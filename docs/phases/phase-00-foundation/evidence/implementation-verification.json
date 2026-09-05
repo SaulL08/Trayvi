@@ -1,0 +1,123 @@
+{
+  "recordedAtUtc": "2026-09-05T03:11:00Z",
+  "kind": "implementation-verification-not-formal-audit",
+  "tests": [
+    {
+      "artifact": "artifacts/windows-unit.json",
+      "success": true,
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "84dc628721a2cdb4fddc2c305e095db9d894e540db37cf9bd95140725b0a0e48"
+    },
+    {
+      "artifact": "artifacts/windows-integration.json",
+      "success": true,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 2,
+      "sha256": "ad8b1076c33fd56290c6e6389bc417ceb5cb6ea9ae35d1620d9768cc76d2e07c"
+    },
+    {
+      "artifact": "artifacts/linux-unit.json",
+      "success": true,
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "68788471ad8c726cd5dc458082d2dd670884d825e782a59ad9ec15642d0dfc04"
+    },
+    {
+      "artifact": "artifacts/linux-integration.json",
+      "success": true,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "sha256": "c7331201b331353316351d359090ea97336e8817cde65fc10e8d8fbd9b19f3d1"
+    }
+  ],
+  "files": [
+    {
+      "path": "pnpm-lock.yaml",
+      "sha256": "0c23466cc24c9a04afa5a8c09a065fb648cd0c6ab7772004dfed870cceef3071"
+    },
+    {
+      "path": "infra/database/Dockerfile.postgis",
+      "sha256": "3df9e7f556db07ed4aea34b582953d188b2a3253ce2bddd233eba2b87d12018f"
+    },
+    {
+      "path": ".github/workflows/phase-00.yml",
+      "sha256": "c6ab4939de1b1898220fbdd7647b4920ad57f3808f409e258ce22602a7a80ca4"
+    },
+    {
+      "path": "artifacts/linux-final.log",
+      "sha256": "68450b2df743f0ecb956f8e7a1af2ef1459248a15e271659479c8de12922d292"
+    },
+    {
+      "path": "artifacts/trivy-repository-final.json",
+      "sha256": "3f23450b27c2d78ea25b7af9baa9de11cba71aa0d3e71c3d4f8ec7f17af08fc2"
+    },
+    {
+      "path": "artifacts/trivy-postgis-final.json",
+      "sha256": "94713d1b316ef1c0ae7ec8aefef403fda74ec30618daf27b4f980cf3d4e10686"
+    }
+  ],
+  "toolchain": {
+    "node": "22.14.0",
+    "pnpm": "11.25.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.1"
+  },
+  "verification": {
+    "windows": "VERIFIED",
+    "linuxCleanContainer": "VERIFIED",
+    "githubHosted": "CI-CONFIGURED; BLOCKED awaiting remote and execution"
+  },
+  "database": {
+    "imageId": "sha256:acd4e2b0d36c026955274ced62e2db4dd6d0387506d1b760a1b141051162e5d7",
+    "user": "70:70",
+    "postgis": true,
+    "cleanApply": true,
+    "repeatNoOp": true,
+    "rollbackRollForward": true,
+    "runtimeDdlDenied": true,
+    "outboxAtomicity": true,
+    "invalidMigrationRolledBack": true,
+    "concurrentSerialized": true
+  },
+  "security": {
+    "tool": "Trivy 0.70.0",
+    "databaseUpdatedAt": "2026-09-04T19:03:14.457271343Z",
+    "repository": {
+      "includeDevDependencies": true,
+      "severityFilter": ["HIGH", "CRITICAL"],
+      "vulnerabilities": 0,
+      "secrets": 0,
+      "misconfigurations": 0
+    },
+    "postgis": {
+      "high": 0,
+      "critical": 0,
+      "secrets": 0,
+      "reusedUnchangedImage": true,
+      "warnings": [
+        "Alpine 3.24 absent from scanner EOL table",
+        "No vulnerability detail for CVE-2026-80256; scanner result is not proof of absence of unknown vulnerabilities"
+      ]
+    }
+  },
+  "healthMeasurement": {
+    "platform": "Windows",
+    "transport": "Fastify inject, no network",
+    "warmup": 5,
+    "samples": 50,
+    "p50Ms": 0.1377,
+    "p95Ms": 0.3014,
+    "maxMs": 1.1601,
+    "productionCapacityClaim": false
+  },
+  "limitations": [
+    "No commit or remote exists; clean Linux uses a source snapshot rather than a checkout.",
+    "Hosted ubuntu-24.04 jobs, artifact upload, branch protection, ownership and repository license await external decisions.",
+    "Formal audit and AUDIT.md intentionally deferred by user."
+  ]
+}

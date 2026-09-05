@@ -1,0 +1,31 @@
+{
+  "name": "@trayvi/api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "node --watch --env-file=../../.env.api --import tsx src/main.ts",
+    "start": "node dist/main.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.3.0",
+    "@fastify/helmet": "13.1.1",
+    "@nestjs/common": "12.0.1",
+    "@nestjs/core": "12.0.1",
+    "@nestjs/platform-fastify": "12.0.1",
+    "@opentelemetry/api": "1.9.1",
+    "@trayvi/config": "workspace:*",
+    "@trayvi/observability": "workspace:*",
+    "fastify": "5.12.1",
+    "kysely": "0.29.5",
+    "pg": "8.23.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@trayvi/test-support": "workspace:*"
+  }
+}

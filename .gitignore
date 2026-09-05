@@ -1,0 +1,40 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Build, test, and tool output
+dist/
+coverage/
+.turbo/
+artifacts/
+test-results/
+*.tsbuildinfo
+
+# Runtime and local data
+*.log
+logs/
+tmp/
+.tmp/
+.docker-local/
+infra/local/data/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+*.tar
+*.tar.gz
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

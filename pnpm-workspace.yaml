@@ -1,0 +1,15 @@
+packages:
+  - apps/*
+  - packages/*
+
+engineStrict: true
+autoInstallPeers: false
+strictPeerDependencies: true
+saveExact: true
+strictSsl: true
+enableGlobalVirtualStore: false
+
+allowBuilds:
+  '@nestjs/core': true
+  esbuild: true
+  protobufjs: false

@@ -1,0 +1,17 @@
+{
+  "version": "2.2.0-provisional",
+  "color.palette.trayviTeal": "#10BFA5",
+  "color.palette.midnightNavy": "#0B1623",
+  "color.palette.white": "#FFFFFF",
+  "color.palette.orangeAccent": "#FF9F43",
+  "color.palette.cloud": "#F7FAFC",
+  "color.palette.actionBlue": "#3478F6",
+  "color.palette.graphite": "#182230",
+  "color.brand.primary": "#10BFA5",
+  "color.brand.secondary": "#0B1623",
+  "color.background.primary": "#F7FAFC",
+  "color.surface.primary": "#FFFFFF",
+  "color.accent.orange": "#FF9F43",
+  "color.route.primary": "#3478F6",
+  "color.text.primary": "#182230"
+}

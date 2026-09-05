@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="325" viewBox="0 0 1080 325" role="img" aria-labelledby="title desc">
+  <title id="title">Trayvi monochrome light logo</title>
+  <desc id="desc">A one-color white Trayvi horizontal logo for dark backgrounds.</desc>
+  <defs>
+    <mask id="route-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="290" height="325">
+      <rect width="290" height="325" fill="#FFFFFF"/>
+      <circle cx="154" cy="104" r="7" fill="#000000"/>
+    </mask>
+  </defs>
+  <g fill="#FFFFFF">
+    <g mask="url(#route-cutout)">
+      <path d="M48 76 C67 34 107 8 153 8 C204 8 245 41 258 88 L226 97 C216 63 187 40 153 40 C120 40 92 58 80 76 Z M18 91 H132 L117 121 H89 L122 185 C108 182 94 176 80 168 L55 121 H3 Z M76 168 C89 176 104 181 119 184 L155 258 L223 118 H259 L172 292 C165 306 159 315 155 315 C151 315 145 306 138 293 Z M223 118 H259 L236 163 C226 172 213 178 198 180 Z"/>
+      <circle cx="154" cy="104" r="18"/>
+    </g>
+    <path d="M325 118 L322 124 L322 140 L360 140 L361 141 L361 224 L384 224 L384 142 L386 140 L424 140 L424 118 Z M464 118 L464 224 L486 224 L486 142 L488 140 L539 140 L545 142 L551 150 L551 157 L547 164 L542 167 L509 167 L503 172 L502 180 L545 224 L575 224 L542 190 L543 188 L553 186 L562 181 L566 177 L572 166 L573 145 L570 136 L562 126 L551 120 L542 118 Z M662 118 L609 224 L635 224 L638 216 L641 212 L671 150 L673 148 L675 149 L675 151 L711 224 L736 224 L684 118 Z M740 118 L790 184 L790 224 L813 224 L813 183 L863 118 L835 118 L802 161 L798 158 L768 118 Z M890 118 L941 224 L964 224 L1015 120 L1015 118 L990 118 L953 194 L951 193 L916 118 Z M1051 118 L1051 224 L1074 224 L1074 119 L1073 118 Z M673 189 L655 224 L691 224 Z"/>
+  </g>
+  <path d="M154 134 C134 144 135 153 158 161 C179 169 179 180 158 189 C141 197 141 208 155 219" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

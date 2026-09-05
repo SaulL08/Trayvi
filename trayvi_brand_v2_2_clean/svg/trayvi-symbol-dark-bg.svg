@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="290" height="325" viewBox="0 0 290 325" role="img" aria-labelledby="title desc">
+  <title id="title">Trayvi symbol for dark backgrounds</title>
+  <desc id="desc">A teal and white geometric T and V forming a location marker with a winding route and destination point.</desc>
+  <defs>
+    <mask id="route-cutout" maskUnits="userSpaceOnUse" x="0" y="0" width="290" height="325">
+      <rect width="290" height="325" fill="#FFFFFF"/>
+      <circle cx="154" cy="104" r="7" fill="#000000"/>
+    </mask>
+  </defs>
+  <g mask="url(#route-cutout)">
+    <path d="M48 76 C67 34 107 8 153 8 C204 8 245 41 258 88 L226 97 C216 63 187 40 153 40 C120 40 92 58 80 76 Z" fill="#10BFA5"/>
+    <path d="M18 91 H132 L117 121 H89 L122 185 C108 182 94 176 80 168 L55 121 H3 Z" fill="#10BFA5"/>
+    <path d="M76 168 C89 176 104 181 119 184 L155 258 L223 118 H259 L172 292 C165 306 159 315 155 315 C151 315 145 306 138 293 Z" fill="#FFFFFF"/>
+    <path d="M223 118 H259 L236 163 C226 172 213 178 198 180 Z" fill="#10BFA5"/>
+    <circle cx="154" cy="104" r="18" fill="#FF9F43"/>
+  </g>
+  <path d="M154 134 C134 144 135 153 158 161 C179 169 179 180 158 189 C141 197 141 208 155 219" fill="none" stroke="#10BFA5" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M154 134 C134 144 135 153 158 161 C179 169 179 180 158 189 C141 197 141 208 155 219" fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M154 134 C134 144 135 153 158 161 C179 169 179 180 158 189 C141 197 141 208 155 219" fill="none" stroke="#0B1623" stroke-width="1.75" stroke-dasharray="6 8" stroke-linecap="round"/>
+</svg>

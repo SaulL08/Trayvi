@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Trayvi brand kit v2.2 clean preview</title>
+  <desc id="desc">Preview of the cleaned Trayvi horizontal logo, dark-background logo, symbol, app icon, and provisional palette.</desc>
+  <rect width="1600" height="1200" fill="#F7FAFC"/>
+  <text x="70" y="72" fill="#182230" font-family="Arial, sans-serif" font-size="28" font-weight="700">TRAYVI BRAND KIT — v2.2 CLEAN</text>
+  <text x="70" y="108" fill="#182230" opacity="0.7" font-family="Arial, sans-serif" font-size="18">Clean vector candidate · provisional · pending owner approval</text>
+
+  <rect x="50" y="145" width="1500" height="360" rx="28" fill="#FFFFFF"/>
+  <text x="85" y="190" fill="#182230" font-family="Arial, sans-serif" font-size="16" font-weight="700">PRIMARY LOCKUP · LIGHT SURFACE</text>
+  <image href="../svg/trayvi-logo-horizontal.svg" x="150" y="190" width="1300" height="290" preserveAspectRatio="xMidYMid meet"/>
+
+  <rect x="50" y="535" width="1500" height="300" rx="28" fill="#0B1623"/>
+  <text x="85" y="580" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="16" font-weight="700">INVERSE LOCKUP · MIDNIGHT NAVY</text>
+  <image href="../svg/trayvi-logo-horizontal-dark-bg.svg" x="170" y="575" width="1260" height="240" preserveAspectRatio="xMidYMid meet"/>
+
+  <rect x="50" y="865" width="360" height="285" rx="28" fill="#FFFFFF"/>
+  <text x="80" y="910" fill="#182230" font-family="Arial, sans-serif" font-size="16" font-weight="700">SYMBOL</text>
+  <image href="../svg/trayvi-symbol.svg" x="145" y="920" width="180" height="205" preserveAspectRatio="xMidYMid meet"/>
+
+  <rect x="440" y="865" width="360" height="285" rx="28" fill="#FFFFFF"/>
+  <text x="470" y="910" fill="#182230" font-family="Arial, sans-serif" font-size="16" font-weight="700">APP ICON SOURCE</text>
+  <image href="../svg/trayvi-app-icon.svg" x="515" y="930" width="210" height="210" preserveAspectRatio="xMidYMid meet"/>
+
+  <rect x="830" y="865" width="720" height="285" rx="28" fill="#FFFFFF"/>
+  <text x="860" y="910" fill="#182230" font-family="Arial, sans-serif" font-size="16" font-weight="700">PROVISIONAL PALETTE</text>
+  <g font-family="Arial, sans-serif" font-size="14" fill="#182230">
+    <rect x="860" y="945" width="100" height="70" rx="12" fill="#10BFA5"/><text x="860" y="1040">#10BFA5</text>
+    <rect x="980" y="945" width="100" height="70" rx="12" fill="#0B1623"/><text x="980" y="1040">#0B1623</text>
+    <rect x="1100" y="945" width="100" height="70" rx="12" fill="#FF9F43"/><text x="1100" y="1040">#FF9F43</text>
+    <rect x="1220" y="945" width="100" height="70" rx="12" fill="#3478F6"/><text x="1220" y="1040">#3478F6</text>
+    <rect x="1340" y="945" width="100" height="70" rx="12" fill="#182230"/><text x="1340" y="1040">#182230</text>
+    <rect x="1460" y="945" width="60" height="70" rx="12" fill="#F7FAFC" stroke="#D6DEE8"/><text x="1450" y="1040">Cloud</text>
+  </g>
+  <text x="860" y="1090" fill="#182230" opacity="0.7" font-family="Arial, sans-serif" font-size="16">Muévete. Pide. Envía.</text>
+</svg>

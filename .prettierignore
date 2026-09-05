@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+.turbo
+artifacts
+pnpm-lock.yaml
+trayvi_brand_v2_2_clean/**/*.svg

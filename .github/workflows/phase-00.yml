@@ -1,0 +1,186 @@
+name: Phase 0 CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-00-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22.14.0
+  MIGRATION_DATABASE_URL: postgresql://postgres:ci-local-only@127.0.0.1:5432/postgres
+  DATABASE_URL: postgresql://postgres:ci-local-only@127.0.0.1:5432/postgres
+
+jobs:
+  quality:
+    name: Static, unit, and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Frozen install
+        run: corepack pnpm install --frozen-lockfile
+      - name: Verify toolchain
+        run: corepack pnpm toolchain:check
+      - name: Run quality gate
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          corepack pnpm verify 2>&1 | tee artifacts/quality.log
+      - name: Machine-readable unit and coverage evidence
+        run: corepack pnpm test:unit --coverage --reporter=default --reporter=json --outputFile=artifacts/unit.json
+      - name: Retain quality evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: phase-00-quality
+          path: |
+            artifacts/
+            coverage/
+          if-no-files-found: error
+          retention-days: 14
+
+  integration:
+    name: PostgreSQL/PostGIS and process integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Build and start hardened PostGIS
+        shell: bash
+        run: |
+          docker build --pull=false --tag trayvi/postgis:phase-00 --file infra/database/Dockerfile.postgis infra/database
+          docker run --detach --name trayvi-phase-00-postgis \
+            --env POSTGRES_DB=postgres \
+            --env POSTGRES_USER=postgres \
+            --env POSTGRES_PASSWORD=ci-local-only \
+            --publish 127.0.0.1:5432:5432 \
+            trayvi/postgis:phase-00
+          for attempt in {1..30}; do
+            if docker exec trayvi-phase-00-postgis pg_isready -U postgres -d postgres; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs trayvi-phase-00-postgis
+          exit 1
+      - name: Frozen install and build
+        run: |
+          corepack pnpm install --frozen-lockfile
+          corepack pnpm build
+      - name: Run real-database and process suites
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          corepack pnpm test:integration --reporter=default --reporter=json --outputFile=artifacts/integration.json 2>&1 | tee artifacts/integration.log
+          corepack pnpm db:verify 2>&1 | tee artifacts/database-verification.log
+      - name: Retain integration evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: phase-00-integration
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop PostGIS
+        if: always()
+        run: docker rm --force trayvi-phase-00-postgis || true
+
+  security:
+    name: Dependency, secret, filesystem, and image scans
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable Corepack and frozen install
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Repository and dependency scan
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          corepack pnpm security:secrets 2>&1 | tee artifacts/secret-scan.log
+          corepack pnpm security:dependencies 2>&1 | tee artifacts/dependency-audit.log
+          corepack pnpm security:licenses 2>&1 | tee artifacts/license-policy.log
+      - name: Build hardened PostGIS image
+        run: docker build --pull=false --tag trayvi/postgis:phase-00 --file infra/database/Dockerfile.postgis infra/database
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_INCLUDE_DEV_DEPS: 'true'
+        with:
+          scan-type: fs
+          scan-ref: .
+          version: v0.70.0
+          scanners: vuln,secret,misconfig
+          skip-dirs: node_modules,.git,.cache,artifacts,coverage
+          format: table
+          output: artifacts/trivy-filesystem.txt
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+      - name: Trivy PostGIS image scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: trayvi/postgis:phase-00
+          version: v0.70.0
+          format: table
+          output: artifacts/trivy-postgis.txt
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: '1'
+      - name: Retain security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: phase-00-security
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+  required:
+    name: Phase 0 required gate
+    if: always()
+    needs: [quality, integration, security]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require every mandatory job
+        env:
+          QUALITY: ${{ needs.quality.result }}
+          INTEGRATION: ${{ needs.integration.result }}
+          SECURITY: ${{ needs.security.result }}
+        run: test "$QUALITY" = success && test "$INTEGRATION" = success && test "$SECURITY" = success
