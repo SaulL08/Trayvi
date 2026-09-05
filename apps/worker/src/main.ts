@@ -19,6 +19,9 @@ async function main(): Promise<void> {
   }
 
   const runtime = await createWorkerApplication(config);
+  // The foundation worker has no queue/socket yet. Keep its process alive until an explicit
+  // shutdown without pretending to poll or process product work.
+  const keepAlive = setInterval(() => undefined, 60_000);
   let shuttingDown = false;
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;
@@ -32,10 +35,20 @@ async function main(): Promise<void> {
       process.exit(1);
     }, config.http.shutdownTimeoutMs);
     timeout.unref();
-    void runtime.close(signal).finally(() => clearTimeout(timeout));
+    void runtime
+      .close(signal)
+      .catch((error: unknown) => {
+        runtime.logger.error('worker.shutdown.failed', error);
+        process.exitCode = 1;
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+        clearInterval(keepAlive);
+      });
   };
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   process.once('SIGINT', () => shutdown('SIGINT'));
+  runtime.logger.info('worker.process.ready', { outcome: 'ready', mode: 'foundation' });
 }
 
 void main().catch(() => {

@@ -341,3 +341,41 @@ checkpoint/checkout, hosted CI execution on the selected runner, and stakeholder
 license and branch-protection decisions. AC-035/036 belong to the explicitly deferred audit and are
 not implementation failures; their absence alone is not used to invent permission to begin that audit.
 No Phase 1 work has started.
+
+## Repository closure — first committed reproduction
+
+The sections and 29/36 matrix above preserve the pre-checkpoint implementation history. This
+closure task does not perform the formal audit. Its current status is recorded in the subsequent
+closure summary once the committed reproduction finishes.
+
+Initial checkpoint: `e9f156fcbda8226b9d6c1d1bc6903fe21cd48c49`;
+tree: `4d440498486d41cc00555bad1cbba2fdf0140973`. It contains 151 reviewed versionable files:
+the original 149 plus LICENSE.md and repository governance. No environment, certificate, private key,
+dependency directory, temporary scan/export or build was staged. Brand PNGs are intentional delivery
+assets. The developer-specific path in PROJECT_OVERVIEW.md was removed; test-only synthetic path
+canaries remain intentional. Markdown hard breaks are recognized by `.gitattributes`; four preexisting
+SQL EOF blank-line warnings are retained to avoid changing migration bytes/checksums merely for style.
+
+The first real checkout used a verified Git bundle and `git clone` in a fresh Debian 12 container,
+with an empty dependency store and no shared workspace node_modules. Frozen install, matching
+lockfile hashes, quality gate and 33 unit tests passed. Integration returned **8 passed, 1 failed**:
+the compiled worker exited with code 0 without the expected stopped log. The standalone DB matrix
+was not reached. This attempt is not a successful clean-checkout gate.
+
+Preserved attempt evidence (ignored raw files):
+
+- `artifacts/closure-linux.log`, SHA-256
+  `5bd0f5133a5269ae2437fa25fa2b6ce8afe0c1ab1c93dfa1124f9690beaa3a85`;
+- `artifacts/closure-linux-integration.json`, SHA-256
+  `c95c262172686be196441d8724add6c36fc45abdb72d1c668e4673ce2534ec50`.
+
+The no-queue worker had no referenced event-loop resource and could exit naturally while the test
+raced startup with SIGTERM. The correction keeps only the standalone process alive with a no-work
+idle timer, clears it during bounded shutdown, and announces process readiness after signal handlers
+are installed. API startup announcement likewise follows handler registration. The regression test
+uses that event-driven readiness boundary, sends real SIGTERM without an arbitrary sleep, waits for
+process `close` (including drained output pipes), and cleans up on failure. This uses Node's documented
+[timer lifecycle](https://nodejs.org/download/release/v22.14.0/docs/api/timers.html#class-timeout) and
+[child-process close semantics](https://nodejs.org/download/release/v22.14.0/docs/api/child_process.html#event-close).
+It adds no product work, queue or outbox consumer. A new committed checkout must pass before AC-003
+and runtime acceptance can be considered verified at the corrected checkpoint.

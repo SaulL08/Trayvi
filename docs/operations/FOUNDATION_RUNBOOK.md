@@ -15,6 +15,10 @@ separate controlled command. A configuration failure exits non-zero and prints f
 never values. API startup logs its bind host/port; these are operational fields, not returned by
 health responses.
 
+The worker's `worker.started` event reports application-context initialization;
+`worker.process.ready` confirms the entrypoint has installed signal handlers. An explicit idle timer
+keeps this no-queue foundation process alive until shutdown; it performs no polling or product work.
+
 ## Shutdown
 
 SIGTERM/SIGINT makes the API unready, stops new/idle connections through Fastify close behavior,

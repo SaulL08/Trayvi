@@ -20,12 +20,6 @@ async function main(): Promise<void> {
 
   const runtime = await createApiApplication(config);
   await runtime.app.listen({ host: config.http.host, port: config.http.port });
-  runtime.logger.info('api.started', {
-    host: config.http.host,
-    port: config.http.port,
-    outcome: 'ready',
-  });
-
   let shuttingDown = false;
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;
@@ -43,6 +37,11 @@ async function main(): Promise<void> {
   };
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   process.once('SIGINT', () => shutdown('SIGINT'));
+  runtime.logger.info('api.started', {
+    host: config.http.host,
+    port: config.http.port,
+    outcome: 'ready',
+  });
 }
 
 void main().catch(() => {

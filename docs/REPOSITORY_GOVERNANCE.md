@@ -13,15 +13,17 @@ The default branch is `main`; `.gitattributes` normalizes versioned text to LF.
 Git's existing author configuration identifies commits only. It is not evidence of a GitHub
 account, repository administrator, or authorized review team.
 
-`.github/CODEOWNERS` is deliberately pending: no confirmed GitHub user/team with repository
-access has been supplied. Once confirmed, establish a default reviewer for all paths and
-explicit ownership for workflow, security, infrastructure and architecture changes as the team
-grows. Never insert placeholder accounts. Review requirements must remain usable by the actual team.
+The owner explicitly authorized `@SaulL08` for all paths in `.github/CODEOWNERS` during the
+2026-09-05 closure continuation. No other user or team is inferred. This supersedes the initial
+checkpoint's pending ownership decision. Add specialized ownership as the real team grows.
+Review requirements must remain usable by the actual team; the sole owner cannot approve their own PR.
 
 ## Remote and hosted enforcement
 
-Current remote status: `REMOTE_REQUIRED`. No remote URL, push, Actions run or enforced branch
-protection is claimed. Missing repository coordinates are not a verified permission denial.
+Authorized private remote: `https://github.com/SaulL08/Trayvi.git`, default branch `main`.
+On 2026-09-05 the authenticated read returned `private: true`, administrator access, size zero,
+and no branches; `git ls-remote` returned no refs. This supersedes `REMOTE_REQUIRED` from the initial
+checkpoint. Push, Actions execution and protection must still be evidenced, not inferred from access.
 
 After an authorized GitHub remote is supplied:
 
