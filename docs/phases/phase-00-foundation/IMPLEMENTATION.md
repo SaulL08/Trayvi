@@ -379,3 +379,143 @@ process `close` (including drained output pipes), and cleans up on failure. This
 [child-process close semantics](https://nodejs.org/download/release/v22.14.0/docs/api/child_process.html#event-close).
 It adds no product work, queue or outbox consumer. A new committed checkout must pass before AC-003
 and runtime acceptance can be considered verified at the corrected checkpoint.
+
+## Repository and hosted CI closure — final implementation record
+
+This section supersedes the closure status statements above without deleting them: those statements
+remain the chronological record of the uncommitted implementation and first failed checkout. This is
+still implementation verification, not the adversarial audit required by AC-035/036.
+
+### Worker regression and committed lineage
+
+The defect was reproduced naturally from historical commit
+`e9f156fcbda8226b9d6c1d1bc6903fe21cd48c49` (tree
+`4d440498486d41cc00555bad1cbba2fdf0140973`). The process emitted `worker.started`, then exited 0
+before the harness could deliver shutdown; `worker.stopped` was absent. Evidence is preserved in
+`artifacts/worker-original-reproduction.log` (SHA-256
+`4c2f41405407cda1529fb1804d3425314d66d347c03e02687adbae5b5d9dca9f`).
+
+The root cause combined lifecycle ordering and premature process termination. The no-queue worker had
+no referenced event-loop handle, and its bootstrap emitted startup before the entrypoint installed its
+signal handlers. The process could therefore terminate naturally while the integration harness raced
+to send SIGTERM. Waiting for child `exit` could also precede delivery of the final pipe data.
+
+Commit `c12a6f3ad8492e6a03ce3b2cf576e15a1ebe1743` (tree
+`20c174b12b6292068f10cbd1cd0ff76a81eb36b7`, parent `e9f156f`) fixes that boundary. A referenced
+no-work timer holds only the standalone worker open, signal handlers are installed before
+`worker.process.ready`, bounded close clears the timer, and the harness waits for child `close`. The
+regression sends real SIGTERM without an arbitrary sleep and asserts ordered `worker.started`,
+`worker.draining`, SIGTERM, `worker.stopped`, exit 0, and no timeout. Corrected Linux evidence:
+`artifacts/worker-fix-linux-success.log` SHA-256
+`64c1d3bdc2310523a08b9fa4630ee8a1311e2b26fccba6143c7de86ef769d49d` and JSON SHA-256
+`285c391a0b0d23cab08e281facfc72838acb606b459e79717711d903d00aea6f`.
+
+No checkpoint was amended and no history was rewritten. `.github/CODEOWNERS` contains exactly
+`* @SaulL08`. Normal pushes created private `SaulL08/Trayvi` on `main`; no force option was used.
+
+### Clean checkout of the corrected security checkpoint
+
+The first hosted run, `33994970416` on worker-fix commit `c12a6f3`, retained all three artifacts but
+failed its security gate. Its real image scan found seven HIGH and zero Critical findings in Alpine
+`libuuid 2.42.1-r0`, all with a fixed package available. This was classified as a project image defect,
+not hidden as CI/tool failure. Commit `291550846f70f8cafdc521db92a456150d20c7b6` (tree
+`f4d7bc2f3dbd38028c61159ebe00cce621d1e11e`, parent `c12a6f3`) pins `libuuid 2.42.3-r1` in the
+hardened PostGIS image. An earlier build requesting repository-obsolete `2.42.3-r0` remains preserved
+in `artifacts/postgis-libuuid-build.log`; the successful build and zero-High/Critical scan are preserved
+in `artifacts/postgis-libuuid-build-success.log` and `artifacts/trivy-postgis-libuuid-fixed.json`.
+
+A new Git bundle was cloned at exact commit `2915508` into a fresh Debian 12 container with no shared
+checkout, dependencies or environment files. Node 22.14.0 and pnpm 11.25.0 performed a frozen install;
+the committed lockfile SHA-256 remained
+`0c23466cc24c9a04afa5a8c09a065fb648cd0c6ab7772004dfed870cceef3071` before and after. Format,
+lint, strict typecheck, architecture, secrets, licenses, 33/33 unit tests, all five builds, 9/9 Linux
+integrations, compiled API/worker SIGTERM lifecycles and all eight database/PostGIS invariants passed.
+The verified clone ended clean. Raw evidence and hashes are recorded in
+`evidence/implementation-verification.json`; the aggregate log SHA-256 is
+`e8c561522f9042e82d9647929d1f7dd2e0117664ea0736ce44a84e72d8459689`.
+
+### Hosted CI, security and retained artifacts
+
+[Hosted run 33995414066](https://github.com/SaulL08/Trayvi/actions/runs/33995414066) executed exact
+commit `291550846f70f8cafdc521db92a456150d20c7b6` on the `ubuntu-24.04` label and concluded success.
+All four jobs passed: static/unit/build (`101384997696`), PostgreSQL/PostGIS/process integration
+(`101384997670`), dependency/secret/filesystem/image scans (`101384997445`), and the aggregate
+`Phase 0 required gate` (`101385207947`). This proves the workflow rather than merely inspecting YAML.
+
+The hosted evidence reports 33 unit and 9 integration tests; 73.35% line, 62.38% branch, 78.2%
+function and 72.82% statement coverage; eight database invariants; zero filesystem High/Critical;
+zero PostGIS image High/Critical; zero repository secrets; 266 licenses checked with zero findings;
+and one moderate dependency advisory, below the mandatory High/Critical threshold. A second Trivy
+0.70 scan of the downloaded artifacts found zero secrets. Known non-blocking warnings are retained:
+Alpine 3.24 is not yet in Trivy's EOL table; one CVE lacked scanner detail; and GitHub forced
+SHA-pinned actions targeting Node 20 to execute on Node 24. These do not convert a known finding into
+an exception or claim absence of unknown vulnerabilities.
+
+| Artifact ID | Name                   | Retained until (UTC) | Verified content                                        |
+| ----------- | ---------------------- | -------------------- | ------------------------------------------------------- |
+| 9977915657  | `phase-00-quality`     | 2026-09-19 22:17:35  | unit JSON, quality log, coverage summary, LCOV and HTML |
+| 9977913749  | `phase-00-integration` | 2026-09-19 22:17:27  | integration JSON/log and eight-invariant DB log         |
+| 9977911721  | `phase-00-security`    | 2026-09-19 22:17:18  | dependency, secret, license, filesystem and image scans |
+
+### Branch protection attempt
+
+After the green run, the API was asked to require `Phase 0 required gate`, strict up-to-date status,
+linear history and conversation resolution, with admin enforcement and force-push/deletion disabled.
+GitHub returned HTTP 403: `Upgrade to GitHub Pro or make this repository public to enable this
+feature.` A follow-up branch query reports `protected: false`. Repository visibility was not changed.
+The exact implementation status is **BLOCKED_BY_REPOSITORY_PERMISSION**. This prevents AC-031 from
+passing even though every hosted job is green.
+
+### Current acceptance matrix
+
+This is the authoritative implementation-closure classification: **33 PASS, 0 FAIL, 1 BLOCKED,
+2 PENDING AUDIT**. The earlier 29/36 table is preserved as historical evidence.
+
+| Criterion | Status        | Current evidence                                                                                                                          |
+| --------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| AC-001    | PASS          | `main` is committed and published; line-ending policy is tracked; generated/secrets inventory is clean.                                   |
+| AC-002    | PASS          | Node 22.14.0 and pnpm 11.25.0 are pinned and verified locally and in hosted CI.                                                           |
+| AC-003    | PASS          | A fresh Debian 12 clone of exact commit `2915508` completed the documented setup and remained clean.                                      |
+| AC-004    | PASS          | Frozen installs succeeded from the committed lockfile locally and hosted; its hash was unchanged.                                         |
+| AC-005    | PASS          | The documented root verification command passed locally, in the clean clone and hosted CI.                                                |
+| AC-006    | PASS          | Only the Phase 0 API, worker and justified shared packages exist; no functional domain placeholder was added.                             |
+| AC-007    | PASS          | Format, lint, strict typecheck and all builds passed with zero errors.                                                                    |
+| AC-008    | PASS          | Boundary checks and their forbidden-dependency regression passed.                                                                         |
+| AC-009    | PASS          | Environment access remains confined to the configuration composition boundary.                                                            |
+| AC-010    | PASS          | ADR-001–ADR-010 remain accepted and consistent with the implemented foundation.                                                           |
+| AC-011    | PASS          | Invalid critical configuration fails safely before initialization without secret values.                                                  |
+| AC-012    | PASS          | Unsafe production defaults and wildcard credentialed CORS remain rejected by tests.                                                       |
+| AC-013    | PASS          | Repository and downloaded-artifact secret scans found zero secrets; examples contain placeholders only.                                   |
+| AC-014    | PASS          | Recursive redaction corpus tests passed.                                                                                                  |
+| AC-015    | PASS          | Unexpected API errors retain the safe request-ID envelope without internal data.                                                          |
+| AC-016    | PASS          | Corrected repository/image scans contain zero known High/Critical issues; no exception was self-approved.                                 |
+| AC-017    | PASS          | The pinned PostGIS service became healthy as non-root `70:70`.                                                                            |
+| AC-018    | PASS          | Empty-database migration and repeat no-op are true in clean and hosted matrices.                                                          |
+| AC-019    | PASS          | Rollback/roll-forward, invalid migration rollback and concurrent serialization are true.                                                  |
+| AC-020    | PASS          | The runtime role was denied schema DDL in the real database test.                                                                         |
+| AC-021    | PASS          | No product/domain table or Villa Altagracia runtime hardcoding exists.                                                                    |
+| AC-022    | PASS          | Compiled API and worker start, receive real SIGTERM, drain, log stop and exit 0 within bounds.                                            |
+| AC-023    | PASS          | Liveness independence and readiness loss/recovery against real PostgreSQL passed.                                                         |
+| AC-024    | PASS          | Health/error responses expose no secret, topology or dependency detail.                                                                   |
+| AC-025    | PASS          | Request/correlation ID validation and propagation tests passed.                                                                           |
+| AC-026    | PASS          | Low-risk telemetry and bounded exporter failure/hang tests passed.                                                                        |
+| AC-027    | PASS          | Body/header/URL/request/readiness/shutdown limits are explicit and tested.                                                                |
+| AC-028    | PASS          | Windows developer suites and all Linux suites passed; hosted `ubuntu-24.04` executed successfully.                                        |
+| AC-029    | PASS          | Hosted and clean-clone integration used isolated real PostgreSQL/PostGIS and passed repeatably.                                           |
+| AC-030    | PASS          | Required configuration, DB, telemetry, input, migration, timeout and shutdown failure paths passed.                                       |
+| AC-031    | BLOCKED       | Hosted triggers, permissions, timeouts and aggregate gate work, but `main` protection is unavailable: `BLOCKED_BY_REPOSITORY_PERMISSION`. |
+| AC-032    | PASS          | Three downloadable hosted artifacts retain tests, coverage, DB, build and security evidence for 14 days.                                  |
+| AC-033    | PASS          | Setup, architecture, config, migration, testing, security, observability and operations docs match behavior.                              |
+| AC-034    | PASS          | Historical and current matrices map AC-001–AC-033 to executed or inspected evidence.                                                      |
+| AC-035    | PENDING AUDIT | The formal Section 15 adversarial audit is intentionally outside this closure task.                                                       |
+| AC-036    | PENDING AUDIT | `AUDIT.md` and the audit verdict are intentionally not created or fabricated.                                                             |
+
+## Repository closure decision
+
+**NOT READY FOR PHASE 0 AUDIT**
+
+The code, clean checkout, security correction, remote, artifacts and hosted CI are closed. The sole
+pre-audit blocker is AC-031: GitHub refuses branch protection for this private repository on the
+current plan. Upgrade the repository owner to a plan that supports protection (or explicitly choose
+public visibility), then apply and verify the documented protection request. No Phase 1 work or formal
+Phase 0 audit has started.

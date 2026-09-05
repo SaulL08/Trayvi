@@ -115,6 +115,214 @@
     "maxMs": 1.1601,
     "productionCapacityClaim": false
   },
+  "repositoryClosure": {
+    "recordedAtUtc": "2026-09-05T22:20:38Z",
+    "authoritativeForRepositoryClosure": true,
+    "scope": "implementation-verification-not-formal-audit",
+    "git": {
+      "historicalCommit": "e9f156fcbda8226b9d6c1d1bc6903fe21cd48c49",
+      "historicalTree": "4d440498486d41cc00555bad1cbba2fdf0140973",
+      "workerFixCommit": "c12a6f3ad8492e6a03ce3b2cf576e15a1ebe1743",
+      "workerFixTree": "20c174b12b6292068f10cbd1cd0ff76a81eb36b7",
+      "securityFixCommit": "291550846f70f8cafdc521db92a456150d20c7b6",
+      "securityFixTree": "f4d7bc2f3dbd38028c61159ebe00cce621d1e11e",
+      "remoteCommitAtValidation": "291550846f70f8cafdc521db92a456150d20c7b6",
+      "branch": "main",
+      "remote": "https://github.com/SaulL08/Trayvi.git",
+      "visibility": "private",
+      "codeowner": "@SaulL08",
+      "historyRewritten": false,
+      "forcePushUsed": false
+    },
+    "workerRegression": {
+      "historicalCommit": "e9f156fcbda8226b9d6c1d1bc6903fe21cd48c49",
+      "signal": "SIGTERM",
+      "originalExitCode": 0,
+      "originalStartedObserved": true,
+      "originalStoppedObserved": false,
+      "reproduced": true,
+      "rootCause": "The no-queue worker had no referenced event-loop resource and could terminate naturally after bootstrap. The startup event was emitted before entrypoint signal handlers were installed, so the test raced SIGTERM against premature process termination and observed code 0 without worker.stopped.",
+      "fix": "Keep the standalone worker process alive with a referenced no-work timer, install signal handlers before publishing process readiness, clear the timer after bounded application close, and wait for child close so log pipes are drained.",
+      "regressionTest": "scripts/runtime/process-lifecycle.integration.test.ts sends real SIGTERM without an arbitrary sleep and asserts ordered worker.started, worker.draining, SIGTERM, worker.stopped, exit 0, and no timeout.",
+      "evidence": [
+        {
+          "path": "artifacts/worker-original-reproduction.log",
+          "sha256": "4c2f41405407cda1529fb1804d3425314d66d347c03e02687adbae5b5d9dca9f"
+        },
+        {
+          "path": "artifacts/worker-fix-linux-success.log",
+          "sha256": "64c1d3bdc2310523a08b9fa4630ee8a1311e2b26fccba6143c7de86ef769d49d"
+        },
+        {
+          "path": "artifacts/worker-fix-linux.json",
+          "sha256": "285c391a0b0d23cab08e281facfc72838acb606b459e79717711d903d00aea6f"
+        }
+      ]
+    },
+    "cleanCheckout": {
+      "commit": "291550846f70f8cafdc521db92a456150d20c7b6",
+      "environment": "fresh Debian 12 container, Node 22.14.0, pnpm 11.25.0",
+      "frozenInstall": "PASS",
+      "lockfileBeforeSha256": "0c23466cc24c9a04afa5a8c09a065fb648cd0c6ab7772004dfed870cceef3071",
+      "lockfileAfterSha256": "0c23466cc24c9a04afa5a8c09a065fb648cd0c6ab7772004dfed870cceef3071",
+      "quality": "PASS",
+      "unit": {
+        "passed": 33,
+        "failed": 0,
+        "skipped": 0
+      },
+      "integration": {
+        "passed": 9,
+        "failed": 0,
+        "skipped": 0
+      },
+      "databaseInvariantsPassed": 8,
+      "databaseInvariantsTotal": 8,
+      "apiSigterm": "PASS",
+      "workerSigterm": "PASS",
+      "checkoutCleanAfterVerification": true,
+      "evidence": [
+        {
+          "path": "artifacts/closure-security-linux.log",
+          "sha256": "e8c561522f9042e82d9647929d1f7dd2e0117664ea0736ce44a84e72d8459689"
+        },
+        {
+          "path": "artifacts/closure-security-linux-unit.json",
+          "sha256": "85768641b2bf437c1a7bdefe2ade1fdbf056dff38c646e0cf747897e16c81fb9"
+        },
+        {
+          "path": "artifacts/closure-security-linux-integration.json",
+          "sha256": "2a4e5361ee255db2c0e94a22a51af5a0655de091c625ef9b41894aa656ea097c"
+        },
+        {
+          "path": "artifacts/closure-security-linux-database.log",
+          "sha256": "008a5fb96e68a91ac8fabec4ce26d1b3b5b051138cf30aed1b6d22ecf8e88432"
+        }
+      ]
+    },
+    "hostedCi": {
+      "workflow": "Phase 0 CI",
+      "runnerLabel": "ubuntu-24.04",
+      "failedRun": {
+        "id": 33994970416,
+        "commit": "c12a6f3ad8492e6a03ce3b2cf576e15a1ebe1743",
+        "conclusion": "failure",
+        "rootCauseClassification": "project defect",
+        "rootCause": "The pinned PostGIS image contained libuuid 2.42.1-r0 with seven HIGH vulnerabilities for which the Alpine repository supplied a fixed package.",
+        "preserved": true
+      },
+      "successfulRun": {
+        "id": 33995414066,
+        "number": 2,
+        "commit": "291550846f70f8cafdc521db92a456150d20c7b6",
+        "conclusion": "success",
+        "url": "https://github.com/SaulL08/Trayvi/actions/runs/33995414066",
+        "jobs": [
+          {
+            "id": 101384997445,
+            "name": "Dependency, secret, filesystem, and image scans",
+            "conclusion": "success"
+          },
+          {
+            "id": 101384997670,
+            "name": "PostgreSQL/PostGIS and process integration",
+            "conclusion": "success"
+          },
+          {
+            "id": 101384997696,
+            "name": "Static, unit, and build",
+            "conclusion": "success"
+          },
+          {
+            "id": 101385207947,
+            "name": "Phase 0 required gate",
+            "conclusion": "success"
+          }
+        ],
+        "warning": "GitHub forced SHA-pinned actions that target Node.js 20 to run on Node.js 24; this is non-blocking maintenance evidence, not a failed gate."
+      }
+    },
+    "securityClosure": {
+      "postgisDockerfileSha256": "20434a4efa6986531a04065142d61c8eead17eaade9788ec6f6d65c8d7501fa0",
+      "postgisImageId": "sha256:0689b2c16d64ee3e1e9e24ddece3b391cf2bb55e354b525ed256434235ee0562",
+      "containerUser": "70:70",
+      "libuuid": "2.42.3-r1",
+      "filesystemHigh": 0,
+      "filesystemCritical": 0,
+      "imageHigh": 0,
+      "imageCritical": 0,
+      "repositorySecretFindings": 0,
+      "downloadedArtifactSecretFindings": 0,
+      "dependencyAudit": {
+        "highOrCritical": 0,
+        "moderate": 1,
+        "gateConclusion": "PASS"
+      },
+      "licensePackagesChecked": 266,
+      "licenseFindings": 0,
+      "warnings": [
+        "Alpine 3.24 is absent from the scanner EOL table.",
+        "Trivy had no vulnerability detail for CVE-2026-80256; zero known findings is not proof of absence of unknown vulnerabilities."
+      ],
+      "failedBuildEvidence": {
+        "reason": "Alpine package repository advanced from requested libuuid 2.42.3-r0 to 2.42.3-r1 during validation.",
+        "path": "artifacts/postgis-libuuid-build.log",
+        "sha256": "641931320ac7efc5ff3ab7afe8b9cd469731decc477aca28ff51daf3839f48a6"
+      },
+      "successfulBuildEvidence": {
+        "path": "artifacts/postgis-libuuid-build-success.log",
+        "sha256": "4bad0e5d6fcd2cef1d646232351d475fb2e8b9e1543557d309713baa151fe905"
+      },
+      "successfulScanEvidence": {
+        "path": "artifacts/trivy-postgis-libuuid-fixed.json",
+        "sha256": "0c6f88b532ba0819cfd0859d56901887d5ed0c45ff580574f232b7b6f27e702f"
+      }
+    },
+    "artifacts": [
+      {
+        "id": 9977915657,
+        "name": "phase-00-quality",
+        "commit": "291550846f70f8cafdc521db92a456150d20c7b6",
+        "sizeBytes": 83960,
+        "expiresAtUtc": "2026-09-19T22:17:35Z",
+        "content": "unit JSON, quality log, coverage summary, LCOV and HTML coverage"
+      },
+      {
+        "id": 9977913749,
+        "name": "phase-00-integration",
+        "commit": "291550846f70f8cafdc521db92a456150d20c7b6",
+        "sizeBytes": 4335,
+        "expiresAtUtc": "2026-09-19T22:17:27Z",
+        "content": "integration JSON/log and eight-invariant database verification log"
+      },
+      {
+        "id": 9977911721,
+        "name": "phase-00-security",
+        "commit": "291550846f70f8cafdc521db92a456150d20c7b6",
+        "sizeBytes": 1439,
+        "expiresAtUtc": "2026-09-19T22:17:18Z",
+        "content": "dependency audit, secret scan, license policy, filesystem scan and PostGIS image scan"
+      }
+    ],
+    "branchProtection": {
+      "requested": true,
+      "configured": false,
+      "branchProtected": false,
+      "httpStatus": 403,
+      "status": "BLOCKED_BY_REPOSITORY_PERMISSION",
+      "reason": "GitHub requires upgrading to GitHub Pro or making this private repository public to enable branch protection.",
+      "visibilityChanged": false
+    },
+    "acceptanceCriteria": {
+      "pass": 33,
+      "fail": 0,
+      "blocked": 1,
+      "pendingAudit": 2,
+      "blockedCriteria": ["AC-031"],
+      "pendingAuditCriteria": ["AC-035", "AC-036"],
+      "decision": "NOT READY FOR PHASE 0 AUDIT"
+    }
+  },
   "limitations": [
     "No commit or remote exists; clean Linux uses a source snapshot rather than a checkout.",
     "Hosted ubuntu-24.04 jobs, artifact upload, branch protection, ownership and repository license await external decisions.",
