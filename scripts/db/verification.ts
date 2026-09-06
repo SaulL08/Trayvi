@@ -23,6 +23,8 @@ export interface DatabaseVerificationEvidence {
   readonly runtimeDdlDenied: boolean;
   readonly runtimeIdentityRestricted: boolean;
   readonly outboxAtomicity: boolean;
+  readonly outboxStateIntegrity: boolean;
+  readonly outboxDeleteDenied: boolean;
 }
 
 function quoteRuntimeIdentifier(identifier: string): string {
@@ -73,6 +75,80 @@ async function verifyMainScenario(
       'SELECT count(*)::text AS count FROM platform.outbox_events',
     );
 
+    const validStates = [
+      { status: 'pending', attempts: 0, locked: false, published: false, error: null },
+      { status: 'processing', attempts: 1, locked: true, published: false, error: null },
+      { status: 'published', attempts: 1, locked: false, published: true, error: null },
+      { status: 'failed', attempts: 1, locked: false, published: false, error: 'DELIVERY_FAILED' },
+    ] as const;
+    let validStateRowsAccepted = true;
+    await client.query('BEGIN');
+    try {
+      for (const state of validStates) {
+        await client.query(
+          `INSERT INTO platform.outbox_events
+           (id, event_type, schema_version, aggregate_type, aggregate_id, occurred_at,
+            correlation_id, payload, status, attempts, locked_at, locked_by, published_at,
+            last_error_code)
+           VALUES ($1, 'foundation.state_probe', 1, 'foundation', $2, clock_timestamp(),
+             $3, '{}'::jsonb, $4, $5,
+             CASE WHEN $6 THEN clock_timestamp() ELSE NULL END,
+             CASE WHEN $6 THEN 'audit-worker' ELSE NULL END,
+             CASE WHEN $7 THEN clock_timestamp() ELSE NULL END,
+             $8)`,
+          [
+            randomUUID(),
+            randomUUID(),
+            randomUUID(),
+            state.status,
+            state.attempts,
+            state.locked,
+            state.published,
+            state.error,
+          ],
+        );
+      }
+    } catch {
+      validStateRowsAccepted = false;
+    } finally {
+      await client.query('ROLLBACK');
+    }
+
+    const contradictoryStates = [
+      { status: 'processing', attempts: 1, locked: false, error: null },
+      { status: 'pending', attempts: 0, locked: true, error: 'IMPOSSIBLE' },
+    ] as const;
+    const contradictoryStateDenials: boolean[] = [];
+    for (const state of contradictoryStates) {
+      await client.query('BEGIN');
+      try {
+        await client.query(
+          `INSERT INTO platform.outbox_events
+           (id, event_type, schema_version, aggregate_type, aggregate_id, occurred_at,
+            correlation_id, payload, status, attempts, locked_at, locked_by, last_error_code)
+           VALUES ($1, 'foundation.invalid_state', 1, 'foundation', $2, clock_timestamp(),
+             $3, '{}'::jsonb, $4, $5,
+             CASE WHEN $6 THEN clock_timestamp() ELSE NULL END,
+             CASE WHEN $6 THEN 'audit-worker' ELSE NULL END,
+             $7)`,
+          [
+            randomUUID(),
+            randomUUID(),
+            randomUUID(),
+            state.status,
+            state.attempts,
+            state.locked,
+            state.error,
+          ],
+        );
+        contradictoryStateDenials.push(false);
+      } catch {
+        contradictoryStateDenials.push(true);
+      } finally {
+        await client.query('ROLLBACK');
+      }
+    }
+
     await runtimeClient.connect();
     const identity = await runtimeClient.query<{ session_user: string; current_user: string }>(
       'SELECT session_user, current_user',
@@ -83,6 +159,7 @@ async function verifyMainScenario(
       'DROP TABLE platform.outbox_events',
       'SET ROLE trayvi_local_admin',
       `GRANT trayvi_migrator TO ${quoteRuntimeIdentifier(runtimeLogin.name)}`,
+      'DELETE FROM platform.outbox_events',
     ];
     const denials: boolean[] = [];
     for (const statement of deniedStatements) {
@@ -100,20 +177,26 @@ async function verifyMainScenario(
     const runtimeIdentityRestricted =
       identity.rows[0]?.session_user === runtimeLogin.name &&
       identity.rows[0]?.current_user === runtimeLogin.name &&
-      denials.every(Boolean);
+      denials.slice(0, 5).every(Boolean);
+    const outboxDeleteDenied = denials[5] === true;
 
     const down = await migrator.down();
     const statusAfterDown = await migrator.status();
     const rollForward = await migrator.up();
     return {
       postgis: extension.rows[0]?.installed === true,
-      cleanApply: first.applied.length === 1 && table.rows[0]?.name === 'platform.outbox_events',
-      repeatNoOp: second.applied.length === 0 && second.skipped.length === 1,
+      cleanApply: first.applied.length === 2 && table.rows[0]?.name === 'platform.outbox_events',
+      repeatNoOp: second.applied.length === 0 && second.skipped.length === 2,
       rollbackRollForward:
-        down.length === 1 && statusAfterDown.length === 0 && rollForward.applied.length === 1,
+        down.length === 1 && statusAfterDown.length === 1 && rollForward.applied.length === 1,
       runtimeDdlDenied,
       runtimeIdentityRestricted,
       outboxAtomicity: afterRollback.rows[0]?.count === '0' && afterCommit.rows[0]?.count === '1',
+      outboxStateIntegrity:
+        validStateRowsAccepted &&
+        contradictoryStateDenials.length === 2 &&
+        contradictoryStateDenials.every(Boolean),
+      outboxDeleteDenied,
     };
   } finally {
     await runtimeClient.end().catch(() => undefined);
@@ -159,7 +242,7 @@ async function verifyConcurrency(adminUrl: string): Promise<boolean> {
     const results = await Promise.all([first.up(), second.up()]);
     const appliedCount = results.reduce((sum, result) => sum + result.applied.length, 0);
     const status = await first.status();
-    return appliedCount === 1 && status.length === 1;
+    return appliedCount === 2 && status.length === 2;
   } finally {
     await Promise.all([first.close(), second.close()]);
     await dropDisposableDatabase(adminUrl, database.name);
