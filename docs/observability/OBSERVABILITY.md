@@ -11,6 +11,13 @@ identity documents, payment/card/bank credentials, biometrics, and precise locat
 errors/causes, arrays, circular/deep/large structures, control characters, bearer/JWT-like strings,
 PostgreSQL URLs, and URL query values.
 
+The sanitizer inspects property descriptors and never invokes getters; accessors and objects that
+cannot be reflected safely receive fixed markers. Free-form error text is checked for structured
+sensitive assignments such as JSON, query, or key/value password, token, authorization, identity, and
+OTP fields. Each Fastify request also carries an immutable normalized context in a request-keyed
+`WeakMap`; error and completion hooks pass those IDs explicitly so framework timeout callbacks cannot
+lose or mix correlation data.
+
 Foundation metrics are held behind a narrow low-cardinality registry: HTTP method/status class and
 duration totals, DB probe outcome/duration, and worker lifecycle. Phase 0 exposes no public metrics
 endpoint. A production collector/storage policy is deferred.

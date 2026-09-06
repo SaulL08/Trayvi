@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "status": "PENDING_EXPLICIT_PUSH_AUTHORIZATION",
+  "reason": "Automatic approval review rejected the attempted push before execution because it did not recognize explicit authorization for the GitHub destination and CI side effect.",
+  "remote": "https://github.com/SaulL08/Trayvi.git",
+  "branch": "main",
+  "contentExportedByRejectedAttempt": false,
+  "requiredEvidence": [
+    "final commit SHA",
+    "ubuntu-24.04 workflow run ID and URL",
+    "quality, integration, security, and required job conclusions",
+    "artifact IDs and sanitized content inspection"
+  ]
+}

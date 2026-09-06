@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-06T18:13:00Z",
+  "originalAuditCommit": "2d2db6d",
+  "originalTargetCommit": "6b977aa4eb078f4079cb24cbd1370244d31c7e17",
+  "remediationCodeHead": "c6c4e10",
+  "findings": [
+    {
+      "id": "P0-AUD-001",
+      "originalProbe": "Error message and final logger retained a structured secret canary.",
+      "postFixProbe": "Structured assignment variants are redacted in error, cause, metadata, and final logger boundaries.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-002",
+      "originalProbe": "25 handlers remained active after timeout responses and after application close resolved.",
+      "postFixProbe": "Close waits for tracked handler settlement; deadline expiry records FAILED, omits api.stopped, and exits non-zero.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-003",
+      "originalProbe": "Unknown applied version and modified down SQL were accepted.",
+      "postFixProbe": "Unknown, missing, gapped, incomplete, up-drift, and down-drift histories fail; valid prefix/no-op/down/up and exact legacy upgrade pass.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-004",
+      "originalProbe": "Package/deep app imports and aliased process access produced no architecture violations.",
+      "postFixProbe": "Package, deep, relative, re-export, dynamic import, global/local alias, and destructuring fixtures are rejected; real graph passes.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-005",
+      "originalProbe": "Production PostgreSQL without TLS parsed successfully.",
+      "postFixProbe": "Staging/production require verify-full, conflicting URL SSL parameters fail, and pg clients receive rejectUnauthorized=true.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-006",
+      "originalProbe": "Runtime authenticated as an administrator and SET ROLE restored DDL authority.",
+      "postFixProbe": "Runtime authenticates as an independent restricted login; DDL, administrator SET ROLE, role alteration/drop, and grant escalation are denied.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-007",
+      "originalProbe": "Contradictory processing/pending rows and runtime DELETE were accepted.",
+      "postFixProbe": "Four coherent states pass, contradictory states fail, and runtime DELETE is denied.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-008",
+      "originalProbe": "Enumerable getter ran and its exception escaped the sanitizer.",
+      "postFixProbe": "Getter and Proxy traps do not escape or expose values; final logger emits fixed safe markers.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-009",
+      "originalProbe": "0 of 25 timeout failure and completion records had request/correlation IDs.",
+      "postFixProbe": "25 of 25 concurrent timeout responses, failure logs, and completion logs retain their exact unique request/correlation pair with no cross-bleed.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-010",
+      "originalProbe": "Hosted evidence reported one Moderate advisory without identity or assessment.",
+      "postFixProbe": "GHSA-w5hq-g745-h8pq was identified, recorded, dispositioned FIX, and removed by uuid 11.1.1; post-fix audit reports zero advisories.",
+      "result": "PASS"
+    },
+    {
+      "id": "P0-AUD-011",
+      "originalProbe": "Any git log error, including the 20 MiB buffer limit, was treated as empty history.",
+      "postFixProbe": "No-history is explicit, Git failures fail closed, clean history over 20 MiB streams successfully, and a historical canary fails the scan.",
+      "result": "PASS"
+    }
+  ],
+  "totals": { "passed": 11, "failed": 0 }
+}

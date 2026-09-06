@@ -17,6 +17,11 @@ errors, health/readiness recovery, request limits/CORS, metrics, telemetry failu
 boundaries, secret detection, worker lifecycle, migration behavior, least-privilege grants, PostGIS,
 and outbox atomicity.
 
+Audit regressions additionally cover free-form error secrets, hostile getters/proxies, 25 concurrent
+timeout contexts, handler drain/deadline truthfulness, workspace import/environment aliases, exact
+migration-prefix and pair integrity, verified database TLS, independent runtime login restrictions,
+outbox state/DELETE controls, dependency-advisory triage, and streamed Git history beyond 20 MiB.
+
 Compiled API/worker `start -> SIGTERM -> stop` tests run on Linux CI. Windows cannot deliver POSIX
 `SIGTERM` to a child Node process with equivalent semantics, so the Windows path verifies the same
 close/drain idempotency in-process and skips only that platform-specific child-signal case.

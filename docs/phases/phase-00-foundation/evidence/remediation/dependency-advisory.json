@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-06T18:11:06Z",
+  "source": "pnpm-audit/npm-registry",
+  "tlsVerificationDisabled": false,
+  "before": {
+    "advisoryId": "GHSA-w5hq-g745-h8pq",
+    "package": "uuid",
+    "installedVersion": "11.1.0",
+    "affectedRange": "<11.1.1",
+    "fixedVersion": "11.1.1",
+    "dependencyType": "production",
+    "direct": true,
+    "severity": "moderate",
+    "source": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+    "disposition": "FIX",
+    "owner": "Trayvi repository maintainers",
+    "reviewer": "Phase 0 audit remediation reviewer",
+    "decidedOn": "2026-09-06",
+    "reviewBy": "2027-03-06"
+  },
+  "after": {
+    "installedVersion": "11.1.1",
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0,
+    "passed": true
+  }
+}

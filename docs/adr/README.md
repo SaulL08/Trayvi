@@ -44,5 +44,6 @@ Accepted ADRs are not rewritten to conceal changed assumptions. A new ADR supers
 |                                                         016 | Trip state machine                                  |            7 |
 |                                                         017 | Dispatch policy and single-winner concurrency       |            8 |
 | [018](ADR-018-financial-ledger-and-trayvi-balance-model.md) | Financial ledger and Trayvi balance model           |          12A |
+|      [019](ADR-019-phase-0-audit-remediation-invariants.md) | Phase 0 audit remediation invariants                |            0 |
 
 Numbers are reserved for discoverability; if a decision is removed before creation, the register records it as unused rather than renumbering accepted documents.

@@ -46,10 +46,13 @@ These are configured names and retention, not evidence that GitHub has published
 Remote closure must record actual run/commit/artifact IDs, inspect downloaded content for secrets,
 and verify retention and association with the tested commit.
 
-`pnpm audit --audit-level high` remains a mandatory hosted security step. Its real hosted result
-is pending; previous local Trivy evidence is retained separately and does not substitute for it.
-TLS verification stays enabled; personal credentials, temporary certificates, exported images,
-dependency directories, environment files, build outputs and raw local logs are not versioned.
+`corepack pnpm security:dependencies` remains a mandatory hosted security step. It retains normalized
+JSON containing advisory identity, package/version/ranges, production/development relationship,
+severity, source, and any disposition. High/Critical always fail. Every Moderate requires a current
+`ACCEPT`, `MITIGATE`, `FIX`, or `NOT_AFFECTED` decision with justification, owner, reviewer, decision
+date, and review date in `docs/security/dependency-advisory-triage.json`. TLS verification stays
+enabled; personal credentials, temporary certificates, dependency directories, environment files,
+build outputs and raw local logs are not versioned.
 
 ## Stage boundaries
 

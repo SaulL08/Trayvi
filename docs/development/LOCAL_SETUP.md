@@ -10,9 +10,10 @@ corepack pnpm toolchain:check
 corepack pnpm local:env
 ```
 
-`local:env` creates ignored `.env.local`, `.env.api`, and `.env.worker` files with a cryptographically
-random local database password. It refuses to overwrite them unless rotation is explicitly requested
-with `scripts/local/initialize-environment.ps1 -Force`. Never commit these files.
+`local:env` creates ignored `.env.local`, `.env.api`, and `.env.worker` files with independent,
+cryptographically random migrator and runtime-login passwords. It refuses to overwrite them unless
+rotation is explicitly requested with `scripts/local/initialize-environment.ps1 -Force`. Never commit
+these files.
 
 ## PostgreSQL/PostGIS
 
@@ -25,7 +26,9 @@ corepack pnpm db:verify:local
 The Compose service is bound to loopback port `54329`, uses a minimal non-root PostgreSQL 17/PostGIS
 3.5 image whose upstream Alpine base is pinned by digest, and persists data in a named volume. A
 migration URL is used only by migration/test commands;
-the application assumes the restricted `trayvi_runtime` role.
+the application authenticates directly as `trayvi_runtime_login`. The bootstrap grants that physical
+login membership only in the NOLOGIN `trayvi_runtime` privilege role. Existing storage created before
+this split must be intentionally recreated after reviewing the exact Compose project and volume.
 
 ## Processes and checks
 

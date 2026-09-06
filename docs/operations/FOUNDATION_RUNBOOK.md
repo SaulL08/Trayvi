@@ -22,9 +22,11 @@ keeps this no-queue foundation process alive until shutdown; it performs no poll
 ## Shutdown
 
 SIGTERM/SIGINT makes the API unready, stops new/idle connections through Fastify close behavior,
-closes Nest/database resources, flushes/shuts telemetry, and flushes logs. Worker shutdown closes its
-application context and telemetry. Repeated close requests share one promise. The process exits with
-failure if the configured deadline is exceeded.
+tracks active route-handler promises until they settle, then closes Nest/database resources,
+flushes/shuts telemetry, and flushes logs. Worker shutdown closes its application context and
+telemetry. Repeated close requests share one promise. If handler drain exceeds the configured
+deadline, the API logs `api.shutdown.incomplete`, enters `FAILED`, omits `api.stopped`, and the process
+exits non-zero.
 
 ## Incidents
 

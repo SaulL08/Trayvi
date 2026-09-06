@@ -1,11 +1,32 @@
 # Phase 0 — Foundation and Engineering System — IMPLEMENTATION
 
-**Status:** Implementation verified locally; external acceptance gates pending  
+**Status:** Audit remediation implemented and locally verified; final hosted evidence pending  
 **Started:** 2026-09-04  
 **Authority:** [PLAN.md](PLAN.md)
 
 This is the contemporaneous implementation record. It records only executed evidence; the separate
 adversarial audit required by AC-035 and AC-036 is not part of this implementation pass.
+
+The later adversarial audit and its remediation are recorded without rewriting this contemporaneous
+history in [AUDIT.md](AUDIT.md) and [REMEDIATION.md](REMEDIATION.md).
+
+## Audit remediation continuation — 2026-09-06
+
+- Preserved the original failed audit and versioned evidence byte-for-byte.
+- Closed P0-AUD-001 through P0-AUD-011 in isolated commits covering error-text redaction, truthful
+  handler drain, paired migration integrity, workspace-boundary resolution, verified database TLS,
+  a physical restricted runtime login, outbox state/privilege constraints, accessor-safe sanitizing,
+  request-bound timeout correlation, dependency advisory evidence/triage, and streamed history scans.
+- Identified the retained Moderate as `GHSA-w5hq-g745-h8pq` affecting direct production dependency
+  `uuid 11.1.0`; recorded a reviewed `FIX` disposition and upgraded to 11.1.1. The post-fix registry
+  audit reports zero advisories without disabling TLS validation.
+- Re-ran the root gate with 58 unit tests and five builds, 17 Windows integration tests with only the
+  two documented POSIX skips, and all 11 database verification invariants against an isolated fresh
+  runtime-login bootstrap.
+- Added ADR-019 and updated current operational/configuration/database/testing/security-governance
+  documentation. Phase 1 and formal re-audit remain outside this continuation.
+- Final clean-checkout Linux/hosted evidence remains pending. An attempted push was rejected before
+  execution by automatic approval review, so no repository content was exported in that attempt.
 
 ## Baseline inspection
 

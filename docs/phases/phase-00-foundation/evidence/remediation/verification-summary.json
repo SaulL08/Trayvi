@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-06T18:13:00Z",
+  "platform": "Windows local plus isolated PostgreSQL/PostGIS",
+  "rootVerify": {
+    "result": "PASS",
+    "unitTestFilesPassed": 14,
+    "unitTestsPassed": 58,
+    "workspaceBuildsPassed": 5,
+    "architectureGate": "PASS",
+    "secretGate": "PASS",
+    "licensesChecked": 323,
+    "licenseFindings": 0
+  },
+  "windowsIntegration": {
+    "result": "PASS_WITH_PLATFORM_SKIPS",
+    "testFilesPassed": 7,
+    "testFilesSkipped": 1,
+    "testsPassed": 17,
+    "testsSkipped": 2,
+    "skips": "POSIX child-process signal cases"
+  },
+  "databaseVerification": {
+    "result": "PASS",
+    "postgis": true,
+    "cleanApply": true,
+    "repeatNoOp": true,
+    "rollbackRollForward": true,
+    "runtimeDdlDenied": true,
+    "runtimeIdentityRestricted": true,
+    "outboxAtomicity": true,
+    "outboxStateIntegrity": true,
+    "outboxDeleteDenied": true,
+    "invalidMigrationRolledBack": true,
+    "concurrentSerialized": true
+  },
+  "dependencyAudit": {
+    "result": "PASS",
+    "totalAdvisories": 0,
+    "tlsVerificationDisabled": false
+  },
+  "hostedCi": {
+    "result": "PENDING_EXPLICIT_PUSH_AUTHORIZATION_AFTER_AUTOMATIC_REVIEW_REJECTION"
+  }
+}
