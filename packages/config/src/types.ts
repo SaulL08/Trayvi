@@ -2,6 +2,9 @@ export type RuntimeEnvironment = 'development' | 'test' | 'staging' | 'productio
 export type ServiceName = 'api' | 'worker';
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export type LogFormat = 'json' | 'pretty';
+export type DatabaseTlsConfig =
+  | { readonly mode: 'disable' }
+  | { readonly mode: 'verify-full'; readonly rejectUnauthorized: true; readonly ca?: string };
 
 export interface AppConfig {
   readonly environment: RuntimeEnvironment;
@@ -24,6 +27,7 @@ export interface AppConfig {
     readonly url: string;
     readonly readinessTimeoutMs: number;
     readonly runtimeRole?: string;
+    readonly tls: DatabaseTlsConfig;
   };
   readonly cors: {
     readonly allowedOrigins: readonly string[];
@@ -47,4 +51,5 @@ export type RawEnvironment = Readonly<Record<string, string | undefined>>;
 
 export interface MigrationConfig {
   readonly databaseUrl: string;
+  readonly databaseTls: DatabaseTlsConfig;
 }

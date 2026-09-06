@@ -3,6 +3,7 @@ export { loadAppConfig, loadMigrationConfig } from './environment';
 export { parseAppConfig, parseMigrationConfig } from './parse-config';
 export type {
   AppConfig,
+  DatabaseTlsConfig,
   LogFormat,
   LogLevel,
   MigrationConfig,

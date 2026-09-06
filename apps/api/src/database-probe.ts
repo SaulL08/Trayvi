@@ -37,6 +37,13 @@ export class DatabaseProbe implements OnModuleDestroy {
       max: 5,
       options: config.database.runtimeRole ? `-c role=${config.database.runtimeRole}` : undefined,
       query_timeout: this.#timeoutMs,
+      ssl:
+        config.database.tls.mode === 'verify-full'
+          ? {
+              rejectUnauthorized: config.database.tls.rejectUnauthorized,
+              ...(config.database.tls.ca ? { ca: config.database.tls.ca } : {}),
+            }
+          : false,
       statement_timeout: this.#timeoutMs,
     });
     this.#pool.on('error', (error) => {

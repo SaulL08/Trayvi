@@ -1,7 +1,14 @@
 import { z } from 'zod';
 
 import { ConfigValidationError } from './config-error';
-import type { AppConfig, MigrationConfig, RawEnvironment, ServiceName } from './types';
+import type {
+  AppConfig,
+  DatabaseTlsConfig,
+  MigrationConfig,
+  RawEnvironment,
+  RuntimeEnvironment,
+  ServiceName,
+} from './types';
 
 const numberField = (defaultValue: number, minimum: number, maximum: number) =>
   z.preprocess(
@@ -34,6 +41,8 @@ const rawSchema = z
     HOST: z.string().trim().min(1).max(255).default('127.0.0.1'),
     PORT: numberField(3000, 1, 65_535),
     DATABASE_URL: z.string().trim().min(1).max(2_048),
+    DATABASE_TLS_MODE: z.enum(['disable', 'verify-full']).default('disable'),
+    DATABASE_TLS_CA: optionalTextField(65_536),
     DATABASE_RUNTIME_ROLE: z
       .string()
       .trim()
@@ -73,6 +82,11 @@ const rawSchema = z
         path: ['DATABASE_URL'],
         message: 'must use the PostgreSQL protocol',
       });
+    }
+    if (databaseUrl) {
+      for (const issue of databaseTlsIssues(value.NODE_ENV, value.DATABASE_TLS_MODE, databaseUrl)) {
+        context.addIssue({ code: 'custom', path: [issue.field], message: issue.constraint });
+      }
     }
 
     const origins = parseOrigins(value.CORS_ALLOWED_ORIGINS);
@@ -177,6 +191,48 @@ function isUnsafeProductionDatabaseUrl(url: URL): boolean {
   );
 }
 
+const conflictingTlsParameters = new Set([
+  'ssl',
+  'sslmode',
+  'sslcert',
+  'sslkey',
+  'sslrootcert',
+  'sslpassword',
+]);
+
+function databaseTlsIssues(
+  environment: RuntimeEnvironment,
+  mode: 'disable' | 'verify-full',
+  url: URL,
+): { readonly field: string; readonly constraint: string }[] {
+  const issues: { field: string; constraint: string }[] = [];
+  if ((environment === 'staging' || environment === 'production') && mode !== 'verify-full') {
+    issues.push({
+      field: 'DATABASE_TLS_MODE',
+      constraint: 'must be verify-full in staging and production',
+    });
+  }
+  for (const key of url.searchParams.keys()) {
+    if (conflictingTlsParameters.has(key.toLowerCase())) {
+      issues.push({
+        field: 'DATABASE_URL',
+        constraint: 'must not contain TLS query parameters; use typed database TLS settings',
+      });
+      break;
+    }
+  }
+  return issues;
+}
+
+function databaseTlsConfig(
+  mode: 'disable' | 'verify-full',
+  ca: string | undefined,
+): DatabaseTlsConfig {
+  return mode === 'verify-full'
+    ? { mode, rejectUnauthorized: true, ...(ca ? { ca } : {}) }
+    : { mode };
+}
+
 function deepFreeze<T>(value: T): Readonly<T> {
   if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -230,6 +286,7 @@ export function parseAppConfig(
       url: result.data.DATABASE_URL,
       readinessTimeoutMs: result.data.DATABASE_READY_TIMEOUT_MS,
       ...(runtimeRole ? { runtimeRole } : {}),
+      tls: databaseTlsConfig(result.data.DATABASE_TLS_MODE, result.data.DATABASE_TLS_CA),
     },
     cors: {
       allowedOrigins: parseOrigins(result.data.CORS_ALLOWED_ORIGINS),
@@ -260,13 +317,35 @@ export function parseMigrationConfig(environment: RawEnvironment): MigrationConf
       { field: 'MIGRATION_DATABASE_URL', constraint: 'must be a valid PostgreSQL URL' },
     ]);
   }
+  const environmentResult = z
+    .enum(['development', 'test', 'staging', 'production'])
+    .default('development')
+    .safeParse(environment.NODE_ENV);
+  const modeResult = z
+    .enum(['disable', 'verify-full'])
+    .default('disable')
+    .safeParse(environment.DATABASE_TLS_MODE);
+  const caResult = optionalTextField(65_536).safeParse(environment.DATABASE_TLS_CA);
+  if (!environmentResult.success || !modeResult.success || !caResult.success) {
+    throw new ConfigValidationError([
+      { field: 'DATABASE_TLS_MODE', constraint: 'must define a valid database TLS policy' },
+    ]);
+  }
+  let url: URL;
   try {
-    const url = new URL(result.data);
+    url = new URL(result.data);
     if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error('invalid protocol');
   } catch {
     throw new ConfigValidationError([
       { field: 'MIGRATION_DATABASE_URL', constraint: 'must be a valid PostgreSQL URL' },
     ]);
   }
-  return deepFreeze({ databaseUrl: result.data });
+  const issues = databaseTlsIssues(environmentResult.data, modeResult.data, url);
+  if (issues.length > 0) {
+    throw new ConfigValidationError(issues);
+  }
+  return deepFreeze({
+    databaseUrl: result.data,
+    databaseTls: databaseTlsConfig(modeResult.data, caResult.data),
+  });
 }

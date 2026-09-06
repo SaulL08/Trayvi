@@ -6,6 +6,7 @@ import { Pool } from 'pg';
 import type { PoolClient } from 'pg';
 
 import { ConfigValidationError, loadMigrationConfig } from '../../packages/config/src/index.js';
+import type { DatabaseTlsConfig } from '../../packages/config/src/index.js';
 
 const MIGRATION_LOCK_ID = '84932675001377';
 const DEFAULT_MIGRATIONS_DIRECTORY = resolve(process.cwd(), 'infra/database/migrations');
@@ -239,12 +240,23 @@ export class SqlMigrator {
   readonly #pool: Pool;
   readonly #directory: string;
 
-  constructor(databaseUrl: string, migrationsDirectory = DEFAULT_MIGRATIONS_DIRECTORY) {
+  constructor(
+    databaseUrl: string,
+    migrationsDirectory = DEFAULT_MIGRATIONS_DIRECTORY,
+    databaseTls: DatabaseTlsConfig = { mode: 'disable' },
+  ) {
     this.#directory = migrationsDirectory;
     this.#pool = new Pool({
       connectionString: databaseUrl,
       connectionTimeoutMillis: 5_000,
       max: 2,
+      ssl:
+        databaseTls.mode === 'verify-full'
+          ? {
+              rejectUnauthorized: databaseTls.rejectUnauthorized,
+              ...(databaseTls.ca ? { ca: databaseTls.ca } : {}),
+            }
+          : false,
       statement_timeout: 30_000,
     });
   }
@@ -354,7 +366,7 @@ async function runCli(): Promise<void> {
   }
   const config = loadMigrationConfig();
   const directory = optionValue(process.argv.slice(3), '--directory=');
-  const migrator = new SqlMigrator(config.databaseUrl, directory);
+  const migrator = new SqlMigrator(config.databaseUrl, directory, config.databaseTls);
   try {
     const result =
       command === 'up'

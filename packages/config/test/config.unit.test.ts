@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ConfigValidationError, parseAppConfig } from '../src';
+import { ConfigValidationError, parseAppConfig, parseMigrationConfig } from '../src';
 import type { RawEnvironment } from '../src';
 
 const validEnvironment: RawEnvironment = {
@@ -101,5 +101,70 @@ describe('configuration composition', () => {
     );
 
     expect(config.telemetry.exporterEndpoint).toBeUndefined();
+  });
+
+  it.each(['staging', 'production'] as const)(
+    'requires verified database TLS in %s',
+    (environment) => {
+      expect(() =>
+        parseAppConfig(
+          {
+            ...validEnvironment,
+            NODE_ENV: environment,
+            HOST: '0.0.0.0',
+            DATABASE_URL: 'postgresql://remote_user:long-random-value@db.example/trayvi',
+            CORS_ALLOWED_ORIGINS: 'https://admin.example.com',
+          },
+          'api',
+        ),
+      ).toThrow(/DATABASE_TLS_MODE/u);
+    },
+  );
+
+  it('maps verify-full TLS with certificate validation for applications and migrations', () => {
+    const environment = {
+      ...validEnvironment,
+      NODE_ENV: 'production',
+      HOST: '0.0.0.0',
+      DATABASE_URL: 'postgresql://remote_user:long-random-value@db.example/trayvi',
+      MIGRATION_DATABASE_URL: 'postgresql://migration_user:long-random-value@db.example/trayvi',
+      DATABASE_TLS_MODE: 'verify-full',
+      DATABASE_TLS_CA: 'trusted-ca-certificate',
+      CORS_ALLOWED_ORIGINS: 'https://admin.example.com',
+    } as const;
+
+    expect(parseAppConfig(environment, 'api').database.tls).toEqual({
+      mode: 'verify-full',
+      rejectUnauthorized: true,
+      ca: 'trusted-ca-certificate',
+    });
+    expect(parseMigrationConfig(environment).databaseTls).toEqual({
+      mode: 'verify-full',
+      rejectUnauthorized: true,
+      ca: 'trusted-ca-certificate',
+    });
+  });
+
+  it('rejects URL query parameters that could weaken or conflict with the typed TLS policy', () => {
+    const environment = {
+      ...validEnvironment,
+      NODE_ENV: 'production',
+      HOST: '0.0.0.0',
+      DATABASE_URL:
+        'postgresql://remote_user:long-random-value@db.example/trayvi?sslmode=no-verify',
+      DATABASE_TLS_MODE: 'verify-full',
+      CORS_ALLOWED_ORIGINS: 'https://admin.example.com',
+    } as const;
+
+    expect(() => parseAppConfig(environment, 'api')).toThrow(/DATABASE_URL/u);
+    expect(() => parseMigrationConfig(environment)).toThrow(/DATABASE_URL/u);
+  });
+
+  it('keeps an explicit local-development TLS exception', () => {
+    const application = parseAppConfig(validEnvironment, 'api');
+    const migration = parseMigrationConfig(validEnvironment);
+
+    expect(application.database.tls).toEqual({ mode: 'disable' });
+    expect(migration.databaseTls).toEqual({ mode: 'disable' });
   });
 });
