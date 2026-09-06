@@ -24,16 +24,10 @@ async function main(): Promise<void> {
   const shutdown = (signal: string): void => {
     if (shuttingDown) return;
     shuttingDown = true;
-    const timeout = setTimeout(() => {
-      runtime.logger.error(
-        'api.shutdown.timeout',
-        new Error('graceful shutdown deadline exceeded'),
-      );
+    void runtime.close(signal).catch(() => {
       process.exitCode = 1;
       process.exit(1);
-    }, config.http.shutdownTimeoutMs);
-    timeout.unref();
-    void runtime.close(signal).finally(() => clearTimeout(timeout));
+    });
   };
   process.once('SIGTERM', () => shutdown('SIGTERM'));
   process.once('SIGINT', () => shutdown('SIGINT'));

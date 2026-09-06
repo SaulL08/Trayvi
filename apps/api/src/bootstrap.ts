@@ -23,6 +23,7 @@ import {
 } from '@trayvi/observability';
 import type { Logger, TelemetryHandle } from '@trayvi/observability';
 
+import { ActiveOperationRegistry, IncompleteShutdownError } from './active-operations';
 import { AppModule } from './app.module';
 import { NestLoggerAdapter } from './http/nest-logger.adapter';
 import type { ProblemDetails } from './http/problem-details';
@@ -116,7 +117,15 @@ export async function createApiApplication(
   app.useGlobalFilters(new SafeExceptionFilter(logger));
 
   const server = app.getHttpAdapter().getInstance() as FastifyInstance;
+  const activeOperations = new ActiveOperationRegistry();
   const requestTimings = new WeakMap<FastifyRequest, RequestTiming>();
+
+  server.addHook('onRoute', (routeOptions) => {
+    const handler = routeOptions.handler;
+    routeOptions.handler = function trackedHandler(request, reply) {
+      return activeOperations.track(() => handler.call(this, request, reply));
+    };
+  });
 
   server.addHook('onRequest', (request, reply, done) => {
     const extracted = propagation.extract(otelContext.active(), request.headers);
@@ -230,11 +239,41 @@ export async function createApiApplication(
       closePromise ??= (async () => {
         runtime.beginDraining();
         logger.info('api.draining', { signal, outcome: 'started' });
-        await app.close();
-        await telemetry.shutdown();
-        runtime.markStopped();
-        logger.info('api.stopped', { outcome: 'success' });
-        logger.flush();
+        let deadline: ReturnType<typeof setTimeout> | undefined;
+        const completion = Promise.all([app.close(), activeOperations.whenIdle()]);
+        const deadlineExceeded = new Promise<'deadline_exceeded'>((resolve) => {
+          deadline = setTimeout(() => resolve('deadline_exceeded'), config.http.shutdownTimeoutMs);
+        });
+        try {
+          const outcome = await Promise.race([
+            completion.then(() => 'completed' as const),
+            deadlineExceeded,
+          ]);
+          if (outcome === 'deadline_exceeded') {
+            const error = new IncompleteShutdownError(activeOperations.size);
+            runtime.markFailed();
+            logger.error('api.shutdown.incomplete', error, {
+              outcome,
+              activeOperations: activeOperations.size,
+            });
+            throw error;
+          }
+          await telemetry.shutdown();
+          runtime.markStopped();
+          logger.info('api.stopped', { outcome: 'success' });
+        } catch (error: unknown) {
+          runtime.markFailed();
+          if (!(error instanceof IncompleteShutdownError)) {
+            logger.error('api.shutdown.incomplete', error, {
+              outcome: 'failed',
+              activeOperations: activeOperations.size,
+            });
+          }
+          throw error;
+        } finally {
+          if (deadline) clearTimeout(deadline);
+          logger.flush();
+        }
       })();
       return closePromise;
     },
