@@ -144,6 +144,9 @@ re-audit.
 - `corepack pnpm db:verify:local`: PASS — all 11 reported database invariants true.
 - `corepack pnpm security:dependencies`: PASS — zero advisories after the `uuid` update; TLS validation
   remained enabled.
+- Clean checkout at `e4b2150`: PASS — frozen install, root gate, 17 Windows integrations with two
+  documented POSIX skips, and all 11 database invariants; no workspace `node_modules` or build cache
+  was reused.
 - Hosted Linux CI and its retained artifacts are pending the explicit push authorization required
   after automatic approval review rejected the attempted external write before execution.
 

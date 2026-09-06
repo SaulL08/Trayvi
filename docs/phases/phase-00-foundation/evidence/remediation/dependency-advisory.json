@@ -15,7 +15,7 @@
     "source": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
     "disposition": "FIX",
     "owner": "Trayvi repository maintainers",
-    "reviewer": "Phase 0 audit remediation reviewer",
+    "reviewer": "@SaulL08",
     "decidedOn": "2026-09-06",
     "reviewBy": "2027-03-06"
   },

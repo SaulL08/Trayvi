@@ -13,7 +13,7 @@
       "disposition": "FIX",
       "justification": "The direct production dependency was upgraded to uuid 11.1.1, the first patched release, and the frozen lockfile now resolves that version.",
       "owner": "Trayvi repository maintainers",
-      "reviewer": "Phase 0 audit remediation reviewer",
+      "reviewer": "@SaulL08",
       "decidedOn": "2026-09-06",
       "reviewBy": "2027-03-06"
     }

@@ -39,6 +39,16 @@
     "totalAdvisories": 0,
     "tlsVerificationDisabled": false
   },
+  "cleanCheckout": {
+    "commit": "e4b2150",
+    "clone": "PASS",
+    "frozenInstall": "PASS_WITH_TLS_VERIFICATION",
+    "rootVerify": "PASS",
+    "windowsIntegration": "PASS_17_SKIP_2_POSIX",
+    "databaseVerification": "PASS_ALL_11_INVARIANTS",
+    "hostNodeModulesReused": false,
+    "hostBuildCacheReused": false
+  },
   "hostedCi": {
     "result": "PENDING_EXPLICIT_PUSH_AUTHORIZATION_AFTER_AUTOMATIC_REVIEW_REJECTION"
   }
