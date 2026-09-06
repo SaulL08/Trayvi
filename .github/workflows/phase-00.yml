@@ -126,14 +126,21 @@ jobs:
         run: |
           corepack enable
           corepack pnpm install --frozen-lockfile
-      - name: Repository and dependency scan
+      - name: Initialize hosted evidence
         shell: bash
         run: |
           mkdir -p artifacts
+          printf '{"runId":"%s","runAttempt":"%s","commit":"%s","repository":"%s","workflow":"%s"}\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_WORKFLOW" \
+            > artifacts/hosted-run-metadata.json
+      - name: Repository secret and license scans
+        shell: bash
+        run: |
           set -o pipefail
           corepack pnpm security:secrets 2>&1 | tee artifacts/secret-scan.log
-          corepack pnpm security:dependencies 2>&1 | tee artifacts/dependency-audit.log
           corepack pnpm security:licenses 2>&1 | tee artifacts/license-policy.log
+      - name: Retain and enforce dependency advisory detail
+        run: corepack pnpm security:dependencies -- --output artifacts/dependency-audit.json
       - name: Build hardened PostGIS image
         run: docker build --pull=false --tag trayvi/postgis:phase-00 --file infra/database/Dockerfile.postgis infra/database
       - name: Trivy filesystem scan

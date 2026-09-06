@@ -28,7 +28,7 @@
     "test:coverage": "vitest run --coverage",
     "architecture:check": "tsx scripts/architecture/check-boundaries.ts",
     "security:secrets": "tsx scripts/security/scan-secrets.ts",
-    "security:dependencies": "pnpm audit --audit-level high",
+    "security:dependencies": "tsx scripts/security/audit-dependencies.ts",
     "security:licenses": "tsx scripts/security/check-licenses.ts",
     "db:migrate": "tsx scripts/db/migrate.ts up",
     "db:migrate:local": "node --env-file=.env.api --import tsx scripts/db/migrate.ts up",
