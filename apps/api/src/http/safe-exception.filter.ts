@@ -6,6 +6,7 @@ import type { Logger } from '@trayvi/observability';
 import { getRequestContext, normalizeInboundId } from '@trayvi/observability';
 
 import { toProblemDetails } from './problem-details';
+import { getHttpRequestContext } from './request-context';
 
 @Catch()
 export class SafeExceptionFilter implements ExceptionFilter {
@@ -15,7 +16,9 @@ export class SafeExceptionFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<FastifyRequest>();
     const reply = http.getResponse<FastifyReply>();
-    const requestId = getRequestContext()?.requestId ?? normalizeInboundId(request.id);
+    const requestContext = getHttpRequestContext(request) ?? getRequestContext();
+    const requestId = requestContext?.requestId ?? normalizeInboundId(request.id);
+    const correlationId = requestContext?.correlationId ?? requestId;
     const problem = toProblemDetails(exception, requestId);
 
     if (!(exception instanceof HttpException) || problem.status >= 500) {
@@ -24,6 +27,8 @@ export class SafeExceptionFilter implements ExceptionFilter {
         route: request.routeOptions?.url ?? 'unmatched',
         statusCode: problem.status,
         outcome: 'failed',
+        requestId,
+        correlationId,
       });
     }
 

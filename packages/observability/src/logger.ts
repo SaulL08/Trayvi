@@ -76,8 +76,8 @@ export class StructuredLogger implements Logger {
   ): void {
     const requestContext = getRequestContext();
     const context = sanitizeLogRecord({
-      ...suppliedContext,
       ...(requestContext ?? {}),
+      ...suppliedContext,
       event,
     });
     this.#logger[level](context, event);

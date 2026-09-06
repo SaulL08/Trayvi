@@ -21,18 +21,20 @@ import {
   runWithRequestContext,
   StructuredLogger,
 } from '@trayvi/observability';
-import type { Logger, TelemetryHandle } from '@trayvi/observability';
+import type { Logger, RequestContext, TelemetryHandle } from '@trayvi/observability';
 
 import { ActiveOperationRegistry, IncompleteShutdownError } from './active-operations';
 import { AppModule } from './app.module';
 import { NestLoggerAdapter } from './http/nest-logger.adapter';
 import type { ProblemDetails } from './http/problem-details';
+import { attachHttpRequestContext } from './http/request-context';
 import { SafeExceptionFilter } from './http/safe-exception.filter';
 import { RuntimeState } from './runtime-state';
 
 interface RequestTiming {
   readonly startedAt: number;
   readonly span: ReturnType<TelemetryHandle['tracer']['startSpan']>;
+  readonly context: RequestContext;
 }
 
 const REQUEST_HEADER_FIELDS_TOO_LARGE = 431;
@@ -129,6 +131,8 @@ export async function createApiApplication(
 
   server.addHook('onRequest', (request, reply, done) => {
     const extracted = propagation.extract(otelContext.active(), request.headers);
+    const requestContext = createRequestContext(request.id, request.headers['x-correlation-id']);
+    attachHttpRequestContext(request, requestContext);
     const span = telemetry.tracer.startSpan(
       'http.server.request',
       {
@@ -137,10 +141,9 @@ export async function createApiApplication(
       },
       extracted,
     );
-    requestTimings.set(request, { startedAt: performance.now(), span });
+    requestTimings.set(request, { startedAt: performance.now(), span, context: requestContext });
     const spanContext = trace.setSpan(extracted, span);
     otelContext.with(spanContext, () => {
-      const requestContext = createRequestContext(request.id, request.headers['x-correlation-id']);
       runWithRequestContext(requestContext, () => {
         reply.header('x-request-id', requestContext.requestId);
         reply.header('x-correlation-id', requestContext.correlationId);
@@ -212,6 +215,7 @@ export async function createApiApplication(
         statusCode: reply.statusCode,
         outcome: reply.statusCode < 400 ? 'success' : 'failure',
         durationMilliseconds: Math.round(durationMilliseconds * 100) / 100,
+        ...(timing?.context ?? {}),
       });
     }
     done();
