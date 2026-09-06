@@ -4,42 +4,58 @@ const MAX_DEPTH = 8;
 const MAX_ENTRIES = 100;
 const MAX_STRING_LENGTH = 4_096;
 
-const sensitiveKeys = new Set([
+const sensitiveKeyNames = [
   'authorization',
-  'proxyauthorization',
+  'proxy_authorization',
   'cookie',
-  'setcookie',
+  'set_cookie',
   'password',
   'passcode',
   'pin',
   'otp',
   'token',
-  'accesstoken',
-  'refreshtoken',
-  'sessiontoken',
+  'access_token',
+  'refresh_token',
+  'session_token',
   'secret',
-  'clientsecret',
-  'apikey',
+  'client_secret',
+  'api_key',
   'documents',
-  'documentnumber',
-  'nationalid',
+  'document_number',
+  'national_id',
   'cedula',
   'card',
-  'cardnumber',
+  'card_number',
   'pan',
   'cvv',
   'cvc',
-  'paymentcredential',
-  'paymentcredentials',
-  'bankaccount',
-  'routingnumber',
+  'payment_credential',
+  'payment_credentials',
+  'bank_account',
+  'routing_number',
   'biometric',
   'biometrics',
   'latitude',
   'longitude',
   'coordinates',
-  'preciselocation',
-]);
+  'precise_location',
+] as const;
+
+const sensitiveKeys = new Set(sensitiveKeyNames.map((key) => key.replaceAll('_', '')));
+const sensitiveTextKeyPattern = [...sensitiveKeyNames]
+  .sort((left, right) => right.length - left.length)
+  .map((key) => key.split('_').join('[_\\s-]*'))
+  .join('|');
+const assignmentPrefix = `(?<prefix>(?:^|[?&,;\\s{])['"]?(?:${sensitiveTextKeyPattern})['"]?\\s*[:=]\\s*)`;
+const sensitiveDoubleQuotedAssignment = new RegExp(
+  `${assignmentPrefix}"(?:\\\\.|[^"\\\\])*"`,
+  'giu',
+);
+const sensitiveSingleQuotedAssignment = new RegExp(
+  `${assignmentPrefix}'(?:\\\\.|[^'\\\\])*'`,
+  'giu',
+);
+const sensitiveBareAssignment = new RegExp(`${assignmentPrefix}(?!["'\\[])[^\\s,;&}\\]]+`, 'giu');
 
 export type SafeLogValue =
   | null
@@ -78,6 +94,9 @@ function sanitizeString(input: string): string {
   value = value.replace(/\b[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu, REDACTED);
   value = value.replace(/\b(?:postgres(?:ql)?):\/\/[^\s]+/giu, '[REDACTED_DATABASE_URL]');
   value = value.replace(/([?&][^=\s&#]{1,128}=)[^\s&#]*/gu, `$1${REDACTED}`);
+  value = value.replace(sensitiveDoubleQuotedAssignment, `$<prefix>"${REDACTED}"`);
+  value = value.replace(sensitiveSingleQuotedAssignment, `$<prefix>'${REDACTED}'`);
+  value = value.replace(sensitiveBareAssignment, `$<prefix>${REDACTED}`);
   return value;
 }
 

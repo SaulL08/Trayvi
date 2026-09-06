@@ -90,4 +90,63 @@ describe('recursive log redaction', () => {
       event: 'redaction.checked',
     });
   });
+
+  it('redacts structured sensitive assignments from error messages, stacks, causes, and metadata', () => {
+    const canaries = [
+      'message-canary',
+      'stack-canary',
+      'cause-canary',
+      'nested-canary',
+      'authorization-canary',
+      'otp-canary',
+      'national-id-canary',
+      'cedula-canary',
+    ];
+    const error = new Error(
+      `failed PASSWORD = "${canaries[0]}" token:${canaries[1]} authorization=Bearer ${canaries[4]}`,
+    );
+    error.stack = `Error: secret='${canaries[1]}'\n at harmless.ts:1:1`;
+    error.cause = new Error(`Otp : ${canaries[2]}`);
+
+    const output = JSON.stringify(
+      sanitizeForLogging({
+        error,
+        metadata: {
+          description: `national_id=${canaries[6]}; CEDULA: '${canaries[7]}'`,
+          nested: [{ note: `client-secret: ${canaries[3]}` }],
+          harmless: 'retry-after: 30',
+        },
+      }),
+    );
+
+    for (const canary of canaries) expect(output).not.toContain(canary);
+    expect(output).toContain('retry-after: 30');
+    expect(output).toContain('[REDACTED]');
+  });
+
+  it('redacts sensitive error text at the direct logger boundary', async () => {
+    const stream = new PassThrough();
+    let output = '';
+    stream.on('data', (chunk: Buffer) => {
+      output += chunk.toString('utf8');
+    });
+    const logger = new StructuredLogger({
+      service: 'worker',
+      environment: 'test',
+      version: 'test',
+      level: 'info',
+      format: 'json',
+      destination: stream,
+    });
+    const canary = 'worker-error-text-canary';
+
+    logger.error('worker.operation.failed', new Error(`password=${canary}`), {
+      detail: `secret: "${canary}"`,
+    });
+    logger.flush();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(output).not.toContain(canary);
+    expect(output).toContain('[REDACTED]');
+  });
 });
