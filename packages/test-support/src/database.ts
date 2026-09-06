@@ -69,3 +69,44 @@ export async function executeSqlFile(databaseUrl: string, sql: string): Promise<
     await client.end();
   }
 }
+
+export async function createRestrictedRuntimeLogin(
+  adminUrl: string,
+  targetDatabaseUrl = adminUrl,
+): Promise<{ readonly name: string; readonly url: string }> {
+  const name = safeDatabaseName('trayvi_runtime_test');
+  const password = randomUUID().replaceAll('-', '') + randomUUID().replaceAll('-', '');
+  const client = new Client({ connectionString: adminUrl, connectionTimeoutMillis: 5_000 });
+  await client.connect();
+  try {
+    const createRole = await client.query<{ sql: string }>(
+      `SELECT format(
+         'CREATE ROLE %I LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION PASSWORD %L',
+         $1::text,
+         $2::text
+       ) AS sql`,
+      [name, password],
+    );
+    const createRoleSql = createRole.rows[0]?.sql;
+    if (!createRoleSql) throw new Error('Could not construct restricted runtime role SQL.');
+    await client.query(createRoleSql);
+    await client.query(`GRANT trayvi_runtime TO ${quoteIdentifier(name)}`);
+  } finally {
+    await client.end();
+  }
+  const url = new URL(targetDatabaseUrl);
+  url.username = name;
+  url.password = password;
+  return { name, url: url.toString() };
+}
+
+export async function dropRestrictedRuntimeLogin(adminUrl: string, name: string): Promise<void> {
+  const client = new Client({ connectionString: adminUrl, connectionTimeoutMillis: 5_000 });
+  await client.connect();
+  try {
+    await client.query(`REVOKE trayvi_runtime FROM ${quoteIdentifier(name)}`);
+    await client.query(`DROP ROLE ${quoteIdentifier(name)}`);
+  } finally {
+    await client.end();
+  }
+}

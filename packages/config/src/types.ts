@@ -26,7 +26,6 @@ export interface AppConfig {
   readonly database: {
     readonly url: string;
     readonly readinessTimeoutMs: number;
-    readonly runtimeRole?: string;
     readonly tls: DatabaseTlsConfig;
   };
   readonly cors: {

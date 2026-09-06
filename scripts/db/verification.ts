@@ -6,7 +6,9 @@ import { Client } from 'pg';
 
 import {
   createDisposableDatabase,
+  createRestrictedRuntimeLogin,
   dropDisposableDatabase,
+  dropRestrictedRuntimeLogin,
   executeSqlFile,
 } from '../../packages/test-support/src/index.js';
 import { MigrationExecutionError, SqlMigrator } from './migrate.js';
@@ -19,7 +21,14 @@ export interface DatabaseVerificationEvidence {
   readonly invalidMigrationRolledBack: boolean;
   readonly concurrentSerialized: boolean;
   readonly runtimeDdlDenied: boolean;
+  readonly runtimeIdentityRestricted: boolean;
   readonly outboxAtomicity: boolean;
+}
+
+function quoteRuntimeIdentifier(identifier: string): string {
+  if (!/^[a-z][a-z0-9_]{0,62}$/u.test(identifier))
+    throw new Error('Unsafe runtime role identifier.');
+  return `"${identifier}"`;
 }
 
 async function verifyMainScenario(
@@ -30,6 +39,8 @@ async function verifyMainScenario(
   const database = await createDisposableDatabase(adminUrl, 'trayvi_migration');
   const migrator = new SqlMigrator(database.url);
   const client = new Client({ connectionString: database.url });
+  const runtimeLogin = await createRestrictedRuntimeLogin(adminUrl, database.url);
+  const runtimeClient = new Client({ connectionString: runtimeLogin.url });
   try {
     const first = await migrator.up();
     const second = await migrator.up();
@@ -62,16 +73,34 @@ async function verifyMainScenario(
       'SELECT count(*)::text AS count FROM platform.outbox_events',
     );
 
-    let runtimeDdlDenied = false;
-    await client.query('BEGIN');
-    try {
-      await client.query('SET LOCAL ROLE trayvi_runtime');
-      await client.query('CREATE TABLE platform.runtime_must_not_create (id integer)');
-    } catch {
-      runtimeDdlDenied = true;
-    } finally {
-      await client.query('ROLLBACK');
+    await runtimeClient.connect();
+    const identity = await runtimeClient.query<{ session_user: string; current_user: string }>(
+      'SELECT session_user, current_user',
+    );
+    const deniedStatements = [
+      'CREATE TABLE platform.runtime_must_not_create (id integer)',
+      'ALTER TABLE platform.outbox_events ADD COLUMN runtime_must_not_add integer',
+      'DROP TABLE platform.outbox_events',
+      'SET ROLE trayvi_local_admin',
+      `GRANT trayvi_migrator TO ${quoteRuntimeIdentifier(runtimeLogin.name)}`,
+    ];
+    const denials: boolean[] = [];
+    for (const statement of deniedStatements) {
+      await runtimeClient.query('BEGIN');
+      try {
+        await runtimeClient.query(statement);
+        denials.push(false);
+      } catch {
+        denials.push(true);
+      } finally {
+        await runtimeClient.query('ROLLBACK');
+      }
     }
+    const runtimeDdlDenied = denials.slice(0, 3).every(Boolean);
+    const runtimeIdentityRestricted =
+      identity.rows[0]?.session_user === runtimeLogin.name &&
+      identity.rows[0]?.current_user === runtimeLogin.name &&
+      denials.every(Boolean);
 
     const down = await migrator.down();
     const statusAfterDown = await migrator.status();
@@ -83,11 +112,14 @@ async function verifyMainScenario(
       rollbackRollForward:
         down.length === 1 && statusAfterDown.length === 0 && rollForward.applied.length === 1,
       runtimeDdlDenied,
+      runtimeIdentityRestricted,
       outboxAtomicity: afterRollback.rows[0]?.count === '0' && afterCommit.rows[0]?.count === '1',
     };
   } finally {
+    await runtimeClient.end().catch(() => undefined);
     await client.end().catch(() => undefined);
     await migrator.close();
+    await dropRestrictedRuntimeLogin(adminUrl, runtimeLogin.name).catch(() => undefined);
     await dropDisposableDatabase(adminUrl, database.name);
   }
 }

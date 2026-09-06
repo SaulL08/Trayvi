@@ -1,5 +1,6 @@
 -- Local/CI cluster bootstrap. Production creates login principals in its secrets/IAM layer and
--- grants membership to these NOLOGIN roles. This script contains no credential.
+-- grants membership to these NOLOGIN roles. The next bootstrap step creates a distinct local
+-- runtime login from an injected, generated secret; this SQL file contains no credential.
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 
 DO $roles$

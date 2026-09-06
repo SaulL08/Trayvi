@@ -16,6 +16,7 @@ describe('PostgreSQL/PostGIS migration matrix', () => {
       invalidMigrationRolledBack: true,
       concurrentSerialized: true,
       runtimeDdlDenied: true,
+      runtimeIdentityRestricted: true,
       outboxAtomicity: true,
     });
   });

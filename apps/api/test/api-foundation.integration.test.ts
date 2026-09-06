@@ -7,7 +7,9 @@ import { loadMigrationConfig, parseAppConfig } from '@trayvi/config';
 import {
   createDisposableDatabase,
   createNamedDisposableDatabase,
+  createRestrictedRuntimeLogin,
   dropDisposableDatabase,
+  dropRestrictedRuntimeLogin,
   executeSqlFile,
 } from '@trayvi/test-support';
 
@@ -24,13 +26,13 @@ describe('API foundation with real PostgreSQL/PostGIS', () => {
     let migrator = new SqlMigrator(database.url);
     await migrator.up();
     await migrator.close();
+    const runtimeLogin = await createRestrictedRuntimeLogin(adminUrl, database.url);
     const config = parseAppConfig(
       {
         NODE_ENV: 'test',
         SERVICE_NAME: 'api',
         SERVICE_VERSION: 'integration',
-        DATABASE_URL: database.url,
-        DATABASE_RUNTIME_ROLE: 'trayvi_runtime',
+        DATABASE_URL: runtimeLogin.url,
         CORS_ALLOWED_ORIGINS: 'https://allowed.example',
         HTTP_BODY_LIMIT_BYTES: '1024',
         HTTP_MAX_URL_LENGTH: '256',
@@ -130,6 +132,7 @@ describe('API foundation with real PostgreSQL/PostGIS', () => {
       expect(runtime.metrics.snapshot().httpRequests).not.toEqual({});
     } finally {
       await runtime.close();
+      await dropRestrictedRuntimeLogin(adminUrl, runtimeLogin.name);
       if (databaseExists) await dropDisposableDatabase(adminUrl, database.name);
     }
   });

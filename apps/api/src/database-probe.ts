@@ -35,7 +35,6 @@ export class DatabaseProbe implements OnModuleDestroy {
       connectionTimeoutMillis: this.#timeoutMs,
       idleTimeoutMillis: 30_000,
       max: 5,
-      options: config.database.runtimeRole ? `-c role=${config.database.runtimeRole}` : undefined,
       query_timeout: this.#timeoutMs,
       ssl:
         config.database.tls.mode === 'verify-full'

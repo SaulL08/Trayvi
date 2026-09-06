@@ -43,11 +43,6 @@ const rawSchema = z
     DATABASE_URL: z.string().trim().min(1).max(2_048),
     DATABASE_TLS_MODE: z.enum(['disable', 'verify-full']).default('disable'),
     DATABASE_TLS_CA: optionalTextField(65_536),
-    DATABASE_RUNTIME_ROLE: z
-      .string()
-      .trim()
-      .regex(/^[a-z][a-z0-9_]{0,62}$/u)
-      .optional(),
     DATABASE_READY_TIMEOUT_MS: numberField(1_000, 50, 10_000),
     CORS_ALLOWED_ORIGINS: z.string().default(''),
     LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
@@ -264,7 +259,6 @@ export function parseAppConfig(
   }
 
   const endpoint = result.data.OTEL_EXPORTER_OTLP_ENDPOINT;
-  const runtimeRole = result.data.DATABASE_RUNTIME_ROLE;
   const config: AppConfig = {
     environment: result.data.NODE_ENV,
     service: {
@@ -285,7 +279,6 @@ export function parseAppConfig(
     database: {
       url: result.data.DATABASE_URL,
       readinessTimeoutMs: result.data.DATABASE_READY_TIMEOUT_MS,
-      ...(runtimeRole ? { runtimeRole } : {}),
       tls: databaseTlsConfig(result.data.DATABASE_TLS_MODE, result.data.DATABASE_TLS_CA),
     },
     cors: {

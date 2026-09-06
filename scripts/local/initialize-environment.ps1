@@ -16,21 +16,26 @@ if (-not $Force) {
   }
 }
 
-$randomBytes = New-Object byte[] 24
+$adminRandomBytes = New-Object byte[] 24
+$runtimeRandomBytes = New-Object byte[] 24
 $randomNumberGenerator = [Security.Cryptography.RandomNumberGenerator]::Create()
 try {
-  $randomNumberGenerator.GetBytes($randomBytes)
+  $randomNumberGenerator.GetBytes($adminRandomBytes)
+  $randomNumberGenerator.GetBytes($runtimeRandomBytes)
 }
 finally {
   $randomNumberGenerator.Dispose()
 }
-$databasePassword = ([BitConverter]::ToString($randomBytes) -replace '-', '').ToLowerInvariant()
-$databaseUrl = "postgresql://trayvi_local_admin:$databasePassword@127.0.0.1:54329/trayvi_local"
+$adminPassword = ([BitConverter]::ToString($adminRandomBytes) -replace '-', '').ToLowerInvariant()
+$runtimePassword = ([BitConverter]::ToString($runtimeRandomBytes) -replace '-', '').ToLowerInvariant()
+$migrationDatabaseUrl = "postgresql://trayvi_local_admin:$adminPassword@127.0.0.1:54329/trayvi_local"
+$runtimeDatabaseUrl = "postgresql://trayvi_runtime_login:$runtimePassword@127.0.0.1:54329/trayvi_local"
 
 $localLines = @(
   'TRAYVI_DB_NAME=trayvi_local',
   'TRAYVI_DB_ADMIN_USER=trayvi_local_admin',
-  "TRAYVI_DB_ADMIN_PASSWORD=$databasePassword"
+  "TRAYVI_DB_ADMIN_PASSWORD=$adminPassword",
+  "TRAYVI_DB_RUNTIME_PASSWORD=$runtimePassword"
 )
 
 $commonLines = @(
@@ -38,11 +43,10 @@ $commonLines = @(
   'SERVICE_VERSION=dev',
   'HOST=127.0.0.1',
   'PORT=3000',
-  "DATABASE_URL=$databaseUrl",
-  "MIGRATION_DATABASE_URL=$databaseUrl",
+  "DATABASE_URL=$runtimeDatabaseUrl",
+  "MIGRATION_DATABASE_URL=$migrationDatabaseUrl",
   'DATABASE_TLS_MODE=disable',
   'DATABASE_TLS_CA=',
-  'DATABASE_RUNTIME_ROLE=trayvi_runtime',
   'DATABASE_READY_TIMEOUT_MS=1000',
   'CORS_ALLOWED_ORIGINS=',
   'LOG_LEVEL=info',
