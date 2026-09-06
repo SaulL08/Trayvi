@@ -8,6 +8,12 @@ export type AdvisoryDisposition = 'ACCEPT' | 'MITIGATE' | 'FIX' | 'NOT_AFFECTED'
 export interface AdvisoryTriage {
   readonly advisoryId: string;
   readonly package: string;
+  readonly installedVersion: string;
+  readonly affectedRange: string;
+  readonly fixedVersion: string;
+  readonly dependencyType: NormalizedAdvisory['dependencyType'];
+  readonly severity: AdvisorySeverity;
+  readonly source: string;
   readonly disposition: AdvisoryDisposition;
   readonly justification: string;
   readonly owner: string;
@@ -137,9 +143,8 @@ function normalizeV1(
     const id = advisoryId(advisory);
     const finding = Array.isArray(advisory.findings) ? object(advisory.findings[0]) : undefined;
     const paths = finding && Array.isArray(finding.paths) ? finding.paths : [];
-    const versions = paths
-      .map((path) => (typeof path === 'string' ? path.split('>').at(-1)?.split('@').at(-1) : ''))
-      .filter((value): value is string => Boolean(value));
+    const findingVersion = text(finding?.version);
+    const versions = findingVersion ? [findingVersion] : [];
     return [
       {
         advisoryId: id,
@@ -151,7 +156,9 @@ function normalizeV1(
         affectedRange: text(advisory.vulnerable_versions, 'unknown'),
         fixedVersion: text(advisory.patched_versions) || null,
         dependencyType: options.dependencyTypes?.get(packageName) ?? 'transitive',
-        direct: advisory.direct === true,
+        direct:
+          advisory.direct === true ||
+          paths.some((path) => typeof path === 'string' && path.split('>').length === 2),
         severity: severity(advisory.severity),
         source: text(advisory.url, 'npm-registry'),
         title: text(advisory.title, 'Untitled advisory'),
@@ -289,12 +296,15 @@ async function installedVersions(root: string): Promise<ReadonlyMap<string, read
 }
 
 async function runAudit(root: string): Promise<unknown> {
-  const command = process.platform === 'win32' ? 'corepack.cmd' : 'corepack';
   return await new Promise((fulfill, reject) => {
-    const child = spawn(command, ['pnpm', 'audit', '--json'], {
-      cwd: root,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const child = spawn(
+      process.execPath,
+      [resolve(root, 'node_modules/pnpm/bin/pnpm.cjs'), 'audit', '--json'],
+      {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
     let stdout = '';
     let stderr = '';
     child.stdout.setEncoding('utf8').on('data', (chunk: string) => (stdout += chunk));

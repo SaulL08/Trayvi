@@ -56,6 +56,12 @@ describe('dependency audit policy', () => {
         {
           advisoryId: 'GHSA-aaaa-bbbb-cccc',
           package: 'example',
+          installedVersion: '1.4.0',
+          affectedRange: '<2.0.0',
+          fixedVersion: '2.0.0',
+          dependencyType: 'development',
+          severity: 'moderate',
+          source: 'https://github.com/advisories/GHSA-aaaa-bbbb-cccc',
           disposition: 'MITIGATE',
           justification: 'The affected code path is unavailable in this build configuration.',
           owner: 'Security owner',
@@ -78,5 +84,44 @@ describe('dependency audit policy', () => {
     if (advisory) advisory.severity = 'high';
 
     expect(evaluateDependencyAudit(highAudit, []).passed).toBe(false);
+  });
+
+  it('normalizes the pnpm v1 advisory format with installed and patched versions', () => {
+    const report = evaluateDependencyAudit(
+      {
+        advisories: {
+          '1119441': {
+            findings: [
+              {
+                version: '11.1.0',
+                paths: ['packages__observability>uuid'],
+                dev: false,
+                optional: false,
+              },
+            ],
+            id: 1119441,
+            title: 'Bounds check',
+            module_name: 'uuid',
+            vulnerable_versions: '<11.1.1',
+            patched_versions: '>=11.1.1',
+            severity: 'moderate',
+            url: 'https://github.com/advisories/GHSA-w5hq-g745-h8pq',
+          },
+        },
+      },
+      [],
+      { dependencyTypes: new Map([['uuid', 'production']]) },
+    );
+
+    expect(report.advisories[0]).toMatchObject({
+      advisoryId: 'GHSA-w5hq-g745-h8pq',
+      package: 'uuid',
+      installedVersion: '11.1.0',
+      affectedRange: '<11.1.1',
+      fixedVersion: '>=11.1.1',
+      dependencyType: 'production',
+      direct: true,
+      severity: 'moderate',
+    });
   });
 });

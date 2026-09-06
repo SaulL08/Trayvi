@@ -1,4 +1,21 @@
 {
   "schemaVersion": 1,
-  "decisions": []
+  "decisions": [
+    {
+      "advisoryId": "GHSA-w5hq-g745-h8pq",
+      "package": "uuid",
+      "installedVersion": "11.1.0",
+      "affectedRange": "<11.1.1",
+      "fixedVersion": "11.1.1",
+      "dependencyType": "production",
+      "severity": "moderate",
+      "source": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+      "disposition": "FIX",
+      "justification": "The direct production dependency was upgraded to uuid 11.1.1, the first patched release, and the frozen lockfile now resolves that version.",
+      "owner": "Trayvi repository maintainers",
+      "reviewer": "Phase 0 audit remediation reviewer",
+      "decidedOn": "2026-09-06",
+      "reviewBy": "2027-03-06"
+    }
+  ]
 }
