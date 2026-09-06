@@ -149,4 +149,78 @@ describe('recursive log redaction', () => {
     expect(output).not.toContain(canary);
     expect(output).toContain('[REDACTED]');
   });
+
+  it('does not invoke getters while sanitizing objects or errors', () => {
+    let getterCalls = 0;
+    const hostile = Object.defineProperties(new Error('safe diagnostic'), {
+      message: {
+        enumerable: true,
+        get: () => {
+          getterCalls += 1;
+          throw new Error('getter-canary');
+        },
+      },
+      metadata: {
+        enumerable: true,
+        get: () => {
+          getterCalls += 1;
+          return 'metadata-canary';
+        },
+      },
+    });
+
+    const output = JSON.stringify(sanitizeForLogging({ hostile }));
+
+    expect(getterCalls).toBe(0);
+    expect(output).toContain('[ACCESSOR]');
+    expect(output).not.toContain('getter-canary');
+    expect(output).not.toContain('metadata-canary');
+  });
+
+  it('contains proxy reflection failures without throwing or exposing the source', () => {
+    const canary = 'proxy-source-canary';
+    const hostile = new Proxy(
+      { value: canary },
+      {
+        ownKeys() {
+          throw new Error('reflection failed');
+        },
+      },
+    );
+
+    expect(() => sanitizeForLogging(hostile)).not.toThrow();
+    const output = JSON.stringify(sanitizeForLogging(hostile));
+    expect(output).toBe('"[UNSANITIZABLE]"');
+    expect(output).not.toContain(canary);
+  });
+
+  it('keeps the final logger available when metadata reflection fails', async () => {
+    const stream = new PassThrough();
+    let output = '';
+    stream.on('data', (chunk: Buffer) => {
+      output += chunk.toString('utf8');
+    });
+    const logger = new StructuredLogger({
+      service: 'unit-test',
+      environment: 'test',
+      version: 'test',
+      level: 'info',
+      format: 'json',
+      destination: stream,
+    });
+    const hostile = new Proxy(
+      {},
+      {
+        ownKeys() {
+          throw new Error('logger-reflection-canary');
+        },
+      },
+    );
+
+    expect(() => logger.info('hostile.checked', { hostile })).not.toThrow();
+    logger.flush();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(output).toContain('[UNSANITIZABLE]');
+    expect(output).not.toContain('logger-reflection-canary');
+  });
 });

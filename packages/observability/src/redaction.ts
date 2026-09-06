@@ -1,5 +1,7 @@
 const REDACTED = '[REDACTED]';
 const TRUNCATED = '[TRUNCATED]';
+const ACCESSOR = '[ACCESSOR]';
+const UNSANITIZABLE = '[UNSANITIZABLE]';
 const MAX_DEPTH = 8;
 const MAX_ENTRIES = 100;
 const MAX_STRING_LENGTH = 4_096;
@@ -100,14 +102,88 @@ function sanitizeString(input: string): string {
   return value;
 }
 
-function sanitizeError(error: Error, seen: WeakSet<object>, depth: number): SafeLogValue {
-  const cause = 'cause' in error ? error.cause : undefined;
-  return {
-    name: sanitizeString(error.name),
-    message: sanitizeString(error.message),
-    ...(error.stack ? { stack: sanitizeString(error.stack) } : {}),
-    ...(cause === undefined ? {} : { cause: sanitizeValue(cause, seen, depth + 1) }),
-  };
+function descriptorsOf(value: object): PropertyDescriptorMap | undefined {
+  try {
+    return Object.getOwnPropertyDescriptors(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function descriptorValue(descriptor: PropertyDescriptor | undefined): unknown {
+  return descriptor && 'value' in descriptor ? descriptor.value : ACCESSOR;
+}
+
+function sanitizeError(
+  descriptors: PropertyDescriptorMap,
+  seen: WeakSet<object>,
+  depth: number,
+): SafeLogValue {
+  const output: Record<string, SafeLogValue> = {};
+  const name = descriptorValue(descriptors.name);
+  const message = descriptorValue(descriptors.message);
+  const stack = descriptorValue(descriptors.stack);
+  const cause = descriptorValue(descriptors.cause);
+  output.name = typeof name === 'string' ? sanitizeString(name) : 'Error';
+  output.message =
+    typeof message === 'string'
+      ? sanitizeString(message)
+      : message === ACCESSOR
+        ? ACCESSOR
+        : '[NON_STRING_ERROR_MESSAGE]';
+  if (stack !== ACCESSOR && stack !== undefined)
+    output.stack = sanitizeValue(stack, seen, depth + 1);
+  else if (descriptors.stack) output.stack = ACCESSOR;
+  if (cause !== ACCESSOR && cause !== undefined)
+    output.cause = sanitizeValue(cause, seen, depth + 1);
+  else if (descriptors.cause) output.cause = ACCESSOR;
+  return output;
+}
+
+function sanitizeArray(
+  descriptors: PropertyDescriptorMap,
+  seen: WeakSet<object>,
+  depth: number,
+): SafeLogValue[] {
+  const lengthValue = descriptorValue(descriptors.length);
+  const length =
+    typeof lengthValue === 'number' && Number.isSafeInteger(lengthValue) ? lengthValue : 0;
+  const result: SafeLogValue[] = [];
+  for (let index = 0; index < Math.min(length, MAX_ENTRIES); index += 1) {
+    const descriptor = descriptors[String(index)];
+    result.push(
+      descriptor && 'value' in descriptor
+        ? sanitizeValue(descriptor.value, seen, depth + 1)
+        : descriptor
+          ? ACCESSOR
+          : '[EMPTY]',
+    );
+  }
+  if (length > MAX_ENTRIES) result.push(TRUNCATED);
+  return result;
+}
+
+function sanitizeObject(
+  descriptors: PropertyDescriptorMap,
+  seen: WeakSet<object>,
+  depth: number,
+): SafeLogValue {
+  const output: Record<string, SafeLogValue> = {};
+  const entries = Object.entries(descriptors)
+    .filter(([, descriptor]) => descriptor.enumerable === true)
+    .slice(0, MAX_ENTRIES);
+  for (const [key, descriptor] of entries) {
+    output[key] = isSensitiveKey(key)
+      ? REDACTED
+      : 'value' in descriptor
+        ? sanitizeValue(descriptor.value, seen, depth + 1)
+        : ACCESSOR;
+  }
+  const enumerableCount = Object.values(descriptors).filter(
+    (descriptor) => descriptor.enumerable === true,
+  ).length;
+  if (enumerableCount > MAX_ENTRIES) output._truncated = true;
+  return output;
 }
 
 function sanitizeValue(value: unknown, seen: WeakSet<object>, depth: number): SafeLogValue {
@@ -129,41 +205,28 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>, depth: number): Sa
   if (depth > MAX_DEPTH) {
     return '[MAX_DEPTH]';
   }
-  if (seen.has(value)) {
-    return '[CIRCULAR]';
-  }
-  seen.add(value);
+  try {
+    if (seen.has(value)) return '[CIRCULAR]';
+    seen.add(value);
+    const descriptors = descriptorsOf(value);
+    if (!descriptors) return UNSANITIZABLE;
 
-  if (value instanceof Error) {
-    return sanitizeError(value, seen, depth);
+    if (value instanceof Error) return sanitizeError(descriptors, seen, depth);
+    if (value instanceof Date) return sanitizeString(Date.prototype.toISOString.call(value));
+    if (value instanceof URL) return sanitizeString(URL.prototype.toString.call(value));
+    if (Array.isArray(value)) return sanitizeArray(descriptors, seen, depth);
+    return sanitizeObject(descriptors, seen, depth);
+  } catch {
+    return UNSANITIZABLE;
   }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  if (value instanceof URL) {
-    return sanitizeString(value.toString());
-  }
-  if (Array.isArray(value)) {
-    const result = value.slice(0, MAX_ENTRIES).map((item) => sanitizeValue(item, seen, depth + 1));
-    if (value.length > MAX_ENTRIES) {
-      result.push(TRUNCATED);
-    }
-    return result;
-  }
-
-  const output: Record<string, SafeLogValue> = {};
-  const entries = Object.entries(value).slice(0, MAX_ENTRIES);
-  for (const [key, child] of entries) {
-    output[key] = isSensitiveKey(key) ? REDACTED : sanitizeValue(child, seen, depth + 1);
-  }
-  if (Object.keys(value).length > MAX_ENTRIES) {
-    output._truncated = true;
-  }
-  return output;
 }
 
 export function sanitizeForLogging(value: unknown): SafeLogValue {
-  return sanitizeValue(value, new WeakSet<object>(), 0);
+  try {
+    return sanitizeValue(value, new WeakSet<object>(), 0);
+  } catch {
+    return UNSANITIZABLE;
+  }
 }
 
 export function sanitizeLogRecord(
