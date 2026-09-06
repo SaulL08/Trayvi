@@ -1,0 +1,64 @@
+{
+  "recordedAtUtc": "2026-09-06T03:34:07.3401777Z",
+  "targetCommit": "6b977aa4eb078f4079cb24cbd1370244d31c7e17",
+  "temporaryHarnessesCommitted": false,
+  "configurationAndLogging": {
+    "productionDatabaseWithoutTlsAccepted": true,
+    "errorMessageSecretLeakedBySanitizer": true,
+    "errorMessageSecretLeakedByFinalLogger": true,
+    "hostileEnumerableGetterInvoked": true,
+    "hostileEnumerableGetterCausedSanitizerThrow": true
+  },
+  "architecture": {
+    "fixtureLocation": "temporary ignored audit directory",
+    "foundationImportedAppByPackageName": true,
+    "environmentReadThroughProcessAlias": true,
+    "reportedViolations": [],
+    "appImportDetected": false,
+    "environmentAccessDetected": false
+  },
+  "api": {
+    "transport": "real-loopback-http",
+    "concurrentSlowHandlers": 25,
+    "timeoutResponses503": 25,
+    "activeHandlersAfterTimeoutResponses": 25,
+    "completedHandlersAfterTimeoutResponses": 0,
+    "activeHandlersAfterApplicationCloseResolved": 25,
+    "completedHandlersAfterApplicationCloseResolved": 0,
+    "completedHandlersAfterAdditional550Ms": 25,
+    "apiStoppedLoggedBeforeHandlersCompleted": true,
+    "unexpectedErrorResponseStatus": 500,
+    "unexpectedErrorResponseContainedCanary": false,
+    "unexpectedErrorLogContainedCanary": true,
+    "slowTimeoutFailureRecords": 25,
+    "slowTimeoutFailureRecordsWithRequestId": 0,
+    "slowTimeoutCompletionRecords": 25,
+    "slowTimeoutCompletionRecordsWithRequestId": 0
+  },
+  "database": {
+    "environment": "isolated disposable PostgreSQL databases on local PostGIS container",
+    "runtimeRole": {
+      "sessionUser": "trayvi_local_admin",
+      "initialCurrentUser": "trayvi_runtime",
+      "ddlDeniedBeforeRoleChange": true,
+      "resetRoleRestoredAdmin": false,
+      "explicitSetRoleRestoredAdmin": true,
+      "ddlAllowedAfterExplicitSetRole": true
+    },
+    "outbox": {
+      "processingWithoutLockAccepted": true,
+      "pendingWithLockAndErrorAccepted": true,
+      "runtimeDeletePrivilege": true,
+      "runtimeTriggerPrivilege": false,
+      "runtimeTruncatePrivilege": false
+    },
+    "migrations": {
+      "unknownAppliedVersionInserted": "9999",
+      "unknownAppliedVersionRejectedByUp": false,
+      "upResultAfterUnknownVersion": { "applied": [], "skipped": ["0001"] },
+      "modifiedDownSqlRejected": false,
+      "modifiedDownSqlExecuted": true
+    },
+    "allDisposableDatabasesRemoved": true
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "recordedAtUtc": "2026-09-06T03:34:07.3401777Z",
+  "targetCommit": "6b977aa4eb078f4079cb24cbd1370244d31c7e17",
+  "existingControls": {
+    "rootVerify": {
+      "result": "PASS",
+      "unitTestFilesPassed": 12,
+      "unitTestsPassed": 33,
+      "workspaceTypechecksPassed": 5,
+      "workspaceBuildsPassed": 5,
+      "architectureGateReportedPassed": true,
+      "repositorySecretGateReportedPassed": true,
+      "licensesChecked": 322,
+      "licenseFindings": 0
+    },
+    "windowsIntegration": {
+      "result": "PASS_WITH_PLATFORM_SKIPS",
+      "testsPassed": 7,
+      "testsSkipped": 2,
+      "skips": "POSIX child-process signal cases"
+    },
+    "databaseVerification": {
+      "result": "PASS",
+      "postgis": true,
+      "cleanApply": true,
+      "repeatNoOp": true,
+      "rollbackRollForward": true,
+      "runtimeDdlDeniedByExistingScenario": true,
+      "outboxAtomicity": true,
+      "invalidMigrationRolledBack": true,
+      "concurrentSerialized": true
+    },
+    "hostedSecurityArtifact": {
+      "runId": 34007817063,
+      "dependencyAudit": "1 moderate vulnerability; advisory identity absent from retained log",
+      "filesystemHighCritical": 0,
+      "postgisImageHighCritical": 0,
+      "repositorySecrets": 0,
+      "licenses": "PASS"
+    },
+    "containerInspection": {
+      "runtimeUser": "70:70",
+      "effectiveCapabilitiesHex": "0000000000000000",
+      "rootDirectoryWritableByRuntimeUser": false,
+      "pgdataWritableByRuntimeUser": true,
+      "health": "healthy",
+      "memoryLimitBytes": 1073741824,
+      "nanoCpus": 2000000000,
+      "publishedPort": "127.0.0.1:54329",
+      "imageId": "sha256:acd4e2b0d36c026955274ced62e2db4dd6d0387506d1b760a1b141051162e5d7"
+    }
+  },
+  "cleanCheckoutAttempt": {
+    "cloneSucceeded": true,
+    "commit": "6b977aa4eb078f4079cb24cbd1370244d31c7e17",
+    "offlineFrozenInstall": "BLOCKED_BY_INCOMPLETE_LOCAL_CONTENT_STORE",
+    "onlineFrozenInstall": "BLOCKED_BY_HOST_UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+    "tlsVerificationDisabled": false,
+    "classification": "audit-environment limitation; exact-SHA hosted CI independently passed"
+  },
+  "localDependencyAudit": {
+    "result": "BLOCKED_BY_HOST_CERTIFICATE_CHAIN",
+    "tlsVerificationDisabled": false,
+    "substituteEvidence": "downloaded security artifact from exact-SHA hosted run 34007817063"
+  }
+}
