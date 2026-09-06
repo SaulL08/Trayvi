@@ -519,3 +519,65 @@ pre-audit blocker is AC-031: GitHub refuses branch protection for this private r
 current plan. Upgrade the repository owner to a plan that supports protection (or explicitly choose
 public visibility), then apply and verify the documented protection request. No Phase 1 work or formal
 Phase 0 audit has started.
+
+## AC-031 governance retry — 2026-09-06
+
+This section is the current governance closure record. It preserves the earlier implementation,
+repository closure, HTTP 403 and acceptance evidence above. Scope is AC-031 only.
+
+At `2026-09-06T02:55:54.7421027Z` (`2026-09-05` in America/Santo_Domingo), the authenticated
+GitHub account was `SaulL08`, with repository administrator permission. Local `HEAD`, local
+`origin/main`, `git ls-remote` and GitHub's branch API agreed on
+`51f4929edcbd129ad650348a7ed4fe887153fcb9`. The working tree was clean. The repository remains
+private at `https://github.com/SaulL08/Trayvi.git`; branch is `main`, CODEOWNER is `@SaulL08`.
+Initial sandbox credential failures were resolved by accessing the Windows credential store outside
+the sandbox; the protection failure below occurred after successful authentication.
+
+### Published check and preserved hosted CI
+
+[Run 33995808121](https://github.com/SaulL08/Trayvi/actions/runs/33995808121) was queried again:
+commit `51f4929edcbd129ad650348a7ed4fe887153fcb9`, status `completed`, conclusion `success`,
+runner label `ubuntu-24.04`. Security (`101386033653`), quality (`101386033699`), integration
+(`101386033728`) and required gate (`101386271382`) all concluded `success`. The check-run API
+confirmed the exact name `Phase 0 required gate`, app ID `15368`, app slug `github-actions`.
+The earlier runs and all baseline, worker-fix and security-fix evidence remain preserved.
+
+### Requested protection and effective API result
+
+The authenticated `PUT /repos/SaulL08/Trayvi/branches/main/protection` requested the published
+check bound to GitHub Actions, strict up-to-date checks, administrator enforcement, linear history,
+conversation resolution, and disabled force pushes and deletion. Review requirements and actor
+restrictions were `null`; no extra reviewer, signed-commit, deployment or team requirement was added.
+
+- **First attempt:** HTTP 403 due to the repository plan limitation, preserved above.
+- **Final attempt in this retry:** HTTP 403 again; protection was **not enabled**. Exact message:
+  `Upgrade to GitHub Pro or make this repository public to enable this feature.`
+- A subsequent independent `GET /repos/SaulL08/Trayvi/branches/main` returned `protected: false`,
+  `protection.enabled: false`, `enforcement_level: "off"`, `contexts: []`, `checks: []`.
+- `GET /repos/SaulL08/Trayvi/branches/main/protection` returned the same HTTP 403. Ruleset and
+  effective branch-rule queries also returned HTTP 403 with the same plan limitation.
+- Strict, admin enforcement, linear history, force-push and deletion settings cannot be reported as
+  effective values: the protection endpoint did not return them. Requested values are not evidence
+  of enforcement. The authenticated user API did not expose a plan name.
+
+No destructive negative test was appropriate: the branch API already proves protection is inactive.
+No force push, branch deletion, visibility change, protection bypass or history rewrite was performed.
+The exact request and response evidence is in `evidence/implementation-verification.json` under
+`governanceClosureRetry`. Documentation is published with a new normal commit and normal push;
+post-push HEAD, CI and protection are checked again and reported at handoff.
+
+### Current acceptance and decision
+
+The previous 33 passing criteria retain their accepted evidence. **33 PASS, 0 FAIL, 1 BLOCKED,
+2 PENDING AUDIT**:
+
+| Criterion | Status        | Evidence                                                                |
+| --------- | ------------- | ----------------------------------------------------------------------- |
+| AC-031    | BLOCKED       | Authenticated protection PUT returned HTTP 403; GET protected is false. |
+| AC-035    | PENDING AUDIT | Formal adversarial audit has not started.                               |
+| AC-036    | PENDING AUDIT | No audit report or verdict has been created.                            |
+
+**NOT READY FOR PHASE 0 AUDIT**. The externally reported resolution is not reflected by GitHub's
+effective API behavior for this private repository. AC-031 requires successful protection enablement
+and independent read-back after GitHub grants the capability to the repository owner. No Phase 1
+work or implementation revalidation was performed in this retry.
