@@ -15,13 +15,17 @@ interface MigrationDefinition {
   readonly name: string;
   readonly upSql: string;
   readonly downSql: string;
-  readonly checksum: string;
+  readonly upChecksum: string;
+  readonly downChecksum: string;
+  readonly pairChecksum: string;
 }
 
 export interface AppliedMigration {
   readonly version: string;
   readonly name: string;
-  readonly checksum: string;
+  readonly upChecksum: string;
+  readonly downChecksum: string;
+  readonly pairChecksum: string;
   readonly appliedAt: Date;
 }
 
@@ -41,10 +45,18 @@ function checksum(sql: string): string {
   return createHash('sha256').update(sql, 'utf8').digest('hex');
 }
 
+function pairChecksum(upChecksum: string, downChecksum: string): string {
+  return checksum(`${upChecksum}:${downChecksum}`);
+}
+
 async function loadMigrations(directory: string): Promise<readonly MigrationDefinition[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const upFiles = entries
     .filter((entry) => entry.isFile() && /^\d{4,}_[a-z0-9_]+\.up\.sql$/u.test(entry.name))
+    .map((entry) => entry.name)
+    .sort((left, right) => left.localeCompare(right));
+  const downFiles = entries
+    .filter((entry) => entry.isFile() && /^\d{4,}_[a-z0-9_]+\.down\.sql$/u.test(entry.name))
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right));
 
@@ -60,46 +72,165 @@ async function loadMigrations(directory: string): Promise<readonly MigrationDefi
     } catch {
       throw new Error(`Migration ${match[1]} has no paired down SQL file.`);
     }
+    const upChecksum = checksum(upSql);
+    const downChecksum = checksum(downSql);
     definitions.push({
       version: match[1],
       name: match[2],
       upSql,
       downSql,
-      checksum: checksum(upSql),
+      upChecksum,
+      downChecksum,
+      pairChecksum: pairChecksum(upChecksum, downChecksum),
     });
   }
 
   const versions = definitions.map((migration) => migration.version);
   if (new Set(versions).size !== versions.length)
     throw new Error('Migration versions must be unique.');
+  const expectedDownFiles = upFiles.map((file) => file.replace(/\.up\.sql$/u, '.down.sql'));
+  if (expectedDownFiles.join('\n') !== downFiles.join('\n')) {
+    throw new Error('Migration up/down files must form exact pairs.');
+  }
   return definitions;
 }
 
-async function initializeMetadata(client: PoolClient): Promise<void> {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS public.trayvi_schema_migrations (
-      version varchar(32) PRIMARY KEY,
-      name varchar(160) NOT NULL,
-      checksum char(64) NOT NULL,
-      applied_at timestamptz NOT NULL DEFAULT clock_timestamp()
+function assertExactHistory(
+  applied: readonly AppliedMigration[],
+  definitions: readonly MigrationDefinition[],
+): void {
+  if (applied.length > definitions.length) {
+    throw new Error('Applied migration history is not a valid repository prefix.');
+  }
+  for (const [index, existing] of applied.entries()) {
+    const expected = definitions[index];
+    if (
+      !expected ||
+      existing.version !== expected.version ||
+      existing.name !== expected.name ||
+      existing.upChecksum !== expected.upChecksum ||
+      existing.downChecksum !== expected.downChecksum ||
+      existing.pairChecksum !== expected.pairChecksum
+    ) {
+      throw new Error('Applied migration history is not a valid repository prefix.');
+    }
+  }
+}
+
+async function initializeMetadata(
+  client: PoolClient,
+  definitions: readonly MigrationDefinition[],
+): Promise<void> {
+  await client.query('BEGIN');
+  try {
+    const table = await client.query<{ exists: boolean }>(
+      "SELECT to_regclass('public.trayvi_schema_migrations') IS NOT NULL AS exists",
     );
-    REVOKE ALL ON TABLE public.trayvi_schema_migrations FROM PUBLIC;
-  `);
+    if (table.rows[0]?.exists !== true) {
+      await client.query(`
+        CREATE TABLE public.trayvi_schema_migrations (
+          version varchar(32) PRIMARY KEY,
+          name varchar(160) NOT NULL,
+          up_checksum char(64) NOT NULL,
+          down_checksum char(64) NOT NULL,
+          pair_checksum char(64) NOT NULL,
+          applied_at timestamptz NOT NULL DEFAULT clock_timestamp()
+        )
+      `);
+    } else {
+      const columns = await client.query<{ column_name: string }>(
+        `SELECT column_name
+         FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'trayvi_schema_migrations'
+         ORDER BY column_name`,
+      );
+      const actual = columns.rows.map((row) => row.column_name);
+      const legacy = ['applied_at', 'checksum', 'name', 'version'];
+      const current = [
+        'applied_at',
+        'down_checksum',
+        'name',
+        'pair_checksum',
+        'up_checksum',
+        'version',
+      ];
+      if (actual.join('\n') === legacy.join('\n')) {
+        const oldRows = await client.query<{
+          version: string;
+          name: string;
+          checksum: string;
+        }>('SELECT version, name, checksum FROM public.trayvi_schema_migrations ORDER BY version');
+        if (oldRows.rows.length > definitions.length) {
+          throw new Error('Legacy migration history is not a valid repository prefix.');
+        }
+        for (const [index, row] of oldRows.rows.entries()) {
+          const expected = definitions[index];
+          if (
+            !expected ||
+            row.version !== expected.version ||
+            row.name !== expected.name ||
+            row.checksum !== expected.upChecksum
+          ) {
+            throw new Error('Legacy migration history is not a valid repository prefix.');
+          }
+        }
+        await client.query(
+          'ALTER TABLE public.trayvi_schema_migrations RENAME checksum TO up_checksum',
+        );
+        await client.query(
+          'ALTER TABLE public.trayvi_schema_migrations ADD COLUMN down_checksum char(64)',
+        );
+        await client.query(
+          'ALTER TABLE public.trayvi_schema_migrations ADD COLUMN pair_checksum char(64)',
+        );
+        for (const row of oldRows.rows) {
+          const expected = definitions.find((migration) => migration.version === row.version);
+          if (!expected)
+            throw new Error('Legacy migration history is not a valid repository prefix.');
+          await client.query(
+            `UPDATE public.trayvi_schema_migrations
+             SET down_checksum = $2, pair_checksum = $3
+             WHERE version = $1`,
+            [row.version, expected.downChecksum, expected.pairChecksum],
+          );
+        }
+        await client.query(
+          'ALTER TABLE public.trayvi_schema_migrations ALTER COLUMN down_checksum SET NOT NULL',
+        );
+        await client.query(
+          'ALTER TABLE public.trayvi_schema_migrations ALTER COLUMN pair_checksum SET NOT NULL',
+        );
+      } else if (actual.join('\n') !== current.join('\n')) {
+        throw new Error('Migration metadata schema is incomplete or unsupported.');
+      }
+    }
+    await client.query('REVOKE ALL ON TABLE public.trayvi_schema_migrations FROM PUBLIC');
+    await client.query('COMMIT');
+  } catch (error: unknown) {
+    await client.query('ROLLBACK');
+    throw error;
+  }
 }
 
 async function readApplied(client: PoolClient): Promise<readonly AppliedMigration[]> {
   const result = await client.query<{
     version: string;
     name: string;
-    checksum: string;
+    up_checksum: string;
+    down_checksum: string;
+    pair_checksum: string;
     applied_at: Date;
   }>(
-    'SELECT version, name, checksum, applied_at FROM public.trayvi_schema_migrations ORDER BY version',
+    `SELECT version, name, up_checksum, down_checksum, pair_checksum, applied_at
+     FROM public.trayvi_schema_migrations
+     ORDER BY version`,
   );
   return result.rows.map((row) => ({
     version: row.version,
     name: row.name,
-    checksum: row.checksum,
+    upChecksum: row.up_checksum,
+    downChecksum: row.down_checksum,
+    pairChecksum: row.pair_checksum,
     appliedAt: row.applied_at,
   }));
 }
@@ -121,19 +252,13 @@ export class SqlMigrator {
   async up(): Promise<MigrationRunResult> {
     const definitions = await loadMigrations(this.#directory);
     return this.#withLock(async (client) => {
-      await initializeMetadata(client);
+      await initializeMetadata(client, definitions);
       const applied = await readApplied(client);
-      const appliedByVersion = new Map(applied.map((migration) => [migration.version, migration]));
+      assertExactHistory(applied, definitions);
       const result: { applied: string[]; skipped: string[] } = { applied: [], skipped: [] };
 
-      for (const migration of definitions) {
-        const existing = appliedByVersion.get(migration.version);
-        if (existing) {
-          if (existing.checksum !== migration.checksum || existing.name !== migration.name) {
-            throw new Error(
-              `Applied migration ${migration.version} no longer matches repository SQL.`,
-            );
-          }
+      for (const [index, migration] of definitions.entries()) {
+        if (index < applied.length) {
           result.skipped.push(migration.version);
           continue;
         }
@@ -141,9 +266,16 @@ export class SqlMigrator {
         try {
           await client.query(migration.upSql);
           await client.query(
-            `INSERT INTO public.trayvi_schema_migrations (version, name, checksum)
-             VALUES ($1, $2, $3)`,
-            [migration.version, migration.name, migration.checksum],
+            `INSERT INTO public.trayvi_schema_migrations
+               (version, name, up_checksum, down_checksum, pair_checksum)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+              migration.version,
+              migration.name,
+              migration.upChecksum,
+              migration.downChecksum,
+              migration.pairChecksum,
+            ],
           );
           await client.query('COMMIT');
           result.applied.push(migration.version);
@@ -159,16 +291,14 @@ export class SqlMigrator {
   async down(): Promise<readonly string[]> {
     const definitions = await loadMigrations(this.#directory);
     return this.#withLock(async (client) => {
-      await initializeMetadata(client);
+      await initializeMetadata(client, definitions);
       const applied = await readApplied(client);
+      assertExactHistory(applied, definitions);
       const latest = applied.at(-1);
       if (!latest) return [];
-      const migration = definitions.find((candidate) => candidate.version === latest.version);
-      if (!migration || migration.checksum !== latest.checksum) {
-        throw new Error(
-          `Cannot safely roll back migration ${latest.version}; repository SQL differs.`,
-        );
-      }
+      const migration = definitions[applied.length - 1];
+      if (!migration)
+        throw new Error('Applied migration history is not a valid repository prefix.');
       await client.query('BEGIN');
       try {
         await client.query(migration.downSql);
@@ -186,8 +316,11 @@ export class SqlMigrator {
 
   async status(): Promise<readonly AppliedMigration[]> {
     return this.#withLock(async (client) => {
-      await initializeMetadata(client);
-      return readApplied(client);
+      const definitions = await loadMigrations(this.#directory);
+      await initializeMetadata(client, definitions);
+      const applied = await readApplied(client);
+      assertExactHistory(applied, definitions);
+      return applied;
     });
   }
 
