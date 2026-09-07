@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-07T18:49:19.6921649Z",
+  "targetCommit": "01f360aa717593458beae3123db3de925f3fb319",
+  "rootVerify": {
+    "result": "PASS",
+    "unitTestFilesPassed": 14,
+    "unitTestsPassed": 58,
+    "workspaceBuildsPassed": 5,
+    "architectureGateReportedPass": true,
+    "secretGateReportedPass": true,
+    "licensesChecked": 323,
+    "licenseFindings": 0
+  },
+  "isolatedWindowsIntegration": {
+    "result": "PASS_WITH_PLATFORM_SKIPS",
+    "testsPassed": 17,
+    "testsSkipped": 2,
+    "skips": "POSIX compiled child-process signal cases"
+  },
+  "existingLocalEnvironment": {
+    "documentedCommandResult": "BLOCKED_IGNORED_ENVIRONMENT_AND_VOLUME_DRIFT",
+    "classifiedAsTargetDefect": false,
+    "replacement": "fresh disposable database"
+  },
+  "databaseVerification": {
+    "result": "PASS",
+    "invariantsPassed": 11,
+    "database": "disposable PostgreSQL 17/PostGIS 3.5 over loopback"
+  },
+  "cleanCheckout": {
+    "commitAndTreeMatched": true,
+    "lockfileHashMatched": true,
+    "offlineFrozenInstall": "BLOCKED_INCOMPLETE_LOCAL_STORE",
+    "onlineFrozenInstall": "BLOCKED_HOST_CERTIFICATE_CHAIN"
+  },
+  "container": {
+    "user": "70:70",
+    "effectiveCapabilitiesHex": "0000000000000000",
+    "rootFilesystemRootWritable": false,
+    "databaseDirectoryWritable": true,
+    "composeMemoryLimitBytes": 1073741824,
+    "composeNanoCpus": 2000000000,
+    "publishedOnLoopback": true
+  },
+  "security": {
+    "repositorySecrets": 0,
+    "licenses": "PASS",
+    "liveDependencyAudit": "UNAVAILABLE_HOST_CERTIFICATE_CHAIN",
+    "declaredHostedCritical": 0,
+    "declaredHostedHigh": 0,
+    "declaredHostedModerate": 0,
+    "declaredHostedSecrets": 0,
+    "declaredHostedMisconfigurations": 0
+  },
+  "originalFindingStatus": {
+    "closed": 7,
+    "partiallyRemediated": 3,
+    "reopened": 1
+  },
+  "newFindings": { "critical": 0, "high": 0, "medium": 0, "low": 1, "info": 0 },
+  "decision": "PHASE 0 RE-AUDIT FAILED — ADDITIONAL REMEDIATION REQUIRED"
+}

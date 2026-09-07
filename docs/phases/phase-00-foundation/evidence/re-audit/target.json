@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-07T18:49:19.6921649Z",
+  "originalAuditCommit": "6b977aa4eb078f4079cb24cbd1370244d31c7e17",
+  "remediationCommit": "01f360aa717593458beae3123db3de925f3fb319",
+  "reAuditTarget": {
+    "commit": "01f360aa717593458beae3123db3de925f3fb319",
+    "tree": "87bcaac4c86b5c76dac6b8f98041b0e04eae882d",
+    "branch": "main",
+    "remote": "https://github.com/SaulL08/Trayvi.git",
+    "headMatchesLocalOriginMain": true,
+    "workingTreeCleanAtStart": true
+  },
+  "githubVerification": {
+    "declaredMainCommit": "01f360aa717593458beae3123db3de925f3fb319",
+    "liveReadback": "UNAVAILABLE",
+    "reason": "Git credential access and the connected GitHub read transport were unavailable in this audit session."
+  },
+  "hostedCi": {
+    "declaredRunId": 34149350569,
+    "declaredRunner": "ubuntu-24.04",
+    "declaredStatus": "SUCCESS",
+    "liveReadback": "UNAVAILABLE"
+  },
+  "auditDocumentSha256AtStart": "3EF87D28459B5B5F608CBC202253EACF0F2D27F84E6EC6354601AF7A292F22F1",
+  "auditDocumentSha256AtEnd": "3EF87D28459B5B5F608CBC202253EACF0F2D27F84E6EC6354601AF7A292F22F1"
+}

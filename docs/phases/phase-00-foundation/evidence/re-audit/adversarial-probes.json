@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-07T18:49:19.6921649Z",
+  "targetCommit": "01f360aa717593458beae3123db3de925f3fb319",
+  "secretHandling": {
+    "structuredContextCanaryRedacted": true,
+    "stringOnlyEventCanaryReachedFinalMessage": true,
+    "percentEncodedAssignmentCanaryRetained": true,
+    "result": "REOPENED"
+  },
+  "shutdown": {
+    "normalDrain": true,
+    "cancelableTimeout": true,
+    "nonCancelableDeadlineFailsWithoutStopped": true,
+    "concurrentTimeoutPairsChecked": 25,
+    "result": "CLOSED"
+  },
+  "migrationIntegrity": {
+    "unknownFutureGapIncompleteAndDriftCasesRejected": true,
+    "validPrefixNoOpDownUpAccepted": true,
+    "concurrentApplySerialized": true,
+    "invalidSqlRolledBack": true,
+    "result": "CLOSED"
+  },
+  "architecture": {
+    "existingGateReportedPass": true,
+    "tsconfigPathAliasImportCompiled": true,
+    "tsconfigPathAliasImportDetected": false,
+    "forwardAliasComputedEnvironmentReadCompiled": true,
+    "forwardAliasComputedEnvironmentReadDetected": false,
+    "result": "PARTIALLY_REMEDIATED"
+  },
+  "databaseTls": {
+    "explicitStagingDisableRejected": true,
+    "explicitProductionDisableRejected": true,
+    "malformedModeRejected": true,
+    "duplicateUrlTlsParametersRejected": true,
+    "migrationUrlTlsConflictRejected": true,
+    "missingNodeEnvironmentDefaultsMigrationToDevelopmentDisable": true,
+    "result": "PARTIALLY_REMEDIATED"
+  },
+  "runtimeDatabaseIdentity": {
+    "sessionUserEqualsPhysicalRuntimeLogin": true,
+    "currentUserEqualsPhysicalRuntimeLogin": true,
+    "directMemberships": ["trayvi_runtime"],
+    "createAlterDropTruncateGrantRevokeCreateRoleSetRoleSetSessionAuthorizationCreateExtensionDenied": true,
+    "alterOwnDefaultPrivilegesAcceptedWithoutAvailableSchemaCreate": true,
+    "result": "CLOSED"
+  },
+  "outbox": {
+    "coherentStateConstraint": true,
+    "deleteDenied": true,
+    "pendingToPublishedSingleUpdateAccepted": true,
+    "result": "PARTIALLY_REMEDIATED"
+  },
+  "sanitizer": {
+    "getterCalls": 0,
+    "reflectionFailuresContained": true,
+    "revokedProxyContained": true,
+    "circularNullPrototypeAggregateMapBigIntFunctionAndSymbolHandled": true,
+    "canaryReachedSanitizedOutput": false,
+    "result": "CLOSED"
+  },
+  "correlation": {
+    "concurrentPairsChecked": 25,
+    "responsesAndFailureCompletionLogsMatched": true,
+    "crossRequestBleed": false,
+    "result": "CLOSED"
+  },
+  "supplyChain": {
+    "controlledModerateRetainedIdentityFields": true,
+    "controlledUntriagedModerateFailed": true,
+    "liveRegistryAudit": "UNAVAILABLE_HOST_CERTIFICATE_CHAIN",
+    "declaredHostedCounts": { "critical": 0, "high": 0, "moderate": 0 },
+    "result": "CLOSED_WITH_LIVE_READ_LIMITATION"
+  },
+  "historicalSecretScanning": {
+    "repositoryAndReachableHistoryScanPassed": true,
+    "nonRepositoryFailsClosed": true,
+    "largeHistoryStreams": true,
+    "historyOnlyCanaryDetected": true,
+    "gitSubprocessHasInternalTimeout": false,
+    "result": "CLOSED_WITH_NEW_LOW_FINDING"
+  }
+}
