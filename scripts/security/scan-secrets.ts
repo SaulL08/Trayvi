@@ -1,7 +1,7 @@
-import { execFile, execFileSync, spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { promisify } from 'node:util';
+
+import { runBoundedProcess } from './bounded-process.js';
 
 interface SecretPattern {
   readonly name: string;
@@ -27,7 +27,11 @@ const patterns: readonly SecretPattern[] = [
   },
 ];
 
-const execFileAsync = promisify(execFile);
+export interface GitScanDeadlineOptions {
+  readonly metadataTimeoutMs?: number;
+  readonly historyTimeoutMs?: number;
+  readonly terminationGraceMs?: number;
+}
 
 export function findPotentialSecrets(source: string, label: string): readonly SecretFinding[] {
   const findings: SecretFinding[] = [];
@@ -42,8 +46,11 @@ export function findPotentialSecrets(source: string, label: string): readonly Se
   return findings;
 }
 
-function repositoryFiles(root: string): readonly string[] {
-  const output = execFileSync(
+async function repositoryFiles(
+  root: string,
+  options: GitScanDeadlineOptions,
+): Promise<readonly string[]> {
+  const result = await runBoundedProcess(
     'git',
     [
       '-c',
@@ -54,17 +61,33 @@ function repositoryFiles(root: string): readonly string[] {
       '--exclude-standard',
       '-z',
     ],
-    { cwd: root, encoding: 'utf8' },
+    {
+      cwd: root,
+      label: 'Git repository file enumeration',
+      timeoutMs: options.metadataTimeoutMs ?? 15_000,
+      ...(options.terminationGraceMs === undefined
+        ? {}
+        : { terminationGraceMs: options.terminationGraceMs }),
+      maxCapturedOutputBytes: 64 * 1_024 * 1_024,
+    },
   );
-  return output.split('\0').filter(Boolean);
+  return result.stdout.split('\0').filter(Boolean);
 }
 
-async function assertGitRepository(root: string): Promise<void> {
+async function assertGitRepository(root: string, options: GitScanDeadlineOptions): Promise<void> {
   try {
-    const { stdout } = await execFileAsync(
+    const { stdout } = await runBoundedProcess(
       'git',
       ['-c', `safe.directory=${root.replaceAll('\\', '/')}`, 'rev-parse', '--is-inside-work-tree'],
-      { cwd: root, encoding: 'utf8' },
+      {
+        cwd: root,
+        label: 'Git repository validation',
+        timeoutMs: options.metadataTimeoutMs ?? 15_000,
+        ...(options.terminationGraceMs === undefined
+          ? {}
+          : { terminationGraceMs: options.terminationGraceMs }),
+        maxCapturedOutputBytes: 64 * 1_024,
+      },
     );
     if (stdout.trim() !== 'true') throw new Error('Git did not identify a working tree');
   } catch (error) {
@@ -72,12 +95,23 @@ async function assertGitRepository(root: string): Promise<void> {
   }
 }
 
-async function reachableCommitCount(root: string): Promise<number> {
+async function reachableCommitCount(
+  root: string,
+  options: GitScanDeadlineOptions,
+): Promise<number> {
   try {
-    const { stdout } = await execFileAsync(
+    const { stdout } = await runBoundedProcess(
       'git',
       ['-c', `safe.directory=${root.replaceAll('\\', '/')}`, 'rev-list', '--all', '--count'],
-      { cwd: root, encoding: 'utf8' },
+      {
+        cwd: root,
+        label: 'Git history enumeration',
+        timeoutMs: options.metadataTimeoutMs ?? 15_000,
+        ...(options.terminationGraceMs === undefined
+          ? {}
+          : { terminationGraceMs: options.terminationGraceMs }),
+        maxCapturedOutputBytes: 64 * 1_024,
+      },
     );
     const count = Number.parseInt(stdout.trim(), 10);
     if (!Number.isSafeInteger(count) || count < 0) throw new Error('Invalid Git commit count');
@@ -87,58 +121,58 @@ async function reachableCommitCount(root: string): Promise<number> {
   }
 }
 
-export async function scanGitHistory(root: string): Promise<readonly SecretFinding[]> {
-  await assertGitRepository(root);
-  if ((await reachableCommitCount(root)) === 0) return [];
+export async function scanGitHistory(
+  root: string,
+  options: GitScanDeadlineOptions = {},
+): Promise<readonly SecretFinding[]> {
+  await assertGitRepository(root, options);
+  if ((await reachableCommitCount(root, options)) === 0) return [];
 
-  return await new Promise((fulfill, reject) => {
-    const findings: SecretFinding[] = [];
-    const child = spawn(
-      'git',
-      [
-        '-c',
-        `safe.directory=${root.replaceAll('\\', '/')}`,
-        'log',
-        '-p',
-        '--all',
-        '--no-ext-diff',
-        '--text',
-      ],
-      { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] },
-    );
-    let pending = '';
-    let lineNumber = 0;
-
-    const inspectLine = (line: string): void => {
-      lineNumber += 1;
-      for (const finding of findPotentialSecrets(line, 'git-history')) {
-        findings.push({ ...finding, line: lineNumber });
-      }
-    };
-
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (chunk: string) => {
-      const lines = `${pending}${chunk}`.split(/\r?\n/u);
-      pending = lines.pop() ?? '';
-      for (const line of lines) inspectLine(line);
-    });
-    child.on('error', (error) => {
-      reject(new Error('Unable to start Git history scan', { cause: error }));
-    });
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`Git history scan failed with exit code ${String(code)}`));
-        return;
-      }
-      if (pending) inspectLine(pending);
-      fulfill(findings);
-    });
-  });
+  const findings: SecretFinding[] = [];
+  let pending = '';
+  let lineNumber = 0;
+  const inspectLine = (line: string): void => {
+    lineNumber += 1;
+    for (const finding of findPotentialSecrets(line, 'git-history')) {
+      findings.push({ ...finding, line: lineNumber });
+    }
+  };
+  await runBoundedProcess(
+    'git',
+    [
+      '-c',
+      `safe.directory=${root.replaceAll('\\', '/')}`,
+      'log',
+      '-p',
+      '--all',
+      '--no-ext-diff',
+      '--text',
+    ],
+    {
+      cwd: root,
+      label: 'Git history secret scan',
+      timeoutMs: options.historyTimeoutMs ?? 120_000,
+      ...(options.terminationGraceMs === undefined
+        ? {}
+        : { terminationGraceMs: options.terminationGraceMs }),
+      captureStdout: false,
+      onStdout: (chunk) => {
+        const lines = `${pending}${chunk}`.split(/\r?\n/u);
+        pending = lines.pop() ?? '';
+        for (const line of lines) inspectLine(line);
+      },
+    },
+  );
+  if (pending) inspectLine(pending);
+  return findings;
 }
 
-export async function scanRepository(root: string): Promise<readonly SecretFinding[]> {
+export async function scanRepository(
+  root: string,
+  options: GitScanDeadlineOptions = {},
+): Promise<readonly SecretFinding[]> {
   const findings: SecretFinding[] = [];
-  for (const file of repositoryFiles(root)) {
+  for (const file of await repositoryFiles(root, options)) {
     try {
       const content = await readFile(resolve(root, file), 'utf8');
       findings.push(...findPotentialSecrets(content, file));
@@ -147,7 +181,7 @@ export async function scanRepository(root: string): Promise<readonly SecretFindi
     }
   }
 
-  findings.push(...(await scanGitHistory(root)));
+  findings.push(...(await scanGitHistory(root, options)));
   return findings;
 }
 

@@ -124,4 +124,18 @@ describe('dependency audit policy', () => {
       severity: 'moderate',
     });
   });
+
+  it('fails closed on a registry or network error report', () => {
+    expect(() =>
+      evaluateDependencyAudit(
+        {
+          error: {
+            code: 'ENETUNREACH',
+            summary: 'registry unavailable',
+          },
+        },
+        [],
+      ),
+    ).toThrow('Dependency audit did not return a valid report');
+  });
 });

@@ -1,6 +1,7 @@
-import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
+
+import { runBoundedProcess } from './bounded-process.js';
 
 export type AdvisorySeverity = 'info' | 'low' | 'moderate' | 'high' | 'critical';
 export type AdvisoryDisposition = 'ACCEPT' | 'MITIGATE' | 'FIX' | 'NOT_AFFECTED';
@@ -295,31 +296,25 @@ async function installedVersions(root: string): Promise<ReadonlyMap<string, read
   return new Map([...versions].map(([name, values]) => [name, [...values].sort()]));
 }
 
-async function runAudit(root: string): Promise<unknown> {
-  return await new Promise((fulfill, reject) => {
-    const child = spawn(
-      process.execPath,
-      [resolve(root, 'node_modules/pnpm/bin/pnpm.cjs'), 'audit', '--json'],
-      {
-        cwd: root,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
-    let stdout = '';
-    let stderr = '';
-    child.stdout.setEncoding('utf8').on('data', (chunk: string) => (stdout += chunk));
-    child.stderr.setEncoding('utf8').on('data', (chunk: string) => (stderr += chunk));
-    child.on('error', reject);
-    child.on('close', () => {
-      try {
-        fulfill(JSON.parse(stdout));
-      } catch {
-        reject(
-          new Error(`Dependency audit failed without JSON: ${stderr.trim() || 'unknown error'}`),
-        );
-      }
-    });
-  });
+export async function runDependencyAuditCommand(root: string): Promise<unknown> {
+  const result = await runBoundedProcess(
+    process.execPath,
+    [resolve(root, 'node_modules/pnpm/bin/pnpm.cjs'), 'audit', '--json'],
+    {
+      cwd: root,
+      label: 'Dependency audit',
+      timeoutMs: 120_000,
+      terminationGraceMs: 1_000,
+      maxCapturedOutputBytes: 16 * 1_024 * 1_024,
+      // pnpm uses 1 for a complete report containing policy findings. The evaluator decides pass/fail.
+      acceptedExitCodes: [0, 1],
+    },
+  );
+  try {
+    return JSON.parse(result.stdout);
+  } catch {
+    throw new Error('Dependency audit completed without a valid JSON report');
+  }
 }
 
 async function main(): Promise<void> {
@@ -331,7 +326,7 @@ async function main(): Promise<void> {
   const decisions = Array.isArray(triageDocument.decisions)
     ? (triageDocument.decisions as unknown as AdvisoryTriage[])
     : [];
-  const report = evaluateDependencyAudit(await runAudit(root), decisions, {
+  const report = evaluateDependencyAudit(await runDependencyAuditCommand(root), decisions, {
     dependencyTypes: await directDependencyTypes(root),
     installedVersions: await installedVersions(root),
   });
