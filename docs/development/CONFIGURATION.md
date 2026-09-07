@@ -36,3 +36,8 @@ Database URL query options that select or weaken TLS are rejected. The typed TLS
 the PostgreSQL driver for both runtime probes and migration commands with certificate verification
 enabled. Local development explicitly uses `disable` on loopback; it is never a staging/production
 default.
+
+Migration and administrative commands require an explicit valid `NODE_ENV`; absence never selects
+development. Local setup writes `NODE_ENV=development` explicitly, and CI selects `test` explicitly.
+Only an explicitly selected `development` or `test` environment may use the documented
+`DATABASE_TLS_MODE=disable` exception.

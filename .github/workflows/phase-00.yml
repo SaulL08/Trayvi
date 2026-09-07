@@ -15,6 +15,8 @@ concurrency:
 
 env:
   NODE_VERSION: 22.14.0
+  NODE_ENV: test
+  DATABASE_TLS_MODE: disable
   MIGRATION_DATABASE_URL: postgresql://postgres:ci-local-only@127.0.0.1:5432/postgres
   DATABASE_URL: postgresql://postgres:ci-local-only@127.0.0.1:5432/postgres
 

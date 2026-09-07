@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { ConfigValidationError } from './config-error';
+import type { ConfigIssue } from './config-error';
 import type {
   AppConfig,
   DatabaseTlsConfig,
@@ -312,7 +313,6 @@ export function parseMigrationConfig(environment: RawEnvironment): MigrationConf
   }
   const environmentResult = z
     .enum(['development', 'test', 'staging', 'production'])
-    .default('development')
     .safeParse(environment.NODE_ENV);
   const modeResult = z
     .enum(['disable', 'verify-full'])
@@ -320,9 +320,20 @@ export function parseMigrationConfig(environment: RawEnvironment): MigrationConf
     .safeParse(environment.DATABASE_TLS_MODE);
   const caResult = optionalTextField(65_536).safeParse(environment.DATABASE_TLS_CA);
   if (!environmentResult.success || !modeResult.success || !caResult.success) {
-    throw new ConfigValidationError([
-      { field: 'DATABASE_TLS_MODE', constraint: 'must define a valid database TLS policy' },
-    ]);
+    const issues: ConfigIssue[] = [];
+    if (!environmentResult.success)
+      issues.push({
+        field: 'NODE_ENV',
+        constraint: 'must explicitly select development, test, staging, or production',
+      });
+    if (!modeResult.success)
+      issues.push({
+        field: 'DATABASE_TLS_MODE',
+        constraint: 'must define a valid database TLS policy',
+      });
+    if (!caResult.success)
+      issues.push({ field: 'DATABASE_TLS_CA', constraint: 'must be a valid CA certificate value' });
+    throw new ConfigValidationError(issues);
   }
   let url: URL;
   try {

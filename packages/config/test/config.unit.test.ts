@@ -167,4 +167,33 @@ describe('configuration composition', () => {
     expect(application.database.tls).toEqual({ mode: 'disable' });
     expect(migration.databaseTls).toEqual({ mode: 'disable' });
   });
+
+  it('fails migration configuration closed when the environment is absent or invalid', () => {
+    const missingEnvironment = { ...validEnvironment, NODE_ENV: undefined };
+
+    expect(() => parseMigrationConfig(missingEnvironment)).toThrow(/NODE_ENV/u);
+    expect(() => parseMigrationConfig({ ...validEnvironment, NODE_ENV: 'preview' })).toThrow(
+      /NODE_ENV/u,
+    );
+  });
+
+  it.each(['staging', 'production'] as const)(
+    'accepts only explicit verify-full migration TLS in %s',
+    (environment) => {
+      const base = {
+        ...validEnvironment,
+        NODE_ENV: environment,
+        MIGRATION_DATABASE_URL: 'postgresql://migration_user:long-random-value@db.example/trayvi',
+      } as const;
+
+      expect(() =>
+        parseMigrationConfig({ ...base, DATABASE_TLS_MODE: 'verify-full' }),
+      ).not.toThrow();
+      expect(() => parseMigrationConfig({ ...base, DATABASE_TLS_MODE: 'disable' })).toThrow(
+        /DATABASE_TLS_MODE/u,
+      );
+      const missingMode = { ...base, DATABASE_TLS_MODE: undefined };
+      expect(() => parseMigrationConfig(missingMode)).toThrow(/DATABASE_TLS_MODE/u);
+    },
+  );
 });
