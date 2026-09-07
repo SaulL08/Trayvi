@@ -5,6 +5,7 @@ const UNSANITIZABLE = '[UNSANITIZABLE]';
 const MAX_DEPTH = 8;
 const MAX_ENTRIES = 100;
 const MAX_STRING_LENGTH = 4_096;
+const MAX_PERCENT_DECODE_PASSES = 2;
 
 const sensitiveKeyNames = [
   'authorization',
@@ -88,6 +89,19 @@ function sanitizeString(input: string): string {
     value += TRUNCATED;
   }
 
+  for (let pass = 0; pass < MAX_PERCENT_DECODE_PASSES; pass += 1) {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(value);
+    } catch {
+      decoded = value.replace(/%([0-9a-f]{2})/giu, (_, hexadecimal: string) =>
+        String.fromCodePoint(Number.parseInt(hexadecimal, 16)),
+      );
+    }
+    if (decoded === value) break;
+    value = decoded.slice(0, MAX_STRING_LENGTH);
+  }
+
   value = Array.from(value, (character) => {
     const codePoint = character.codePointAt(0) ?? 0;
     return codePoint <= 31 || codePoint === 127 ? ' ' : character;
@@ -124,6 +138,7 @@ function sanitizeError(
   const message = descriptorValue(descriptors.message);
   const stack = descriptorValue(descriptors.stack);
   const cause = descriptorValue(descriptors.cause);
+  const aggregateErrors = descriptorValue(descriptors.errors);
   output.name = typeof name === 'string' ? sanitizeString(name) : 'Error';
   output.message =
     typeof message === 'string'
@@ -137,6 +152,18 @@ function sanitizeError(
   if (cause !== ACCESSOR && cause !== undefined)
     output.cause = sanitizeValue(cause, seen, depth + 1);
   else if (descriptors.cause) output.cause = ACCESSOR;
+  if (aggregateErrors !== ACCESSOR && aggregateErrors !== undefined)
+    output.errors = sanitizeValue(aggregateErrors, seen, depth + 1);
+  else if (descriptors.errors) output.errors = ACCESSOR;
+  for (const [key, descriptor] of Object.entries(descriptors)) {
+    if (['name', 'message', 'stack', 'cause', 'errors'].includes(key) || !descriptor.enumerable)
+      continue;
+    output[key] = isSensitiveKey(key)
+      ? REDACTED
+      : 'value' in descriptor
+        ? sanitizeValue(descriptor.value, seen, depth + 1)
+        : ACCESSOR;
+  }
   return output;
 }
 

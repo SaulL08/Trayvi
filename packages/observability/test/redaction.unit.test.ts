@@ -150,6 +150,61 @@ describe('recursive log redaction', () => {
     expect(output).toContain('[REDACTED]');
   });
 
+  it('sanitizes string-only and encoded secrets in final serialized Pino output', async () => {
+    const stream = new PassThrough();
+    let output = '';
+    stream.on('data', (chunk: Buffer) => {
+      output += chunk.toString('utf8');
+    });
+    const logger = new StructuredLogger({
+      service: 'api',
+      environment: 'test',
+      version: 'test',
+      level: 'debug',
+      format: 'json',
+      destination: stream,
+    });
+    const canary = 'final-pino-canary';
+    const variants = [
+      `password=${canary}`,
+      `password: ${canary}`,
+      `password="${canary}"`,
+      `"password":"${canary}"`,
+      `?password=${canary}`,
+      `&password=${canary}`,
+      `password%3D${canary}`,
+      `password%3A${canary}`,
+      `PASSWORD%253D${canary}`,
+      `ToKeN=${canary}`,
+      `access_token=${canary}`,
+      `refresh_token=${canary}`,
+      `authorization: ${canary}`,
+      `secret=${canary}`,
+      `otp=${canary}`,
+      `cedula=${canary}`,
+      `national_id=${canary}`,
+      `document_number=${canary}`,
+    ];
+
+    variants.forEach((variant, index) => logger.info(variant, { index }));
+    logger.error(
+      'aggregate.failed',
+      new AggregateError([new Error(`password=${canary}`)], `token=${canary}`),
+      { note: `secret=${canary}` },
+    );
+    logger.flush();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(output).not.toContain(canary);
+    const records = output
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as { event: string; message: string });
+    expect(records).toHaveLength(variants.length + 1);
+    expect(records.every((record) => record.event === record.message)).toBe(true);
+    expect(records.some((record) => record.message.includes('[REDACTED]'))).toBe(true);
+  });
+
   it('does not invoke getters while sanitizing objects or errors', () => {
     let getterCalls = 0;
     const hostile = Object.defineProperties(new Error('safe diagnostic'), {

@@ -75,11 +75,13 @@ export class StructuredLogger implements Logger {
     suppliedContext: Readonly<Record<string, unknown>>,
   ): void {
     const requestContext = getRequestContext();
+    const sanitizedEvent = sanitizeForLogging(event);
+    const safeEvent = typeof sanitizedEvent === 'string' ? sanitizedEvent : '[UNSANITIZABLE]';
     const context = sanitizeLogRecord({
       ...(requestContext ?? {}),
       ...suppliedContext,
-      event,
+      event: safeEvent,
     });
-    this.#logger[level](context, event);
+    this.#logger[level](context, safeEvent);
   }
 }
