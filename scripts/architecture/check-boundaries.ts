@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 
@@ -80,17 +81,40 @@ function unwrapped(expression: ts.Expression): ts.Expression {
   return current;
 }
 
-function propertyName(expression: ts.Expression): string | undefined {
+function staticString(
+  expression: ts.Expression,
+  bindings: ReadonlyMap<string, ts.Expression>,
+  seen = new Set<string>(),
+): string | undefined {
+  const candidate = unwrapped(expression);
+  if (ts.isStringLiteral(candidate) || ts.isNoSubstitutionTemplateLiteral(candidate))
+    return candidate.text;
+  if (
+    ts.isBinaryExpression(candidate) &&
+    candidate.operatorToken.kind === ts.SyntaxKind.PlusToken
+  ) {
+    const left = staticString(candidate.left, bindings, seen);
+    const right = staticString(candidate.right, bindings, seen);
+    return left === undefined || right === undefined ? undefined : `${left}${right}`;
+  }
+  if (ts.isIdentifier(candidate) && !seen.has(candidate.text)) {
+    const value = bindings.get(candidate.text);
+    if (!value) return undefined;
+    const nextSeen = new Set(seen);
+    nextSeen.add(candidate.text);
+    return staticString(value, bindings, nextSeen);
+  }
+  return undefined;
+}
+
+function propertyName(
+  expression: ts.Expression,
+  bindings: ReadonlyMap<string, ts.Expression>,
+): string | undefined {
   const candidate = unwrapped(expression);
   if (ts.isPropertyAccessExpression(candidate)) return candidate.name.text;
-  if (
-    ts.isElementAccessExpression(candidate) &&
-    candidate.argumentExpression &&
-    (ts.isStringLiteral(candidate.argumentExpression) ||
-      ts.isNoSubstitutionTemplateLiteral(candidate.argumentExpression))
-  ) {
-    return candidate.argumentExpression.text;
-  }
+  if (ts.isElementAccessExpression(candidate) && candidate.argumentExpression)
+    return staticString(candidate.argumentExpression, bindings);
   return undefined;
 }
 
@@ -105,7 +129,16 @@ function hasProcessEnvironmentAccess(source: string, file: string): boolean {
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const processAliases = new Set(['process']);
   const globalAliases = new Set(['globalThis', 'global']);
+  const staticBindings = new Map<string, ts.Expression>();
   let found = false;
+
+  const collectBindings = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      staticBindings.set(node.name.text, node.initializer);
+    }
+    ts.forEachChild(node, collectBindings);
+  };
+  collectBindings(sourceFile);
 
   const isAlias = (expression: ts.Expression, aliases: ReadonlySet<string>): boolean => {
     const candidate = unwrapped(expression);
@@ -115,14 +148,18 @@ function hasProcessEnvironmentAccess(source: string, file: string): boolean {
     if (isAlias(expression, processAliases)) return true;
     const object = accessedObject(expression);
     return (
-      propertyName(expression) === 'process' &&
+      propertyName(expression, staticBindings) === 'process' &&
       object !== undefined &&
       isAlias(object, globalAliases)
     );
   };
   const isEnvironment = (expression: ts.Expression): boolean => {
     const object = accessedObject(expression);
-    return propertyName(expression) === 'env' && object !== undefined && isProcess(object);
+    return (
+      propertyName(expression, staticBindings) === 'env' &&
+      object !== undefined &&
+      isProcess(object)
+    );
   };
   const bindAlias = (name: ts.BindingName, initializer: ts.Expression): void => {
     if (ts.isIdentifier(name)) {
@@ -133,12 +170,15 @@ function hasProcessEnvironmentAccess(source: string, file: string): boolean {
     }
     if (!ts.isObjectBindingPattern(name)) return;
     for (const element of name.elements) {
-      const sourceName =
-        element.propertyName?.getText(sourceFile) ?? element.name.getText(sourceFile);
-      if (isProcess(initializer) && sourceName.replaceAll(/["']/gu, '') === 'env') found = true;
+      const sourceName = element.propertyName
+        ? ts.isComputedPropertyName(element.propertyName)
+          ? staticString(element.propertyName.expression, staticBindings)
+          : element.propertyName.getText(sourceFile).replaceAll(/["']/gu, '')
+        : element.name.getText(sourceFile).replaceAll(/["']/gu, '');
+      if (isProcess(initializer) && sourceName === 'env') found = true;
       if (
         isAlias(initializer, globalAliases) &&
-        sourceName.replaceAll(/["']/gu, '') === 'process' &&
+        sourceName === 'process' &&
         ts.isIdentifier(element.name)
       ) {
         processAliases.add(element.name.text);
@@ -146,7 +186,7 @@ function hasProcessEnvironmentAccess(source: string, file: string): boolean {
     }
   };
 
-  const visit = (node: ts.Node): void => {
+  const bindKnownAliases = (node: ts.Node): void => {
     if (ts.isVariableDeclaration(node) && node.initializer) bindAlias(node.name, node.initializer);
     if (
       ts.isBinaryExpression(node) &&
@@ -156,6 +196,15 @@ function hasProcessEnvironmentAccess(source: string, file: string): boolean {
       if (isProcess(node.right)) processAliases.add(node.left.text);
       if (isAlias(node.right, globalAliases)) globalAliases.add(node.left.text);
     }
+    ts.forEachChild(node, bindKnownAliases);
+  };
+  for (let pass = 0; pass < staticBindings.size + 2; pass += 1) {
+    const previousSize = processAliases.size + globalAliases.size;
+    bindKnownAliases(sourceFile);
+    if (processAliases.size + globalAliases.size === previousSize) break;
+  }
+
+  const visit = (node: ts.Node): void => {
     if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
       if (isEnvironment(node)) found = true;
     }
@@ -200,10 +249,40 @@ function owningUnit(file: string, units: readonly WorkspaceUnit[]): WorkspaceUni
 function importedUnit(
   specifier: string,
   importer: string,
+  root: string,
   units: readonly WorkspaceUnit[],
 ): WorkspaceUnit | undefined {
-  if (specifier.startsWith('.')) return owningUnit(resolve(dirname(importer), specifier), units);
-  return units.find((unit) => specifier === unit.name || specifier.startsWith(`${unit.name}/`));
+  const textualTarget = specifier.startsWith('.')
+    ? owningUnit(resolve(dirname(importer), specifier), units)
+    : units.find((unit) => specifier === unit.name || specifier.startsWith(`${unit.name}/`));
+  if (textualTarget) return textualTarget;
+
+  let directory = dirname(importer);
+  const canonicalRoot = resolve(root);
+  let configFile: string | undefined;
+  while (directory === canonicalRoot || directory.startsWith(`${canonicalRoot}${sep}`)) {
+    const candidate = resolve(directory, 'tsconfig.json');
+    if (existsSync(candidate)) {
+      configFile = candidate;
+      break;
+    }
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  if (!configFile) return undefined;
+  const parsed = ts.getParsedCommandLineOfConfigFile(
+    configFile,
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: () => undefined,
+    },
+  );
+  if (!parsed) return undefined;
+  const resolvedModule = ts.resolveModuleName(specifier, importer, parsed.options, ts.sys)
+    .resolvedModule?.resolvedFileName;
+  return resolvedModule ? owningUnit(resolvedModule, units) : undefined;
 }
 
 export async function inspectArchitectureFiles(
@@ -237,7 +316,7 @@ export async function inspectArchitectureFiles(
     }
 
     for (const specifier of importsFrom(source, file)) {
-      const target = importedUnit(specifier, absoluteFile, units);
+      const target = importedUnit(specifier, absoluteFile, root, units);
       const resolvedImport = specifier.startsWith('.')
         ? normalized(relative(root, resolve(dirname(absoluteFile), specifier)))
         : specifier;

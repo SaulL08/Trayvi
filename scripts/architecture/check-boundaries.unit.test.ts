@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -40,6 +41,30 @@ describe('architecture boundary enforcement', () => {
     );
     const violations = await inspectArchitectureFiles(process.cwd(), [fixture]);
 
+    expect(violations).toContainEqual(expect.objectContaining({ code: 'DIRECT_ENV_ACCESS' }));
+  });
+
+  it('resolves TypeScript path aliases and forward computed environment aliases', async () => {
+    const root = resolve('scripts/architecture/fixtures/alias-workspace');
+    const fixture = resolve(root, 'packages/foundation/src/bypass.ts');
+    const configPath = resolve(root, 'packages/foundation/tsconfig.json');
+    const parsed = ts.getParsedCommandLineOfConfigFile(
+      configPath,
+      {},
+      {
+        ...ts.sys,
+        onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+          throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+        },
+      },
+    );
+    expect(parsed).toBeDefined();
+    const program = ts.createProgram(parsed?.fileNames ?? [], parsed?.options ?? {});
+    expect(ts.getPreEmitDiagnostics(program)).toEqual([]);
+
+    const violations = await inspectArchitectureFiles(root, [fixture]);
+
+    expect(violations).toContainEqual(expect.objectContaining({ code: 'FOUNDATION_IMPORTS_APP' }));
     expect(violations).toContainEqual(expect.objectContaining({ code: 'DIRECT_ENV_ACCESS' }));
   });
 

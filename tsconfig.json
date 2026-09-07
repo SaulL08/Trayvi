@@ -10,5 +10,11 @@
     }
   },
   "include": ["scripts/**/*.ts", "vitest.config.ts", "eslint.config.mjs"],
-  "exclude": ["node_modules", "dist", "coverage", "infra/database/fixtures"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "infra/database/fixtures",
+    "scripts/architecture/fixtures/alias-workspace"
+  ]
 }
