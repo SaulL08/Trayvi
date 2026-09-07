@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-07T19:35:15.5687535Z",
+  "targetCodeHead": "8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1",
+  "rootVerify": {
+    "result": "PASS",
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "architecture": "PASS",
+    "repositoryAndHistoricalSecrets": 0,
+    "licensesChecked": 323,
+    "licenseFindings": 0,
+    "unitTestFilesPassed": 15,
+    "unitTestsPassed": 68,
+    "unitTestsSkippedOnWindows": 1,
+    "workspaceBuildsPassed": 5
+  },
+  "windowsIntegration": {
+    "result": "PASS_WITH_PLATFORM_SKIPS",
+    "testFilesPassed": 7,
+    "testFilesSkipped": 1,
+    "testsPassed": 17,
+    "testsSkipped": 2,
+    "skips": "existing POSIX compiled child-process signal cases"
+  },
+  "databaseVerification": {
+    "result": "PASS",
+    "invariantsPassed": 12,
+    "postgis": true,
+    "cleanApply": true,
+    "repeatNoOp": true,
+    "rollbackRollForward": true,
+    "runtimeIdentityRestricted": true,
+    "runtimeDdlDenied": true,
+    "outboxAtomicity": true,
+    "outboxStateIntegrity": true,
+    "outboxStateTransitions": true,
+    "outboxDeleteDenied": true,
+    "invalidMigrationRolledBack": true,
+    "concurrentSerialized": true
+  },
+  "securitySubprocesses": {
+    "deterministicTests": "PASS_5_WINDOWS_1_POSIX_SKIP",
+    "normalSuccess": true,
+    "nonzeroExitFails": true,
+    "hangTimesOut": true,
+    "partialOutputDiscarded": true,
+    "forcedTerminationTest": "POSIX_ONLY",
+    "registryErrorReportFails": true,
+    "liveDependencyAudit": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
+    "tlsVerificationDisabled": false
+  },
+  "cleanCheckout": {
+    "result": "PENDING_FINAL_DOCUMENTATION_COMMIT",
+    "hostNodeModulesReused": false,
+    "hostBuildCacheReused": false
+  },
+  "decision": "ADDITIONAL_REMEDIATION_VALIDATION_PENDING"
+}

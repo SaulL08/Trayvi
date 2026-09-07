@@ -13,8 +13,12 @@ PostgreSQL URLs, and URL query values.
 
 The sanitizer inspects property descriptors and never invokes getters; accessors and objects that
 cannot be reflected safely receive fixed markers. Free-form error text is checked for structured
-sensitive assignments such as JSON, query, or key/value password, token, authorization, identity, and
-OTP fields. Each Fastify request also carries an immutable normalized context in a request-keyed
+sensitive assignments such as JSON, query, or key/value password, token, authorization, identity,
+and OTP fields. Percent-encoded text is decoded at most twice before those textual checks; invalid
+encoding is handled without retry loops or payload expansion. Both the structured `event` field and
+Pino's final serialized `message` use the sanitized event value. `AggregateError` members and custom
+enumerable Error metadata use the same boundary. Each Fastify request also carries an immutable
+normalized context in a request-keyed
 `WeakMap`; error and completion hooks pass those IDs explicitly so framework timeout callbacks cannot
 lose or mix correlation data.
 

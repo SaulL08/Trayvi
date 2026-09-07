@@ -25,6 +25,8 @@ repository changes to executable artifacts.
 | Excess runtime privilege     | separate roles, reviewed grants, automated DDL denial                                          | cloud IAM/network policy is unresolved                                    |
 | Unbounded traffic/shutdown   | body/header/URL/time limits, readiness timeout, bounded shutdown                               | production capacity and DDoS controls are unresolved                      |
 | Telemetry exfiltration       | allowlisted metadata, central redaction, bounded exporter                                      | vendor, retention, tenancy, and access policy are unresolved              |
+| Outbox transition skipping   | DB-enforced initial state, transition trigger, state-shape constraints, DELETE denial          | dispatcher and retry policy remain future work                            |
+| Security tool hangs/failures | internal deadlines, exit validation, partial-output rejection, graceful/forced child teardown  | registry availability can still make a run fail indeterminate             |
 
 ## Production blockers
 

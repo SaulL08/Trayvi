@@ -85,7 +85,8 @@ Every schema change identifies classification, purpose, owner, readers, retentio
 
 ## 8. Logging, telemetry, and audit safety
 
-- Structured logging uses an allowlist mindset for context and a central recursive redactor.
+- Structured logging uses an allowlist mindset for context and a central recursive redactor at the
+  final Pino boundary, including string-only messages and bounded percent-encoded text.
 - The sanitizer covers case-insensitive keys and nested structures for passwords, authorization headers, cookies, tokens, OTPs, document values, payment data, biometrics, and precise locations unless a separately approved secure evidence channel exists.
 - HTTP bodies are not logged by default. Query strings are treated as untrusted/sensitive.
 - High-cardinality personal data is prohibited in metric labels.
@@ -98,6 +99,9 @@ Every schema change identifies classification, purpose, owner, readers, retentio
 - Databases/object stores are private; administrative interfaces are not exposed directly to the internet.
 - Runtime containers/processes use non-root identities, read-only filesystems where possible, minimal images, dropped capabilities, and resource limits.
 - Dependencies are lockfile-pinned. CI runs static checks, dependency/license review, secret scanning, and artifact provenance checks appropriate to the deployment platform.
+- Security subprocesses have internal deadlines, validated exit codes, bounded captured output, and
+  graceful then forced termination. Timeout, network failure, invalid/partial output, and process
+  failure all fail closed.
 - Builds are reproducible; production artifacts are built in CI, scanned, signed/attested when platform support is selected, and promoted rather than rebuilt per environment.
 - Backups are encrypted, access-controlled, retention-bound, and restore-tested.
 

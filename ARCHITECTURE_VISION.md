@@ -124,7 +124,11 @@ domain             -> no framework or database dependency
 - Domain code owns invariants, value objects, state transitions, and policies.
 - Infrastructure implements repositories/providers and translates technical failures.
 
-Boundary enforcement is automated through lint/import rules and architecture tests.
+Boundary enforcement is automated through lint/import rules and architecture tests. The static gate
+resolves imports through each source file's effective TypeScript configuration, including `paths`,
+`baseUrl`, workspace packages, subpaths, re-exports, and dynamic imports. It also rejects direct
+environment reads and statically determinable property/alias variants; JavaScript runtime computation
+outside those forms remains governed by the config package boundary and review.
 
 ## 6. Data architecture
 
@@ -161,6 +165,11 @@ Domain changes and their outbox records commit atomically. A worker publishes ve
 - non-sensitive payload.
 
 Consumers are idempotent and maintain processed-event records or equivalent unique constraints. Delivery is at least once. No design assumes exactly-once delivery.
+
+The Phase 0 outbox table enforces its foundation state machine in PostgreSQL: inserts begin pending;
+pending/failed claims enter processing while incrementing attempts and setting a lock; only processing
+may finish published or failed; published is terminal. Dispatch, broker, dead-letter, and retry policy
+remain future work.
 
 ### Extraction criteria
 

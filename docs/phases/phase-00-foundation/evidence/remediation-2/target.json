@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-07T19:35:15.5687535Z",
+  "originalAuditTarget": "6b977aa4eb078f4079cb24cbd1370244d31c7e17",
+  "firstRemediationTarget": "01f360aa717593458beae3123db3de925f3fb319",
+  "firstReAuditCheckpoint": "d793ce17776ee811af67434fbee6abbfd0b1bf11",
+  "additionalRemediationCodeHead": "8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1",
+  "additionalRemediationCodeTree": "313d10283ab138b7ec9819dc7f5ec0cda79d1fe9",
+  "branch": "main",
+  "localOriginMain": "01f360aa717593458beae3123db3de925f3fb319",
+  "published": false,
+  "phase1Advanced": false,
+  "historicalHashes": {
+    "auditSha256": "3EF87D28459B5B5F608CBC202253EACF0F2D27F84E6EC6354601AF7A292F22F1",
+    "remediationSha256": "BC1E7A9AEBCC70DA2159A051BB277B7A05531FD19886A5B2A719C6F954BB00A2",
+    "reAuditSha256": "B1BD26F64A4DBBB584C6ED29A2DF42C465618C634E4965AEA85449256320B328"
+  }
+}
