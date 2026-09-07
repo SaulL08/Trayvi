@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "recordedAtUtc": "2026-09-06T18:13:00Z",
-  "platform": "Windows local plus isolated PostgreSQL/PostGIS",
+  "recordedAtUtc": "2026-09-07T17:46:00Z",
+  "platform": "Windows local, clean checkout, and hosted ubuntu-24.04",
   "rootVerify": {
     "result": "PASS",
     "unitTestFilesPassed": 14,
@@ -50,6 +50,16 @@
     "hostBuildCacheReused": false
   },
   "hostedCi": {
-    "result": "PENDING_EXPLICIT_PUSH_AUTHORIZATION_AFTER_AUTOMATIC_REVIEW_REJECTION"
+    "result": "PASS",
+    "runId": 34148768556,
+    "commit": "929c9b832fe316cfe387544d284877408133e8b0",
+    "runner": "ubuntu-24.04",
+    "unitTestsPassed": 58,
+    "integrationTestsPassed": 19,
+    "integrationTestsSkipped": 0,
+    "requiredGate": "PASS",
+    "artifacts": 3,
+    "artifactFilesInspected": 44,
+    "artifactSecurityInspection": "PASS"
   }
 }

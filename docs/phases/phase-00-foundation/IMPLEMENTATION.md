@@ -1,6 +1,6 @@
 # Phase 0 — Foundation and Engineering System — IMPLEMENTATION
 
-**Status:** Audit remediation implemented and locally verified; final hosted evidence pending  
+**Status:** Audit remediation verified locally and in hosted CI; formal re-audit pending  
 **Started:** 2026-09-04  
 **Authority:** [PLAN.md](PLAN.md)
 
@@ -25,8 +25,10 @@ history in [AUDIT.md](AUDIT.md) and [REMEDIATION.md](REMEDIATION.md).
   runtime-login bootstrap.
 - Added ADR-019 and updated current operational/configuration/database/testing/security-governance
   documentation. Phase 1 and formal re-audit remain outside this continuation.
-- Final clean-checkout Linux/hosted evidence remains pending. An attempted push was rejected before
-  execution by automatic approval review, so no repository content was exported in that attempt.
+- A clean checkout passed frozen install, the root gate, Windows integration, and all database
+  invariants. Hosted run `34148768556` then passed quality, 19 Linux integrations without skips,
+  PostgreSQL/PostGIS verification, security scans, artifacts, and the required aggregate gate at
+  commit `929c9b8`. The separate remediation record contains job and artifact IDs.
 
 ## Baseline inspection
 

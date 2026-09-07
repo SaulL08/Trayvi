@@ -1,7 +1,7 @@
 # Phase 0 — Adversarial Audit Remediation
 
-**Status:** REMEDIATION IMPLEMENTED AND LOCALLY VERIFIED — HOSTED CI PENDING  
-**Date:** 2026-09-06  
+**Status:** READY FOR PHASE 0 RE-AUDIT  
+**Date:** 2026-09-07  
 **Original audit target:** `6b977aa4eb078f4079cb24cbd1370244d31c7e17`  
 **Original audit evidence commit:** `2d2db6d`  
 **Scope:** P0-AUD-001 through P0-AUD-011 only; Phase 1 remains unauthorized
@@ -147,16 +147,25 @@ re-audit.
 - Clean checkout at `e4b2150`: PASS — frozen install, root gate, 17 Windows integrations with two
   documented POSIX skips, and all 11 database invariants; no workspace `node_modules` or build cache
   was reused.
-- Hosted Linux CI and its retained artifacts are pending the explicit push authorization required
-  after automatic approval review rejected the attempted external write before execution.
+- Hosted Linux CI run `34148768556` at `929c9b8`: PASS on `ubuntu-24.04` — 58 unit tests, 19
+  integrations without skips, all database invariants, dependency/secret/license and Trivy scans,
+  five builds, and the aggregate required gate.
+- Artifacts `phase-00-quality` (`10028644566`), `phase-00-integration` (`10028631847`), and
+  `phase-00-security` (`10028634148`) are retained until 2026-09-21. Inspection of all 44 downloaded
+  files found no secrets, certificates, tokens, environment files, or database credentials.
 
 Safe evidence is under [evidence/remediation](evidence/remediation). No raw environment, credential,
 certificate, database dump, filesystem path, raw log, or secret canary is versioned.
 
 ## Residual risk and next gate
 
-No known audit finding remains open in the local remediation result. AC-031 remains deferred under its
-existing pre-production governance trigger. Formal Phase 0 re-audit remains a separate, unauthorized
-stage and must independently challenge the final commit after hosted CI succeeds.
+No known audit finding remains open in the remediation result. GitHub emitted a non-blocking warning
+that pinned checkout/setup-node/upload-artifact releases declare the deprecated Node 20 action runtime
+and were forced onto Node 24; all action steps passed, but their next pinned major update should be
+reviewed as routine CI maintenance.
 
-Current maximum status: **HOSTED CI PENDING**.
+AC-031 remains **DEFERRED — PRE-PRODUCTION GOVERNANCE**. AC-035 is **PENDING RE-AUDIT**. AC-036 remains
+**PASS** because the original audit record is intact. Formal Phase 0 re-audit remains a separate,
+unauthorized stage and must independently challenge the final commit.
+
+Current maximum status: **READY FOR PHASE 0 RE-AUDIT**.

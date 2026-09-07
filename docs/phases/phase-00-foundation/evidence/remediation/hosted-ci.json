@@ -1,14 +1,86 @@
 {
   "schemaVersion": 1,
-  "status": "PENDING_EXPLICIT_PUSH_AUTHORIZATION",
-  "reason": "Automatic approval review rejected the attempted push before execution because it did not recognize explicit authorization for the GitHub destination and CI side effect.",
+  "recordedAtUtc": "2026-09-07T17:46:00Z",
+  "status": "PASS",
+  "repository": "SaulL08/Trayvi",
   "remote": "https://github.com/SaulL08/Trayvi.git",
   "branch": "main",
-  "contentExportedByRejectedAttempt": false,
-  "requiredEvidence": [
-    "final commit SHA",
-    "ubuntu-24.04 workflow run ID and URL",
-    "quality, integration, security, and required job conclusions",
-    "artifact IDs and sanitized content inspection"
+  "runId": 34148768556,
+  "runUrl": "https://github.com/SaulL08/Trayvi/actions/runs/34148768556",
+  "runAttempt": 1,
+  "commit": "929c9b832fe316cfe387544d284877408133e8b0",
+  "runner": "ubuntu-24.04",
+  "jobs": [
+    {
+      "id": 101826378657,
+      "name": "Static, unit, and build",
+      "conclusion": "success"
+    },
+    {
+      "id": 101826378720,
+      "name": "PostgreSQL/PostGIS and process integration",
+      "conclusion": "success"
+    },
+    {
+      "id": 101826378476,
+      "name": "Dependency, secret, filesystem, and image scans",
+      "conclusion": "success"
+    },
+    {
+      "id": 101826787351,
+      "name": "Phase 0 required gate",
+      "conclusion": "success"
+    }
+  ],
+  "tests": {
+    "unitPassed": 58,
+    "unitFailed": 0,
+    "integrationPassed": 19,
+    "integrationFailed": 0,
+    "integrationSkipped": 0,
+    "databaseVerificationPassed": true
+  },
+  "security": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 0,
+    "dependencyAdvisories": 0,
+    "repositorySecrets": 0,
+    "filesystemMisconfigurations": 0,
+    "postgisImageHighCritical": 0,
+    "licensesPassed": true
+  },
+  "artifacts": [
+    {
+      "id": 10028644566,
+      "name": "phase-00-quality",
+      "sizeBytes": 96916,
+      "digest": "sha256:28cce05c922df8262ecc50fdf63e6fa352fae95b4e64699d8a5dda0d366199c9",
+      "expiresAt": "2026-09-21T17:45:27Z"
+    },
+    {
+      "id": 10028631847,
+      "name": "phase-00-integration",
+      "sizeBytes": 4644,
+      "digest": "sha256:fb2b6e687fb015564cb139e887ad5ae5827ab1981a197be397e542d8e0a7d083",
+      "expiresAt": "2026-09-21T17:44:52Z"
+    },
+    {
+      "id": 10028634148,
+      "name": "phase-00-security",
+      "sizeBytes": 1853,
+      "digest": "sha256:f3c7692979cefa7d0e78cb09b4d1b289a54bb9ef0b89ba5c819a11d4499a04e8",
+      "expiresAt": "2026-09-21T17:44:58Z"
+    }
+  ],
+  "artifactInspection": {
+    "filesInspected": 44,
+    "secretOrCredentialFindings": 0,
+    "environmentFiles": 0,
+    "certificatesOrPrivateKeys": 0,
+    "passed": true
+  },
+  "nonBlockingWarnings": [
+    "GitHub forced checkout, setup-node, and upload-artifact actions that declare Node 20 onto Node 24 because Node 20 action runtime is deprecated."
   ]
 }
