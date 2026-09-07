@@ -27,6 +27,20 @@ payload, availability/attempt/claim/publication state, and safe error code. A bu
 event insert share one caller-owned transaction. Delivery is at least once; consumers are idempotent.
 The Phase 0 worker has lifecycle infrastructure only and publishes nothing. No broker is added.
 
+The database permits only this foundation state machine:
+
+```text
+insert -> pending
+pending -> processing -> published
+                      -> failed -> processing
+```
+
+Claiming `pending` or `failed` increments `attempts`, sets both lock fields, and clears publication
+and error fields. Completing `processing` preserves `attempts`, clears both lock fields, and sets
+exactly one terminal outcome: `published_at` for `published`, or a safe `last_error_code` for
+`failed`. Published rows are terminal. A database trigger enforces these transitions even when a
+runtime bug issues direct DML; row constraints independently enforce each state's field shape.
+
 ## Consequences
 
 Polling, retry, dead-letter policy, and broker adapters remain future work. The table is justified by a
@@ -38,8 +52,9 @@ Payloads exclude restricted data. Metrics use bounded event categories, not aggr
 
 ## Validation and revisit triggers
 
-Integration tests prove commit/rollback atomicity and schema constraints. Revisit when the first real
-event consumer needs throughput or isolation beyond PostgreSQL polling.
+Integration tests prove commit/rollback atomicity, state shapes, allowed transitions, denied skips,
+terminal publication, and runtime DELETE denial. Revisit when the first real event consumer needs
+throughput or isolation beyond PostgreSQL polling.
 
 ## References
 

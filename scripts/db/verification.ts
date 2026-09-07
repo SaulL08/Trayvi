@@ -24,6 +24,7 @@ export interface DatabaseVerificationEvidence {
   readonly runtimeIdentityRestricted: boolean;
   readonly outboxAtomicity: boolean;
   readonly outboxStateIntegrity: boolean;
+  readonly outboxStateTransitions: boolean;
   readonly outboxDeleteDenied: boolean;
 }
 
@@ -75,45 +76,6 @@ async function verifyMainScenario(
       'SELECT count(*)::text AS count FROM platform.outbox_events',
     );
 
-    const validStates = [
-      { status: 'pending', attempts: 0, locked: false, published: false, error: null },
-      { status: 'processing', attempts: 1, locked: true, published: false, error: null },
-      { status: 'published', attempts: 1, locked: false, published: true, error: null },
-      { status: 'failed', attempts: 1, locked: false, published: false, error: 'DELIVERY_FAILED' },
-    ] as const;
-    let validStateRowsAccepted = true;
-    await client.query('BEGIN');
-    try {
-      for (const state of validStates) {
-        await client.query(
-          `INSERT INTO platform.outbox_events
-           (id, event_type, schema_version, aggregate_type, aggregate_id, occurred_at,
-            correlation_id, payload, status, attempts, locked_at, locked_by, published_at,
-            last_error_code)
-           VALUES ($1, 'foundation.state_probe', 1, 'foundation', $2, clock_timestamp(),
-             $3, '{}'::jsonb, $4, $5,
-             CASE WHEN $6 THEN clock_timestamp() ELSE NULL END,
-             CASE WHEN $6 THEN 'audit-worker' ELSE NULL END,
-             CASE WHEN $7 THEN clock_timestamp() ELSE NULL END,
-             $8)`,
-          [
-            randomUUID(),
-            randomUUID(),
-            randomUUID(),
-            state.status,
-            state.attempts,
-            state.locked,
-            state.published,
-            state.error,
-          ],
-        );
-      }
-    } catch {
-      validStateRowsAccepted = false;
-    } finally {
-      await client.query('ROLLBACK');
-    }
-
     const contradictoryStates = [
       { status: 'processing', attempts: 1, locked: false, error: null },
       { status: 'pending', attempts: 0, locked: true, error: 'IMPOSSIBLE' },
@@ -150,6 +112,134 @@ async function verifyMainScenario(
     }
 
     await runtimeClient.connect();
+    const publishedId = randomUUID();
+    const failedId = randomUUID();
+    const newPendingParameters = (): readonly string[] => [
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ];
+    const insertPending = async (id: string): Promise<void> => {
+      const [, aggregateId, correlationId] = newPendingParameters();
+      await runtimeClient.query(
+        `INSERT INTO platform.outbox_events
+         (id, event_type, schema_version, aggregate_type, aggregate_id, occurred_at,
+          correlation_id, payload)
+         VALUES ($1, 'foundation.transition_probe', 1, 'foundation', $2,
+          clock_timestamp(), $3, '{}'::jsonb)`,
+        [id, aggregateId, correlationId],
+      );
+    };
+    await insertPending(publishedId);
+    await runtimeClient.query(
+      `UPDATE platform.outbox_events
+       SET status = 'processing', attempts = attempts + 1,
+           locked_at = clock_timestamp(), locked_by = 'verification-worker',
+           published_at = NULL, last_error_code = NULL
+       WHERE id = $1`,
+      [publishedId],
+    );
+    await runtimeClient.query(
+      `UPDATE platform.outbox_events
+       SET status = 'published', locked_at = NULL, locked_by = NULL,
+           published_at = clock_timestamp(), last_error_code = NULL
+       WHERE id = $1`,
+      [publishedId],
+    );
+    await insertPending(failedId);
+    await runtimeClient.query(
+      `UPDATE platform.outbox_events
+       SET status = 'processing', attempts = attempts + 1,
+           locked_at = clock_timestamp(), locked_by = 'verification-worker',
+           published_at = NULL, last_error_code = NULL
+       WHERE id = $1`,
+      [failedId],
+    );
+    await runtimeClient.query(
+      `UPDATE platform.outbox_events
+       SET status = 'failed', locked_at = NULL, locked_by = NULL,
+           published_at = NULL, last_error_code = 'DELIVERY_FAILED'
+       WHERE id = $1`,
+      [failedId],
+    );
+    await runtimeClient.query(
+      `UPDATE platform.outbox_events
+       SET status = 'processing', attempts = attempts + 1,
+           locked_at = clock_timestamp(), locked_by = 'verification-worker-retry',
+           published_at = NULL, last_error_code = NULL
+       WHERE id = $1`,
+      [failedId],
+    );
+    const allowedStateRows = await runtimeClient.query<{
+      status: string;
+      attempts: number;
+      locked_at: Date | null;
+      locked_by: string | null;
+      published_at: Date | null;
+      last_error_code: string | null;
+    }>(
+      `SELECT status, attempts, locked_at, locked_by, published_at, last_error_code
+       FROM platform.outbox_events WHERE id IN ($1, $2) ORDER BY id`,
+      [publishedId, failedId],
+    );
+    const publishedState = allowedStateRows.rows.find((row) => row.status === 'published');
+    const retriedState = allowedStateRows.rows.find((row) => row.status === 'processing');
+    const allowedTransitionsValid =
+      publishedState?.attempts === 1 &&
+      publishedState.locked_at === null &&
+      publishedState.locked_by === null &&
+      publishedState.published_at instanceof Date &&
+      publishedState.last_error_code === null &&
+      retriedState?.attempts === 2 &&
+      retriedState.locked_at instanceof Date &&
+      retriedState.locked_by === 'verification-worker-retry' &&
+      retriedState.published_at === null &&
+      retriedState.last_error_code === null;
+
+    const skippedTransitions = [
+      `UPDATE platform.outbox_events
+       SET status = 'pending', attempts = 0, locked_at = NULL, locked_by = NULL,
+           published_at = NULL, last_error_code = NULL WHERE id = '${publishedId}'`,
+      `UPDATE platform.outbox_events
+       SET status = 'processing', attempts = 2, locked_at = clock_timestamp(),
+           locked_by = 'invalid-worker', published_at = NULL, last_error_code = NULL
+       WHERE id = '${publishedId}'`,
+    ];
+    const pendingSkipId = randomUUID();
+    await insertPending(pendingSkipId);
+    skippedTransitions.push(
+      `UPDATE platform.outbox_events
+       SET status = 'published', attempts = 1, published_at = clock_timestamp(),
+           locked_at = NULL, locked_by = NULL, last_error_code = NULL
+       WHERE id = '${pendingSkipId}'`,
+      `UPDATE platform.outbox_events
+       SET status = 'failed', attempts = 1, published_at = NULL,
+           locked_at = NULL, locked_by = NULL, last_error_code = 'SKIPPED_PROCESSING'
+       WHERE id = '${pendingSkipId}'`,
+      `INSERT INTO platform.outbox_events
+       (id, event_type, schema_version, aggregate_type, aggregate_id, occurred_at,
+        correlation_id, payload, status, attempts, published_at)
+       VALUES ('${randomUUID()}', 'foundation.invalid_transition', 1, 'foundation',
+        '${randomUUID()}', clock_timestamp(), '${randomUUID()}', '{}'::jsonb,
+        'published', 1, clock_timestamp())`,
+    );
+    const skippedTransitionDenials: boolean[] = [];
+    for (const statement of skippedTransitions) {
+      await runtimeClient.query('BEGIN');
+      try {
+        await runtimeClient.query(statement);
+        skippedTransitionDenials.push(false);
+      } catch {
+        skippedTransitionDenials.push(true);
+      } finally {
+        await runtimeClient.query('ROLLBACK');
+      }
+    }
+    const outboxStateTransitions =
+      allowedTransitionsValid &&
+      skippedTransitionDenials.length === skippedTransitions.length &&
+      skippedTransitionDenials.every(Boolean);
+
     const identity = await runtimeClient.query<{ session_user: string; current_user: string }>(
       'SELECT session_user, current_user',
     );
@@ -185,17 +275,16 @@ async function verifyMainScenario(
     const rollForward = await migrator.up();
     return {
       postgis: extension.rows[0]?.installed === true,
-      cleanApply: first.applied.length === 2 && table.rows[0]?.name === 'platform.outbox_events',
-      repeatNoOp: second.applied.length === 0 && second.skipped.length === 2,
+      cleanApply: first.applied.length === 3 && table.rows[0]?.name === 'platform.outbox_events',
+      repeatNoOp: second.applied.length === 0 && second.skipped.length === 3,
       rollbackRollForward:
-        down.length === 1 && statusAfterDown.length === 1 && rollForward.applied.length === 1,
+        down.length === 1 && statusAfterDown.length === 2 && rollForward.applied.length === 1,
       runtimeDdlDenied,
       runtimeIdentityRestricted,
       outboxAtomicity: afterRollback.rows[0]?.count === '0' && afterCommit.rows[0]?.count === '1',
       outboxStateIntegrity:
-        validStateRowsAccepted &&
-        contradictoryStateDenials.length === 2 &&
-        contradictoryStateDenials.every(Boolean),
+        contradictoryStateDenials.length === 2 && contradictoryStateDenials.every(Boolean),
+      outboxStateTransitions,
       outboxDeleteDenied,
     };
   } finally {
@@ -242,7 +331,7 @@ async function verifyConcurrency(adminUrl: string): Promise<boolean> {
     const results = await Promise.all([first.up(), second.up()]);
     const appliedCount = results.reduce((sum, result) => sum + result.applied.length, 0);
     const status = await first.status();
-    return appliedCount === 2 && status.length === 2;
+    return appliedCount === 3 && status.length === 3;
   } finally {
     await Promise.all([first.close(), second.close()]);
     await dropDisposableDatabase(adminUrl, database.name);

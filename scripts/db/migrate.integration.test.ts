@@ -19,6 +19,7 @@ describe('PostgreSQL/PostGIS migration matrix', () => {
       runtimeIdentityRestricted: true,
       outboxAtomicity: true,
       outboxStateIntegrity: true,
+      outboxStateTransitions: true,
       outboxDeleteDenied: true,
     });
   });

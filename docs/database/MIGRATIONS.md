@@ -24,11 +24,13 @@ metadata, and drift in either direction fail before SQL executes. The only metad
 is the transactional conversion from the exact legacy single-checksum schema.
 
 The Phase 0 migrations enable PostGIS, create only `platform.outbox_events`, enforce coherent pending,
-processing, published, and failed field combinations, grant allowlisted runtime DML without DELETE or
-schema DDL, and supply paired local rollback. PostgreSQL extension provisioning may require a platform
+processing, published, and failed field combinations, and enforce the state transitions documented in
+ADR-008. New rows start pending; claims enter processing and increment attempts; processing alone may
+finish as published or failed; failed rows may be claimed again; published is terminal. Runtime DML
+has no DELETE or schema DDL permission. PostgreSQL extension provisioning may require a platform
 administrator in production before the restricted migrator runs.
 
 `db:verify` creates isolated disposable databases and proves clean apply, repeat no-op, rollback and
 roll-forward, invalid SQL rollback, concurrent serialization, PostGIS, restricted session identity,
-role-escalation/DDL denial, outbox state integrity, DELETE denial, and commit/rollback atomicity.
+role-escalation/DDL denial, outbox state shapes and transitions, DELETE denial, and commit/rollback atomicity.
 Disposable databases are removed in `finally` blocks.
