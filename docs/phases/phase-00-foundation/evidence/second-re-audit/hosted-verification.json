@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "readBack": "INDEPENDENT_AUTHENTICATED",
+  "finalRun": {
+    "runId": 34273021851,
+    "commit": "ef6ed76b16394bbacf9e34337bf0be5aae4a4a17",
+    "conclusion": "success",
+    "jobs": {
+      "security": 102219113758,
+      "quality": 102219113629,
+      "integration": 102219113320,
+      "required": 102219907794
+    },
+    "unit": { "passed": 70, "total": 70, "skipped": 0 },
+    "integration": { "passed": 19, "total": 19, "skipped": 0 },
+    "database": { "passed": 12, "total": 12 },
+    "dependencyAdvisories": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "artifactFilesInspected": 44,
+    "artifactSecretCandidatesConfirmed": 0
+  },
+  "correctiveRun": {
+    "runId": 34271765472,
+    "commit": "a442d2e6e588de299d1515e3c61ec974fc8971f1",
+    "conclusion": "success",
+    "artifactFilesInspected": 44,
+    "artifactSecretCandidatesConfirmed": 0
+  },
+  "historicalIncidentEvidence": {
+    "runId": 34270806808,
+    "artifactId": 10073766304,
+    "stillPresent": true,
+    "deletedOrModifiedByAudit": false
+  },
+  "githubActionRuntimeWarning": {
+    "classification": "NON_BLOCKING_HARDENING",
+    "detail": "SHA-pinned actions targeting Node.js 20 were forced by GitHub to Node.js 24"
+  }
+}

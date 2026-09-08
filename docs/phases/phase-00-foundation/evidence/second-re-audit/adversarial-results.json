@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "targetCommit": "ef6ed76b16394bbacf9e34337bf0be5aae4a4a17",
+  "containsSyntheticValues": false,
+  "containsSecrets": false,
+  "results": [
+    {
+      "finding": "P0-AUD-001",
+      "status": "REOPENED",
+      "probe": "final logger sensitive-alias matrix",
+      "cases": 11,
+      "unredactedAtFinalBoundary": 11,
+      "classes": [
+        "password alias",
+        "generic credential",
+        "private/TLS key",
+        "session material",
+        "free-form text",
+        "error metadata"
+      ]
+    },
+    {
+      "finding": "P0-AUD-004",
+      "status": "REOPENED",
+      "probe": "compiling reflective environment access and static-variable dynamic import",
+      "typecheckPassed": true,
+      "architectureViolationsReported": 0
+    },
+    {
+      "finding": "P0-AUD-005",
+      "status": "CLOSED",
+      "probe": "migration environment and TLS downgrade matrix",
+      "unsafeCasesRejected": 7,
+      "validVerifyFullAccepted": true
+    },
+    {
+      "finding": "P0-AUD-007",
+      "status": "REOPENED",
+      "probe": "physical runtime login direct outbox mutation",
+      "eventIdentityOrPayloadRewriteAccepted": true,
+      "sameStateClaimMetadataRewriteAccepted": true
+    },
+    {
+      "finding": "P0-REAUD-001",
+      "status": "REOPENED",
+      "probe": "POSIX timed-out process tree",
+      "deadlineRejected": true,
+      "directChildTerminated": true,
+      "descendantSurvived": true,
+      "descendantCleanedAfterProbe": true
+    },
+    {
+      "finding": "P0-REAUD2-001",
+      "status": "OPEN",
+      "probe": "repository secret-detector corpus",
+      "genericCredentialClassesTested": 4,
+      "customScannerDetections": 0,
+      "trivyDetections": 0,
+      "localPrivateKeyControlDetections": 1
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "targetCommit": "ef6ed76b16394bbacf9e34337bf0be5aae4a4a17",
+  "environment": {
+    "os": "Windows developer path plus isolated Linux/POSIX probe",
+    "node": "v22.14.0",
+    "pnpm": "11.25.0",
+    "dockerEngine": "29.7.2",
+    "databaseImage": "trayvi/postgis:phase-00-fixed",
+    "posixImage": "node:22.14.0-bookworm-slim"
+  },
+  "cleanCheckout": {
+    "method": "git clone --no-hardlinks",
+    "commitMatched": true,
+    "treeMatched": true,
+    "frozenInstallPassed": true,
+    "packageCount": 267,
+    "rootVerifyPassed": true,
+    "tempDirectoryAttempt": "AUDIT_ENVIRONMENT_LIMITATION",
+    "tempDirectoryReason": "sandbox denied esbuild access to parent directories",
+    "workspaceIsolatedCheckoutPassed": true
+  },
+  "unit": {
+    "filesPassed": 15,
+    "passed": 69,
+    "skipped": 1,
+    "total": 70,
+    "skipReason": "POSIX-only signal escalation on Windows"
+  },
+  "integrationWindows": {
+    "filesPassed": 7,
+    "filesSkipped": 1,
+    "passed": 17,
+    "skipped": 2,
+    "total": 19,
+    "skipReason": "compiled POSIX process signal cases"
+  },
+  "database": {
+    "postgresPostgisReal": true,
+    "standardInvariantsPassed": 12,
+    "standardInvariantsTotal": 12,
+    "adversarialOutboxProbePassed": false
+  },
+  "dependencyAudit": {
+    "localResult": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
+    "tlsVerificationDisabled": false,
+    "exactCommitHostedResult": "PASS_ZERO_ADVISORIES"
+  },
+  "temporaryResourcesRemoved": true
+}
