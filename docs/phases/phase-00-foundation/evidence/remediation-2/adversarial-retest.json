@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 1,
-  "recordedAtUtc": "2026-09-07T19:35:15.5687535Z",
-  "targetCodeHead": "8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1",
+  "schemaVersion": 2,
+  "recordedAtUtc": "2026-09-08T19:35:13.0000000Z",
+  "targetCodeHead": "1d18c00de9807d3c7800ed1dda0056dc7b24561e",
   "findings": [
     {
       "id": "P0-AUD-001",
@@ -9,7 +9,7 @@
       "fixCommits": ["482621647a62efbe4d20e04e4f6bbb4bfae37f1d"],
       "exactProbe": "string-only message and password%3D encoded assignment",
       "result": "PASS",
-      "status": "FIXED_PENDING_SECOND_RE_AUDIT"
+      "status": "FIXED"
     },
     {
       "id": "P0-AUD-004",
@@ -20,7 +20,7 @@
       ],
       "exactProbe": "tsconfig path alias to app and forward computed process environment access",
       "result": "PASS",
-      "status": "FIXED_PENDING_SECOND_RE_AUDIT"
+      "status": "FIXED"
     },
     {
       "id": "P0-AUD-005",
@@ -28,7 +28,7 @@
       "fixCommits": ["3fc3d9a687365acb35b0d9cf171bf1b621581bbb"],
       "exactProbe": "migration configuration without NODE_ENV",
       "result": "PASS",
-      "status": "FIXED_PENDING_SECOND_RE_AUDIT"
+      "status": "FIXED"
     },
     {
       "id": "P0-AUD-007",
@@ -36,7 +36,7 @@
       "fixCommits": ["d1fe816d38c410885dd6aa46f966a95374598bb8"],
       "exactProbe": "runtime pending to published direct UPDATE",
       "result": "PASS",
-      "status": "FIXED_PENDING_SECOND_RE_AUDIT"
+      "status": "FIXED"
     },
     {
       "id": "P0-REAUD-001",
@@ -44,7 +44,7 @@
       "fixCommits": ["83700a0d35aa57ea98c9fac964ffe1d70288219c"],
       "exactProbe": "security subprocess hang and partial output",
       "result": "PASS",
-      "status": "FIXED_PENDING_SECOND_RE_AUDIT"
+      "status": "FIXED"
     }
   ],
   "previouslyClosedRegressionSample": {
@@ -58,5 +58,6 @@
       "P0-AUD-011"
     ],
     "result": "PASS"
-  }
+  },
+  "independentSecondReAudit": "PENDING"
 }

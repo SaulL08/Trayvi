@@ -1,7 +1,8 @@
 {
-  "schemaVersion": 1,
-  "recordedAtUtc": "2026-09-07T19:35:15.5687535Z",
-  "targetCodeHead": "8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1",
+  "schemaVersion": 2,
+  "recordedAtUtc": "2026-09-08T19:35:13.0000000Z",
+  "targetCodeHead": "1d18c00de9807d3c7800ed1dda0056dc7b24561e",
+  "targetTree": "cba993d35ff10596b54b7c79f0dd794232b8c37d",
   "rootVerify": {
     "result": "PASS",
     "format": "PASS",
@@ -40,21 +41,53 @@
     "invalidMigrationRolledBack": true,
     "concurrentSerialized": true
   },
+  "posixLinux": {
+    "result": "PASS",
+    "image": "node:22.14.0-bookworm-slim",
+    "frozenInstall": "PASS_OFFLINE_FROM_PNPM_CONTENT_ADDRESSABLE_STORE",
+    "primaryWorkspaceNodeModulesReused": false,
+    "workspaceBuildsPassed": 5,
+    "unitTestFilesPassed": 15,
+    "unitTestsPassed": 69,
+    "unitTestsSkipped": 0,
+    "integrationTestFilesPassed": 8,
+    "integrationTestsPassed": 19,
+    "integrationTestsSkipped": 0,
+    "forcedTerminationTest": "PASS",
+    "compiledProcessSignalTests": 2,
+    "databaseInvariantsPassed": 12
+  },
   "securitySubprocesses": {
     "deterministicTests": "PASS_5_WINDOWS_1_POSIX_SKIP",
     "normalSuccess": true,
     "nonzeroExitFails": true,
     "hangTimesOut": true,
     "partialOutputDiscarded": true,
-    "forcedTerminationTest": "POSIX_ONLY",
+    "forcedTerminationTest": "PASS_ON_POSIX",
     "registryErrorReportFails": true,
     "liveDependencyAudit": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
     "tlsVerificationDisabled": false
   },
   "cleanCheckout": {
-    "result": "PENDING_FINAL_DOCUMENTATION_COMMIT",
+    "result": "PASS",
+    "head": "1d18c00de9807d3c7800ed1dda0056dc7b24561e",
+    "tree": "cba993d35ff10596b54b7c79f0dd794232b8c37d",
+    "frozenInstall": "PASS",
+    "rootVerify": "PASS",
+    "windowsIntegration": "PASS_WITH_PLATFORM_SKIPS_COVERED_ON_POSIX",
+    "databaseVerification": "PASS",
     "hostNodeModulesReused": false,
-    "hostBuildCacheReused": false
+    "hostBuildCacheReused": false,
+    "posixBuildCacheHits": 0
   },
-  "decision": "ADDITIONAL_REMEDIATION_VALIDATION_PENDING"
+  "securitySeverityCounts": {
+    "critical": "PENDING_HOSTED_CI",
+    "high": "PENDING_HOSTED_CI",
+    "moderate": "PENDING_HOSTED_CI",
+    "localLiveAudit": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
+    "tlsVerificationDisabled": false
+  },
+  "hostedCi": "NOT_AUTHORIZED_NOT_RUN",
+  "secondReAudit": "PENDING",
+  "decision": "ADDITIONAL_REMEDIATION_LOCALLY_VERIFIED_READY_FOR_HOSTED_CI_AUTHORIZATION"
 }

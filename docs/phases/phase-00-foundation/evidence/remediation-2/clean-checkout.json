@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-08T19:35:13.0000000Z",
+  "head": "1d18c00de9807d3c7800ed1dda0056dc7b24561e",
+  "tree": "cba993d35ff10596b54b7c79f0dd794232b8c37d",
+  "dependencyInstallation": {
+    "frozenLockfile": true,
+    "result": "PASS",
+    "primaryWorkspaceNodeModulesReused": false,
+    "primaryWorkspaceBuildOutputsReused": false,
+    "posixContentAddressableStoreUsed": true
+  },
+  "windows": {
+    "rootVerify": "PASS",
+    "unitTestsPassed": 68,
+    "unitTestsSkippedPosixOnly": 1,
+    "integrationTestsPassed": 17,
+    "integrationTestsSkippedPosixOnly": 2,
+    "databaseInvariantsPassed": 12
+  },
+  "linuxPosix": {
+    "image": "node:22.14.0-bookworm-slim",
+    "buildsPassed": 5,
+    "buildCacheHits": 0,
+    "unitTestsPassed": 69,
+    "unitTestsSkipped": 0,
+    "integrationTestsPassed": 19,
+    "integrationTestsSkipped": 0,
+    "databaseInvariantsPassed": 12,
+    "signalCoverage": {
+      "childIgnoringGracefulTermination": "PASS",
+      "compiledApiSigterm": "PASS",
+      "compiledWorkerSigterm": "PASS"
+    }
+  },
+  "dependencyAudit": {
+    "result": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
+    "tlsVerificationDisabled": false,
+    "freshSeverityCounts": "PENDING_HOSTED_CI"
+  },
+  "result": "PASS",
+  "maximumStatus": "ADDITIONAL REMEDIATION LOCALLY VERIFIED — READY FOR HOSTED CI AUTHORIZATION"
+}

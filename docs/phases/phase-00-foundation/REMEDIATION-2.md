@@ -1,10 +1,12 @@
 # Phase 0 — Additional Audit Remediation
 
-**Status:** Validation pending clean-checkout completion  
+**Status:** ADDITIONAL REMEDIATION LOCALLY VERIFIED — READY FOR HOSTED CI AUTHORIZATION  
 **Original audit target:** `6b977aa4eb078f4079cb24cbd1370244d31c7e17`  
 **First remediation target / first re-audit target:** `01f360aa717593458beae3123db3de925f3fb319`  
 **First re-audit record:** `d793ce17776ee811af67434fbee6abbfd0b1bf11`  
-**Additional remediation code head:** `8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1`
+**Additional remediation code head:** `8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1`  
+**Clean-checkout validation target:** `1d18c00de9807d3c7800ed1dda0056dc7b24561e`  
+**Clean-checkout validation tree:** `cba993d35ff10596b54b7c79f0dd794232b8c37d`
 
 This is a chronological addition after the failed first re-audit. It does not revise `AUDIT.md`,
 `REMEDIATION.md`, or `RE-AUDIT.md`, and it does not perform the independent second re-audit.
@@ -24,7 +26,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   filter paths.
 - **Post-fix reproduction:** The exact string-only and `password%3D<canary>` probes emit only
   `[REDACTED]`; the canary is absent from serialized output.
-- **Status:** **FIXED — PENDING SECOND RE-AUDIT**.
+- **Status:** **FIXED**. Independent second re-audit remains pending.
 
 ### P0-AUD-004 — MEDIUM — Partially remediated architecture aliases
 
@@ -42,7 +44,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   deep, relative, re-export, dynamic import, and environment fixtures remain active.
 - **Post-fix reproduction:** Both re-audit bypasses produce violations; the real repository produces
   none.
-- **Status:** **FIXED — PENDING SECOND RE-AUDIT**.
+- **Status:** **FIXED**. Independent second re-audit remains pending.
 
 ### P0-AUD-005 — MEDIUM — Partially remediated migration environment
 
@@ -56,7 +58,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   invalid environment fail; explicit local development with disabled TLS passes.
 - **Post-fix reproduction:** Removing `NODE_ENV` returns `ConfigValidationError` for `NODE_ENV` before
   a migration connection is created.
-- **Status:** **FIXED — PENDING SECOND RE-AUDIT**.
+- **Status:** **FIXED**. Independent second re-audit remains pending.
 
 ### P0-AUD-007 — MEDIUM — Partially remediated outbox transitions
 
@@ -73,7 +75,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   also verify timestamps, locks, attempts, safe error codes, state shapes, and DELETE denial.
 - **Post-fix reproduction:** The exact single UPDATE from pending to published fails with SQLSTATE
   `23514`; the real database matrix reports `outboxStateTransitions=true`.
-- **Status:** **FIXED — PENDING SECOND RE-AUDIT**.
+- **Status:** **FIXED**. Independent second re-audit remains pending.
 
 ### P0-REAUD-001 — LOW — Security subprocess deadlines
 
@@ -89,7 +91,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   history-only secrets are covered.
 - **Post-fix reproduction:** A real unavailable-registry run returned
   `security.dependencies.failed` and exit code 1; deterministic hangs terminate and never pass.
-- **Status:** **FIXED — PENDING SECOND RE-AUDIT**.
+- **Status:** **FIXED**. Independent second re-audit remains pending.
 
 ## Previously closed regression sample
 
@@ -98,7 +100,7 @@ P0-AUD-008, P0-AUD-009, P0-AUD-010, and P0-AUD-011. Their shutdown truthfulness,
 integrity, physical runtime identity, hostile-object sanitizer, concurrent correlation, advisory
 triage, and streamed history controls remained passing.
 
-## Verification before clean checkout
+## Local verification
 
 - Root verification: PASS — format, lint, strict typecheck, architecture, repository/history secrets,
   323 licenses, 68 unit tests, and five builds. One POSIX-only signal-escalation test is skipped on
@@ -109,11 +111,23 @@ triage, and streamed history controls remained passing.
 - Dependency audit: FAILED CLOSED because the host registry/certificate path returned an invalid
   report. TLS verification was not disabled. The dependency graph and lockfile are unchanged from
   the prior zero-advisory hosted result, but this run is not represented as a fresh security PASS.
-- Clean checkout: pending after this documentation/evidence commit.
+- Clean-checkout target: PASS at `1d18c00de9807d3c7800ed1dda0056dc7b24561e`, tree
+  `cba993d35ff10596b54b7c79f0dd794232b8c37d`, from an isolated checkout with a frozen dependency
+  installation. The primary workspace's `node_modules` and build outputs were not reused.
+- Clean-checkout Windows verification: PASS — root verification completed with 68 unit tests and
+  one POSIX-only skip; integration completed with 17 tests and two POSIX-only skips; database
+  verification reported all 12 invariants true.
+- Clean-checkout Linux/POSIX verification: PASS in `node:22.14.0-bookworm-slim` — frozen offline
+  install from the pnpm content-addressable store, five clean builds, 69/69 unit tests, 19/19
+  integration tests, and all 12 database invariants. This run included graceful-to-forced child
+  termination and both compiled process-lifecycle signal cases.
+- Current-target dependency severity counts: **PENDING HOSTED CI**. The local live audit failed
+  closed on an invalid registry/certificate response, so no fresh current-target zero count is
+  asserted. TLS verification remained enabled.
 
-## Provisional acceptance
+## Local acceptance
 
-| Criterion  | Provisional status                       | Basis                                                           |
+| Criterion  | Local status                             | Basis                                                           |
 | ---------- | ---------------------------------------- | --------------------------------------------------------------- |
 | AC-008     | PASS                                     | Effective TypeScript alias resolves to the forbidden app.       |
 | AC-009     | PASS                                     | Statically computable process/environment aliases fail.         |
@@ -123,7 +137,7 @@ triage, and streamed history controls remained passing.
 | AC-026     | PASS                                     | String-only and encoded canaries do not reach Pino output.      |
 | AC-030     | PASS                                     | Config, Git, audit, timeout, partial, and network failures run. |
 | AC-033     | PASS                                     | Current architecture/config/logging/outbox/testing docs match.  |
-| AC-035     | FAIL / PENDING SECOND RE-AUDIT           | Remediation cannot self-approve the phase.                      |
+| AC-035     | PENDING SECOND RE-AUDIT                  | Remediation cannot self-approve the phase.                      |
 | AC-036     | PASS                                     | Audit and re-audit retain their respective failed outcomes.     |
 | **AC-031** | **DEFERRED — PRE-PRODUCTION GOVERNANCE** | No governance mutation was attempted.                           |
 
@@ -134,5 +148,9 @@ triage, and streamed history controls remained passing.
 - `REMEDIATION.md` and `RE-AUDIT.md` are unchanged after checkpoint `d793ce1`.
 - The historical chain remains: audit failed → remediation → re-audit failed → additional
   remediation.
-- Phase 1 remains unauthorized. The maximum status becomes **READY FOR PHASE 0 SECOND RE-AUDIT**
-  only after the required clean-checkout validation completes.
+- Hosted CI has not been authorized or executed for this additional remediation. Phase 1 remains
+  unauthorized, and the independent Phase 0 Second Re-Audit remains pending.
+
+## Decision
+
+**ADDITIONAL REMEDIATION LOCALLY VERIFIED — READY FOR HOSTED CI AUTHORIZATION**
