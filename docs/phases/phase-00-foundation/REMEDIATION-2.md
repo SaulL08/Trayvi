@@ -1,12 +1,14 @@
 # Phase 0 — Additional Audit Remediation
 
-**Status:** ADDITIONAL REMEDIATION LOCALLY VERIFIED — READY FOR HOSTED CI AUTHORIZATION  
+**Status:** READY FOR PHASE 0 SECOND RE-AUDIT  
 **Original audit target:** `6b977aa4eb078f4079cb24cbd1370244d31c7e17`  
 **First remediation target / first re-audit target:** `01f360aa717593458beae3123db3de925f3fb319`  
 **First re-audit record:** `d793ce17776ee811af67434fbee6abbfd0b1bf11`  
 **Additional remediation code head:** `8bd1e768d9dd146742e0aa3f0d6c71526d58d9a1`  
 **Clean-checkout validation target:** `1d18c00de9807d3c7800ed1dda0056dc7b24561e`  
-**Clean-checkout validation tree:** `cba993d35ff10596b54b7c79f0dd794232b8c37d`
+**Clean-checkout validation tree:** `cba993d35ff10596b54b7c79f0dd794232b8c37d`  
+**Hosted corrective target:** `a442d2e6e588de299d1515e3c61ec974fc8971f1`  
+**Hosted corrective target tree:** `211a468b317c42aecc1408a5eba075a663f7200d`
 
 This is a chronological addition after the failed first re-audit. It does not revise `AUDIT.md`,
 `REMEDIATION.md`, or `RE-AUDIT.md`, and it does not perform the independent second re-audit.
@@ -20,13 +22,15 @@ This is a chronological addition after the failed first re-audit. It does not re
 - **Fix:** `482621647a62efbe4d20e04e4f6bbb4bfae37f1d` sanitizes the event once for both
   `event` and final `message`, performs at most two bounded percent-decoding passes, and traverses
   `AggregateError.errors` plus enumerable Error metadata without invoking accessors.
+  `a442d2e6e588de299d1515e3c61ec974fc8971f1` additionally classifies database protocol
+  `secretKey` fields as sensitive after artifact inspection exposed one ephemeral PostgreSQL value.
 - **Files:** `packages/observability/src/logger.ts`, `redaction.ts`, and the redaction unit suite.
 - **Regression:** Final serialized Pino output is inspected for plain, colon, quoted, JSON-like,
   query, percent-encoded, case-variant, nested Error, AggregateError, worker/API logger, and exception
-  filter paths.
+  filter paths, including an enumerable PostgreSQL client `secretKey`.
 - **Post-fix reproduction:** The exact string-only and `password%3D<canary>` probes emit only
   `[REDACTED]`; the canary is absent from serialized output.
-- **Status:** **FIXED**. Independent second re-audit remains pending.
+- **Status:** **FIXED — HOSTED VERIFIED**. Independent second re-audit remains pending.
 
 ### P0-AUD-004 — MEDIUM — Partially remediated architecture aliases
 
@@ -44,7 +48,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   deep, relative, re-export, dynamic import, and environment fixtures remain active.
 - **Post-fix reproduction:** Both re-audit bypasses produce violations; the real repository produces
   none.
-- **Status:** **FIXED**. Independent second re-audit remains pending.
+- **Status:** **FIXED — HOSTED VERIFIED**. Independent second re-audit remains pending.
 
 ### P0-AUD-005 — MEDIUM — Partially remediated migration environment
 
@@ -58,7 +62,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   invalid environment fail; explicit local development with disabled TLS passes.
 - **Post-fix reproduction:** Removing `NODE_ENV` returns `ConfigValidationError` for `NODE_ENV` before
   a migration connection is created.
-- **Status:** **FIXED**. Independent second re-audit remains pending.
+- **Status:** **FIXED — HOSTED VERIFIED**. Independent second re-audit remains pending.
 
 ### P0-AUD-007 — MEDIUM — Partially remediated outbox transitions
 
@@ -75,7 +79,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   also verify timestamps, locks, attempts, safe error codes, state shapes, and DELETE denial.
 - **Post-fix reproduction:** The exact single UPDATE from pending to published fails with SQLSTATE
   `23514`; the real database matrix reports `outboxStateTransitions=true`.
-- **Status:** **FIXED**. Independent second re-audit remains pending.
+- **Status:** **FIXED — HOSTED VERIFIED**. Independent second re-audit remains pending.
 
 ### P0-REAUD-001 — LOW — Security subprocess deadlines
 
@@ -91,7 +95,7 @@ This is a chronological addition after the failed first re-audit. It does not re
   history-only secrets are covered.
 - **Post-fix reproduction:** A real unavailable-registry run returned
   `security.dependencies.failed` and exit code 1; deterministic hangs terminate and never pass.
-- **Status:** **FIXED**. Independent second re-audit remains pending.
+- **Status:** **FIXED — HOSTED VERIFIED**. Independent second re-audit remains pending.
 
 ## Previously closed regression sample
 
@@ -121,9 +125,33 @@ triage, and streamed history controls remained passing.
   install from the pnpm content-addressable store, five clean builds, 69/69 unit tests, 19/19
   integration tests, and all 12 database invariants. This run included graceful-to-forced child
   termination and both compiled process-lifecycle signal cases.
-- Current-target dependency severity counts: **PENDING HOSTED CI**. The local live audit failed
-  closed on an invalid registry/certificate response, so no fresh current-target zero count is
-  asserted. TLS verification remained enabled.
+- Local dependency severity counts were not asserted because the live audit failed closed on an
+  invalid registry/certificate response. TLS verification remained enabled; the hosted current-target
+  counts are recorded below.
+
+## Hosted verification
+
+- Initial publication run `34270806808` completed all configured CI jobs successfully for
+  `44766753e46efecac45b729483cb1b15445aa61d`. Post-run artifact inspection then found one
+  unredacted ephemeral PostgreSQL `secretKey` in integration artifact `10073766304`. This was
+  classified as a security regression; the run and discovery remain recorded.
+- Corrective commit `a442d2e6e588de299d1515e3c61ec974fc8971f1` added the minimum redaction rule and a final-output
+  regression test. Hosted run `34271765472` completed successfully on `ubuntu-24.04`.
+- Security job `102214806197`: PASS — Critical 0, High 0, Moderate 0, repository secrets 0,
+  filesystem misconfigurations 0, dependency vulnerabilities 0, and hardened PostGIS image
+  vulnerabilities 0. TLS validation was not disabled.
+- Quality job `102214806336`: PASS — static gate, 70/70 unit tests with zero skips, coverage evidence,
+  and five builds.
+- Integration job `102214806230`: PASS — 19/19 integration tests with zero skips, API and Worker
+  SIGTERM lifecycle cases, and all 12 database invariants.
+- Required gate job `102215415238`: PASS.
+- Artifact inspection: PASS — all 44 extracted files were inspected; no tokens, private keys,
+  credential-bearing URLs, unredacted passwords, `.env` files, private certificate/key files, or
+  unredacted database protocol secret keys were found. The expected `secretKey` field was retained as
+  `[REDACTED]`.
+- Artifacts, all bound to the corrective commit and retained until 2026-09-22 UTC:
+  `phase-00-security` (`10074126495`), `phase-00-integration` (`10074133852`), and
+  `phase-00-quality` (`10074147733`).
 
 ## Local acceptance
 
@@ -148,9 +176,9 @@ triage, and streamed history controls remained passing.
 - `REMEDIATION.md` and `RE-AUDIT.md` are unchanged after checkpoint `d793ce1`.
 - The historical chain remains: audit failed → remediation → re-audit failed → additional
   remediation.
-- Hosted CI has not been authorized or executed for this additional remediation. Phase 1 remains
+- Hosted CI and artifact inspection are complete for the additional remediation. Phase 1 remains
   unauthorized, and the independent Phase 0 Second Re-Audit remains pending.
 
 ## Decision
 
-**ADDITIONAL REMEDIATION LOCALLY VERIFIED — READY FOR HOSTED CI AUTHORIZATION**
+**READY FOR PHASE 0 SECOND RE-AUDIT**

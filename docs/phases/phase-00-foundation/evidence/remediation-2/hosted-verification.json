@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-08T19:57:21.0000000Z",
+  "initialRun": {
+    "runId": 34270806808,
+    "commit": "44766753e46efecac45b729483cb1b15445aa61d",
+    "ciConclusion": "SUCCESS",
+    "artifactInspection": "FAIL",
+    "finding": "integration.log contained one unredacted ephemeral PostgreSQL secretKey",
+    "classification": "SECURITY_REGRESSION",
+    "artifacts": [
+      {
+        "id": 10073757809,
+        "name": "phase-00-security",
+        "commit": "44766753e46efecac45b729483cb1b15445aa61d",
+        "expiresAtUtc": "2026-09-22T19:46:45Z",
+        "inspection": "PASS"
+      },
+      {
+        "id": 10073766304,
+        "name": "phase-00-integration",
+        "commit": "44766753e46efecac45b729483cb1b15445aa61d",
+        "expiresAtUtc": "2026-09-22T19:46:58Z",
+        "inspection": "FAIL_UNREDACTED_EPHEMERAL_POSTGRESQL_SECRET_KEY"
+      },
+      {
+        "id": 10073794773,
+        "name": "phase-00-quality",
+        "commit": "44766753e46efecac45b729483cb1b15445aa61d",
+        "expiresAtUtc": "2026-09-22T19:47:41Z",
+        "inspection": "PASS"
+      }
+    ]
+  },
+  "correction": {
+    "commit": "a442d2e6e588de299d1515e3c61ec974fc8971f1",
+    "tree": "211a468b317c42aecc1408a5eba075a663f7200d",
+    "description": "redact database protocol secret keys at the final logging boundary",
+    "regressionTest": "PASS"
+  },
+  "finalRun": {
+    "runId": 34271765472,
+    "runAttempt": 1,
+    "commit": "a442d2e6e588de299d1515e3c61ec974fc8971f1",
+    "workflow": "Phase 0 CI",
+    "event": "push",
+    "runner": "ubuntu-24.04",
+    "status": "COMPLETED",
+    "conclusion": "SUCCESS",
+    "jobs": [
+      {
+        "id": 102214806197,
+        "name": "Dependency, secret, filesystem, and image scans",
+        "status": "SUCCESS"
+      },
+      {
+        "id": 102214806336,
+        "name": "Static, unit, and build",
+        "status": "SUCCESS"
+      },
+      {
+        "id": 102214806230,
+        "name": "PostgreSQL/PostGIS and process integration",
+        "status": "SUCCESS"
+      },
+      {
+        "id": 102215415238,
+        "name": "Phase 0 required gate",
+        "status": "SUCCESS"
+      }
+    ]
+  },
+  "linuxPosix": {
+    "unitTests": "70/70",
+    "integrationTests": "19/19",
+    "skips": 0,
+    "apiSigterm": "PASS",
+    "workerSigterm": "PASS",
+    "securitySubprocessTimeout": "PASS",
+    "sigtermToSigkillEscalation": "PASS",
+    "databaseInvariants": "12/12"
+  },
+  "security": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 0,
+    "secrets": 0,
+    "misconfigurations": 0,
+    "dependencyAdvisories": 0,
+    "filesystemVulnerabilities": 0,
+    "postgisImageVulnerabilities": 0,
+    "tlsVerificationDisabled": false
+  },
+  "artifacts": [
+    {
+      "id": 10074126495,
+      "name": "phase-00-security",
+      "commit": "a442d2e6e588de299d1515e3c61ec974fc8971f1",
+      "expiresAtUtc": "2026-09-22T19:56:37Z",
+      "inspection": "PASS"
+    },
+    {
+      "id": 10074133852,
+      "name": "phase-00-integration",
+      "commit": "a442d2e6e588de299d1515e3c61ec974fc8971f1",
+      "expiresAtUtc": "2026-09-22T19:56:49Z",
+      "inspection": "PASS"
+    },
+    {
+      "id": 10074147733,
+      "name": "phase-00-quality",
+      "commit": "a442d2e6e588de299d1515e3c61ec974fc8971f1",
+      "expiresAtUtc": "2026-09-22T19:57:11Z",
+      "inspection": "PASS"
+    }
+  ],
+  "artifactInspection": {
+    "filesInspected": 44,
+    "forbiddenFileNames": 0,
+    "sensitiveContentFindings": 0,
+    "unredactedDatabaseProtocolSecretKeys": 0,
+    "redactedDatabaseProtocolSecretKeys": 1,
+    "result": "PASS"
+  },
+  "findings": {
+    "P0-AUD-001": "FIXED_HOSTED_VERIFIED",
+    "P0-AUD-004": "FIXED_HOSTED_VERIFIED",
+    "P0-AUD-005": "FIXED_HOSTED_VERIFIED",
+    "P0-AUD-007": "FIXED_HOSTED_VERIFIED",
+    "P0-REAUD-001": "FIXED_HOSTED_VERIFIED"
+  },
+  "acceptance": {
+    "AC-031": "DEFERRED_PRE_PRODUCTION_GOVERNANCE",
+    "AC-035": "PENDING_SECOND_RE_AUDIT",
+    "AC-036": "PASS"
+  },
+  "remainingIssues": [
+    "GitHub warns that pinned JavaScript actions targeting Node.js 20 are forced to run on Node.js 24"
+  ],
+  "decision": "READY_FOR_PHASE_0_SECOND_RE_AUDIT"
+}
