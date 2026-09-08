@@ -91,6 +91,35 @@ describe('recursive log redaction', () => {
     });
   });
 
+  it('redacts a database protocol secret key from final error output', async () => {
+    const stream = new PassThrough();
+    let output = '';
+    stream.on('data', (chunk: Buffer) => {
+      output += chunk.toString('utf8');
+    });
+    const logger = new StructuredLogger({
+      service: 'api',
+      environment: 'test',
+      version: 'test',
+      level: 'error',
+      format: 'json',
+      destination: stream,
+    });
+    const protocolSecret = 1_353_585_937;
+    const databaseError = Object.assign(new Error('database connection terminated'), {
+      client: { secretKey: protocolSecret },
+    });
+
+    logger.error('database.pool.error', databaseError);
+    logger.flush();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(output).not.toContain(String(protocolSecret));
+    expect(JSON.parse(output)).toMatchObject({
+      error: { client: { secretKey: '[REDACTED]' } },
+    });
+  });
+
   it('redacts structured sensitive assignments from error messages, stacks, causes, and metadata', () => {
     const canaries = [
       'message-canary',

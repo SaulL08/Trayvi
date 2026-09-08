@@ -21,6 +21,7 @@ const sensitiveKeyNames = [
   'refresh_token',
   'session_token',
   'secret',
+  'secret_key',
   'client_secret',
   'api_key',
   'documents',
