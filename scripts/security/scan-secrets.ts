@@ -6,6 +6,9 @@ import { runBoundedProcess } from './bounded-process.js';
 interface SecretPattern {
   readonly name: string;
   readonly expression: RegExp;
+  readonly candidateGroup?: number;
+  readonly minimumLength?: number;
+  readonly minimumEntropy?: number;
 }
 
 export interface SecretFinding {
@@ -25,7 +28,93 @@ const patterns: readonly SecretPattern[] = [
     name: 'hardcoded-bearer',
     expression: /\bBearer\s+[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/u,
   },
+  {
+    name: 'postgresql-url-credential',
+    expression: /\bpostgres(?:ql)?:\/\/[^:\s/@]+:([^@\s/]+)@/giu,
+    candidateGroup: 1,
+    minimumLength: 12,
+    minimumEntropy: 2.5,
+  },
+  {
+    name: 'password-assignment',
+    expression: /\b(?:password|passwd)\b\s*[:=]\s*["']?([^"'`\s,;]+)/giu,
+    candidateGroup: 1,
+    minimumLength: 12,
+    minimumEntropy: 2.5,
+  },
+  {
+    name: 'authorization-bearer',
+    expression: /\bauthorization\b\s*[:=]\s*["']?Bearer\s+([A-Za-z0-9._~+/=-]{24,})/giu,
+    candidateGroup: 1,
+    minimumLength: 24,
+    minimumEntropy: 3,
+  },
+  {
+    name: 'api-key-assignment',
+    expression: /\bapi[_-]?key\b\s*[:=]\s*["']?([^"'`\s,;]+)/giu,
+    candidateGroup: 1,
+    minimumLength: 20,
+    minimumEntropy: 3,
+  },
+  {
+    name: 'private-key-assignment',
+    expression: /\bprivate[_-]?key\b\s*[:=]\s*["']?([^"'`\s,;]+)/giu,
+    candidateGroup: 1,
+    minimumLength: 20,
+    minimumEntropy: 3,
+  },
+  {
+    name: 'ssl-key-assignment',
+    expression: /\bssl[_-]?key\b\s*[:=]\s*["']?([^"'`\s,;]+)/giu,
+    candidateGroup: 1,
+    minimumLength: 20,
+    minimumEntropy: 3,
+  },
 ];
+
+const explicitExampleMarker =
+  /(?:^|[-_.])(?:example|placeholder|dummy|fake|unused|local-only|changeme|replace-me|redacted|random|super-secret|canary)(?:$|[-_.}])/iu;
+
+function shannonEntropy(value: string): number {
+  const frequencies = new Map<string, number>();
+  for (const character of value) {
+    frequencies.set(character, (frequencies.get(character) ?? 0) + 1);
+  }
+  let entropy = 0;
+  for (const count of frequencies.values()) {
+    const probability = count / value.length;
+    entropy -= probability * Math.log2(probability);
+  }
+  return entropy;
+}
+
+function isExplicitlyAllowedExample(value: string): boolean {
+  const candidate = value.trim();
+  return (
+    candidate.startsWith('${') ||
+    candidate.startsWith('{{') ||
+    candidate.startsWith('<') ||
+    /^\$[A-Za-z_]/u.test(candidate) ||
+    candidate.includes('(') ||
+    /canary$/iu.test(candidate) ||
+    /^(?:process\.)?env(?:\.|\[|_|[A-Z])/u.test(candidate) ||
+    /^secrets(?:\.|\[|_|[A-Z])/iu.test(candidate) ||
+    explicitExampleMarker.test(candidate)
+  );
+}
+
+function isStrongContextualCandidate(
+  value: string,
+  minimumLength: number,
+  minimumEntropy: number,
+): boolean {
+  const candidate = value.replace(/[}\])]+$/u, '');
+  return (
+    !isExplicitlyAllowedExample(value) &&
+    candidate.length >= minimumLength &&
+    shannonEntropy(candidate) >= minimumEntropy
+  );
+}
 
 export interface GitScanDeadlineOptions {
   readonly metadataTimeoutMs?: number;
@@ -37,9 +126,30 @@ export function findPotentialSecrets(source: string, label: string): readonly Se
   const findings: SecretFinding[] = [];
   for (const [index, line] of source.split(/\r?\n/u).entries()) {
     for (const pattern of patterns) {
+      if (
+        pattern.name === 'private-key' &&
+        (line.includes('${') || line.includes("['-----BEGIN ',"))
+      ) {
+        continue;
+      }
       pattern.expression.lastIndex = 0;
-      if (pattern.expression.test(line)) {
+      if (pattern.candidateGroup === undefined && pattern.expression.test(line)) {
         findings.push({ source: label, line: index + 1, pattern: pattern.name });
+        continue;
+      }
+      if (pattern.candidateGroup === undefined) continue;
+      for (const match of line.matchAll(pattern.expression)) {
+        const candidate = match[pattern.candidateGroup];
+        if (
+          candidate !== undefined &&
+          isStrongContextualCandidate(
+            candidate,
+            pattern.minimumLength ?? 1,
+            pattern.minimumEntropy ?? 0,
+          )
+        ) {
+          findings.push({ source: label, line: index + 1, pattern: pattern.name });
+        }
       }
     }
   }
