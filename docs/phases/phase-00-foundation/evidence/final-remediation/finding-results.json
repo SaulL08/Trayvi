@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "target": "fc8dd16c87ee93b2eb00f1b980f52bedd5a54110",
+  "findings": [
+    {
+      "id": "P0-AUD-001",
+      "severity": "HIGH",
+      "previous": "REOPENED",
+      "final": "FIXED",
+      "fixCommit": "2aaaba807ea4339f9d414504f5e0c7bd3a426854",
+      "exactProbe": "PASS_CANARIES_ABSENT_FROM_FINAL_PINO_JSON",
+      "safeFieldsPreserved": true
+    },
+    {
+      "id": "P0-AUD-004",
+      "severity": "MEDIUM",
+      "previous": "REOPENED",
+      "final": "FIXED",
+      "fixCommit": "fc5c095cffb0e788f596517476b3448c9f20465d",
+      "reflectiveEnvironmentProbe": "VIOLATION",
+      "staticVariableDynamicImportProbe": "VIOLATION",
+      "realRepositoryViolations": 0
+    },
+    {
+      "id": "P0-AUD-007",
+      "severity": "MEDIUM",
+      "previous": "REOPENED",
+      "final": "FIXED",
+      "fixCommit": "6d67ce615e1d57fdf6d247d22e998db77b095e70",
+      "immutableEventUpdatesDenied": true,
+      "arbitraryMetadataUpdatesDenied": true,
+      "validTransitionsPreserved": true,
+      "deleteDenied": true
+    },
+    {
+      "id": "P0-REAUD-001",
+      "severity": "LOW",
+      "previous": "REOPENED",
+      "final": "FIXED",
+      "fixCommit": "1e4c9fb15aaa1d261f0ae8c20ae34940cd70c53b",
+      "windowsTreeCleanup": "PASS",
+      "posixProcessGroupCleanup": "PASS",
+      "resistantDescendantAliveAfterRejection": false
+    },
+    {
+      "id": "P0-REAUD2-001",
+      "severity": "MEDIUM",
+      "previous": "OPEN",
+      "final": "FIXED",
+      "fixCommit": "fc8dd16c87ee93b2eb00f1b980f52bedd5a54110",
+      "positiveCredentialClassesDetected": 8,
+      "negativeFixtureFindings": 0,
+      "repositoryAndHistoryFindings": 0,
+      "findingValuesRetained": false
+    }
+  ]
+}
