@@ -234,6 +234,70 @@ describe('recursive log redaction', () => {
     expect(records.some((record) => record.message.includes('[REDACTED]'))).toBe(true);
   });
 
+  it('redacts the second re-audit corpus at the final Pino boundary without destroying safe keys', async () => {
+    const stream = new PassThrough();
+    let output = '';
+    stream.on('data', (chunk: Buffer) => {
+      output += chunk.toString('utf8');
+    });
+    const logger = new StructuredLogger({
+      service: 'security-subprocess',
+      environment: 'test',
+      version: 'test',
+      level: 'debug',
+      format: 'json',
+      destination: stream,
+    });
+    const canaries = [
+      'passwd-value-2rA9',
+      'credential-value-7xQ3',
+      'private-key-value-5mN8',
+      'ssl-key-value-4vK6',
+      'session-value-9pL2',
+      'database-url-value-8cJ4',
+      'connection-string-value-6hT1',
+      'pem-body-value-3sW7',
+      'error-text-value-1fD5',
+      'cause-value-0bR9',
+      'aggregate-value-7gM2',
+    ];
+    const error = Object.assign(new Error(`credentials=${canaries[8]}`), {
+      cause: new Error(`session-id=${canaries[9]}`),
+      privateKey: canaries[2],
+    });
+    const aggregate = new AggregateError(
+      [error, new Error(`ssl_key=${canaries[10]}`)],
+      `credential=${canaries[1]}`,
+    );
+
+    logger.info(`passwd=${canaries[0]}`);
+    logger.warn('worker.diagnostic', {
+      credential: canaries[1],
+      nested: [{ privateKey: canaries[2] }, { 'SSL-KEY': canaries[3] }, { SESSION: canaries[4] }],
+      databaseUrl: canaries[5],
+      connection_string: canaries[6],
+      safeId: '018f4f7a-3c2b-7b11-8abc-0123456789ab',
+      keyboardKey: 'ArrowUp',
+    });
+    logger.error(
+      `subprocess stderr -----BEGIN PRIVATE KEY-----\n${canaries[7]}\n-----END PRIVATE KEY-----`,
+      aggregate,
+    );
+    logger.debug(`credential%3D${canaries[1]}`);
+    logger.flush();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    for (const canary of canaries) expect(output).not.toContain(canary);
+    const records = output
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(records).toHaveLength(4);
+    expect(output).toContain('018f4f7a-3c2b-7b11-8abc-0123456789ab');
+    expect(output).toContain('ArrowUp');
+    expect(output).toContain('[REDACTED_PRIVATE_KEY]');
+  });
+
   it('does not invoke getters while sanitizing objects or errors', () => {
     let getterCalls = 0;
     const hostile = Object.defineProperties(new Error('safe diagnostic'), {

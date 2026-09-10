@@ -13,6 +13,7 @@ const sensitiveKeyNames = [
   'cookie',
   'set_cookie',
   'password',
+  'passwd',
   'passcode',
   'pin',
   'otp',
@@ -20,10 +21,18 @@ const sensitiveKeyNames = [
   'access_token',
   'refresh_token',
   'session_token',
+  'session',
+  'session_id',
   'secret',
   'secret_key',
+  'credential',
+  'credentials',
   'client_secret',
   'api_key',
+  'private_key',
+  'ssl_key',
+  'database_url',
+  'connection_string',
   'documents',
   'document_number',
   'national_id',
@@ -60,6 +69,8 @@ const sensitiveSingleQuotedAssignment = new RegExp(
   'giu',
 );
 const sensitiveBareAssignment = new RegExp(`${assignmentPrefix}(?!["'\\[])[^\\s,;&}\\]]+`, 'giu');
+const privateKeyBlock =
+  /-----BEGIN (?:ENCRYPTED |RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?(?:-----END (?:ENCRYPTED |RSA |EC |OPENSSH )?PRIVATE KEY-----|$)/giu;
 
 export type SafeLogValue =
   | null
@@ -107,6 +118,7 @@ function sanitizeString(input: string): string {
     const codePoint = character.codePointAt(0) ?? 0;
     return codePoint <= 31 || codePoint === 127 ? ' ' : character;
   }).join('');
+  value = value.replace(privateKeyBlock, '[REDACTED_PRIVATE_KEY]');
   value = value.replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/giu, `Bearer ${REDACTED}`);
   value = value.replace(/\b[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu, REDACTED);
   value = value.replace(/\b(?:postgres(?:ql)?):\/\/[^\s]+/giu, '[REDACTED_DATABASE_URL]');
