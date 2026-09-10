@@ -64,8 +64,21 @@ describe('architecture boundary enforcement', () => {
 
     const violations = await inspectArchitectureFiles(root, [fixture]);
 
-    expect(violations).toContainEqual(expect.objectContaining({ code: 'FOUNDATION_IMPORTS_APP' }));
+    expect(
+      violations.filter((violation) => violation.code === 'FOUNDATION_IMPORTS_APP'),
+    ).toHaveLength(2);
     expect(violations).toContainEqual(expect.objectContaining({ code: 'DIRECT_ENV_ACCESS' }));
+  });
+
+  it('rejects a foundation dynamic import whose target cannot be resolved statically', async () => {
+    const fixture = resolve(
+      'packages/test-support/fixtures/invalid-boundary/unresolved-dynamic-import.ts',
+    );
+    const violations = await inspectArchitectureFiles(process.cwd(), [fixture]);
+
+    expect(violations).toContainEqual(
+      expect.objectContaining({ code: 'UNRESOLVED_FOUNDATION_DYNAMIC_IMPORT' }),
+    );
   });
 
   it('enforces application boundaries from package manifests', async () => {

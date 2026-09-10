@@ -41,9 +41,23 @@ async function sourceFiles(directory: string): Promise<string[]> {
   return output;
 }
 
-function importsFrom(source: string, file: string): readonly string[] {
+interface ImportAnalysis {
+  readonly specifiers: readonly string[];
+  readonly unresolvedDynamicImport: boolean;
+}
+
+function importsFrom(source: string, file: string): ImportAnalysis {
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const imports: string[] = [];
+  const staticBindings = new Map<string, ts.Expression>();
+  let unresolvedDynamicImport = false;
+  const collectBindings = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      staticBindings.set(node.name.text, node.initializer);
+    }
+    ts.forEachChild(node, collectBindings);
+  };
+  collectBindings(sourceFile);
   const visit = (node: ts.Node): void => {
     if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -52,20 +66,22 @@ function importsFrom(source: string, file: string): readonly string[] {
     ) {
       imports.push(node.moduleSpecifier.text);
     }
-    if (
-      ts.isCallExpression(node) &&
-      node.arguments.length === 1 &&
-      node.arguments[0] &&
-      ts.isStringLiteral(node.arguments[0]) &&
-      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-        (ts.isIdentifier(node.expression) && node.expression.text === 'require'))
-    ) {
-      imports.push(node.arguments[0].text);
+    if (ts.isCallExpression(node) && node.arguments.length === 1 && node.arguments[0]) {
+      const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      const isRequire = ts.isIdentifier(node.expression) && node.expression.text === 'require';
+      if (isDynamicImport || isRequire) {
+        const specifier = staticString(node.arguments[0], staticBindings);
+        if (specifier === undefined) {
+          if (isDynamicImport) unresolvedDynamicImport = true;
+        } else {
+          imports.push(specifier);
+        }
+      }
     }
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return imports;
+  return { specifiers: imports, unresolvedDynamicImport };
 }
 
 function unwrapped(expression: ts.Expression): ts.Expression {
@@ -96,6 +112,15 @@ function staticString(
     const left = staticString(candidate.left, bindings, seen);
     const right = staticString(candidate.right, bindings, seen);
     return left === undefined || right === undefined ? undefined : `${left}${right}`;
+  }
+  if (ts.isTemplateExpression(candidate)) {
+    let value = candidate.head.text;
+    for (const span of candidate.templateSpans) {
+      const expressionValue = staticString(span.expression, bindings, seen);
+      if (expressionValue === undefined) return undefined;
+      value += expressionValue + span.literal.text;
+    }
+    return value;
   }
   if (ts.isIdentifier(candidate) && !seen.has(candidate.text)) {
     const value = bindings.get(candidate.text);
@@ -144,21 +169,43 @@ function hasProcessEnvironmentAccess(source: string, file: string): boolean {
     const candidate = unwrapped(expression);
     return ts.isIdentifier(candidate) && aliases.has(candidate.text);
   };
+  const isReflectGet = (
+    expression: ts.Expression,
+    objectMatches: (object: ts.Expression) => boolean,
+    expectedProperty: string,
+  ): boolean => {
+    const candidate = unwrapped(expression);
+    if (!ts.isCallExpression(candidate) || candidate.arguments.length < 2) return false;
+    const reflectObject = accessedObject(candidate.expression);
+    const propertyArgument = candidate.arguments[1];
+    return (
+      reflectObject !== undefined &&
+      isAlias(reflectObject, new Set(['Reflect'])) &&
+      propertyName(candidate.expression, staticBindings) === 'get' &&
+      candidate.arguments[0] !== undefined &&
+      propertyArgument !== undefined &&
+      objectMatches(candidate.arguments[0]) &&
+      staticString(propertyArgument, staticBindings) === expectedProperty
+    );
+  };
+  const isGlobal = (expression: ts.Expression): boolean => isAlias(expression, globalAliases);
   const isProcess = (expression: ts.Expression): boolean => {
     if (isAlias(expression, processAliases)) return true;
     const object = accessedObject(expression);
     return (
-      propertyName(expression, staticBindings) === 'process' &&
-      object !== undefined &&
-      isAlias(object, globalAliases)
+      (propertyName(expression, staticBindings) === 'process' &&
+        object !== undefined &&
+        isGlobal(object)) ||
+      isReflectGet(expression, isGlobal, 'process')
     );
   };
   const isEnvironment = (expression: ts.Expression): boolean => {
     const object = accessedObject(expression);
     return (
-      propertyName(expression, staticBindings) === 'env' &&
-      object !== undefined &&
-      isProcess(object)
+      (propertyName(expression, staticBindings) === 'env' &&
+        object !== undefined &&
+        isProcess(object)) ||
+      isReflectGet(expression, isProcess, 'env')
     );
   };
   const bindAlias = (name: ts.BindingName, initializer: ts.Expression): void => {
@@ -315,7 +362,15 @@ export async function inspectArchitectureFiles(
       });
     }
 
-    for (const specifier of importsFrom(source, file)) {
+    const importAnalysis = importsFrom(source, file);
+    if (importer?.kind === 'package' && importAnalysis.unresolvedDynamicImport) {
+      violations.push({
+        code: 'UNRESOLVED_FOUNDATION_DYNAMIC_IMPORT',
+        file,
+        detail: 'Foundation package dynamic imports must have a statically resolvable target.',
+      });
+    }
+    for (const specifier of importAnalysis.specifiers) {
       const target = importedUnit(specifier, absoluteFile, root, units);
       const resolvedImport = specifier.startsWith('.')
         ? normalized(relative(root, resolve(dirname(absoluteFile), specifier)))

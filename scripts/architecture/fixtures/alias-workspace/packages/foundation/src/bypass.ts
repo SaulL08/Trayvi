@@ -5,5 +5,10 @@ export function forbiddenEnvironmentRead(): NodeJS.ProcessEnv | undefined {
 }
 
 const processAlias = globalThis['process'];
+const reflectedProcess = Reflect.get(globalThis, 'process');
+const applicationRoot = '@internal-api';
+const applicationTarget = `${applicationRoot}/bootstrap`;
 
 export { applicationValue };
+export const forbiddenReflectedEnvironment = reflectedProcess.env.NODE_ENV;
+export const forbiddenStaticDynamicImport = import(applicationTarget);
