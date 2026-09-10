@@ -25,6 +25,8 @@ export interface DatabaseVerificationEvidence {
   readonly outboxAtomicity: boolean;
   readonly outboxStateIntegrity: boolean;
   readonly outboxStateTransitions: boolean;
+  readonly outboxImmutableDataDenied: boolean;
+  readonly outboxMetadataMutationDenied: boolean;
   readonly outboxDeleteDenied: boolean;
 }
 
@@ -240,6 +242,39 @@ async function verifyMainScenario(
       skippedTransitionDenials.length === skippedTransitions.length &&
       skippedTransitionDenials.every(Boolean);
 
+    const immutableStatements = [
+      `UPDATE platform.outbox_events SET event_type = 'foundation.tampered' WHERE id = '${pendingSkipId}'`,
+      `UPDATE platform.outbox_events SET payload = '{"tampered":true}'::jsonb WHERE id = '${pendingSkipId}'`,
+    ];
+    const immutableDataDenials: boolean[] = [];
+    for (const statement of immutableStatements) {
+      await runtimeClient.query('BEGIN');
+      try {
+        await runtimeClient.query(statement);
+        immutableDataDenials.push(false);
+      } catch {
+        immutableDataDenials.push(true);
+      } finally {
+        await runtimeClient.query('ROLLBACK');
+      }
+    }
+    const metadataStatements = [
+      `UPDATE platform.outbox_events SET attempts = attempts + 100 WHERE id = '${failedId}'`,
+      `UPDATE platform.outbox_events SET locked_by = 'tampered-worker' WHERE id = '${failedId}'`,
+    ];
+    const metadataMutationDenials: boolean[] = [];
+    for (const statement of metadataStatements) {
+      await runtimeClient.query('BEGIN');
+      try {
+        await runtimeClient.query(statement);
+        metadataMutationDenials.push(false);
+      } catch {
+        metadataMutationDenials.push(true);
+      } finally {
+        await runtimeClient.query('ROLLBACK');
+      }
+    }
+
     const identity = await runtimeClient.query<{ session_user: string; current_user: string }>(
       'SELECT session_user, current_user',
     );
@@ -275,16 +310,22 @@ async function verifyMainScenario(
     const rollForward = await migrator.up();
     return {
       postgis: extension.rows[0]?.installed === true,
-      cleanApply: first.applied.length === 3 && table.rows[0]?.name === 'platform.outbox_events',
-      repeatNoOp: second.applied.length === 0 && second.skipped.length === 3,
+      cleanApply: first.applied.length === 4 && table.rows[0]?.name === 'platform.outbox_events',
+      repeatNoOp: second.applied.length === 0 && second.skipped.length === 4,
       rollbackRollForward:
-        down.length === 1 && statusAfterDown.length === 2 && rollForward.applied.length === 1,
+        down.length === 1 && statusAfterDown.length === 3 && rollForward.applied.length === 1,
       runtimeDdlDenied,
       runtimeIdentityRestricted,
       outboxAtomicity: afterRollback.rows[0]?.count === '0' && afterCommit.rows[0]?.count === '1',
       outboxStateIntegrity:
         contradictoryStateDenials.length === 2 && contradictoryStateDenials.every(Boolean),
       outboxStateTransitions,
+      outboxImmutableDataDenied:
+        immutableDataDenials.length === immutableStatements.length &&
+        immutableDataDenials.every(Boolean),
+      outboxMetadataMutationDenied:
+        metadataMutationDenials.length === metadataStatements.length &&
+        metadataMutationDenials.every(Boolean),
       outboxDeleteDenied,
     };
   } finally {
@@ -331,7 +372,7 @@ async function verifyConcurrency(adminUrl: string): Promise<boolean> {
     const results = await Promise.all([first.up(), second.up()]);
     const appliedCount = results.reduce((sum, result) => sum + result.applied.length, 0);
     const status = await first.status();
-    return appliedCount === 3 && status.length === 3;
+    return appliedCount === 4 && status.length === 4;
   } finally {
     await Promise.all([first.close(), second.close()]);
     await dropDisposableDatabase(adminUrl, database.name);

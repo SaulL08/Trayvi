@@ -41,6 +41,13 @@ exactly one terminal outcome: `published_at` for `published`, or a safe `last_er
 `failed`. Published rows are terminal. A database trigger enforces these transitions even when a
 runtime bug issues direct DML; row constraints independently enforce each state's field shape.
 
+The event envelope is immutable after insert: identity, type/schema, aggregate reference,
+occurrence/correlation/causation IDs, payload, and creation time cannot be rewritten. The runtime
+role has UPDATE privilege only on lifecycle columns. Those columns may change only as part of the
+state transitions above; same-state rewrites of attempts or lock ownership are rejected. Phase 0
+defines no scheduling transition, so `available_at` also remains stable until a future consumer ADR
+defines retry scheduling.
+
 ## Consequences
 
 Polling, retry, dead-letter policy, and broker adapters remain future work. The table is justified by a
@@ -52,8 +59,9 @@ Payloads exclude restricted data. Metrics use bounded event categories, not aggr
 
 ## Validation and revisit triggers
 
-Integration tests prove commit/rollback atomicity, state shapes, allowed transitions, denied skips,
-terminal publication, and runtime DELETE denial. Revisit when the first real event consumer needs
+Integration tests prove commit/rollback atomicity, immutable event content, controlled metadata,
+state shapes, allowed transitions, denied skips, terminal publication, and runtime DELETE denial.
+Revisit when the first real event consumer needs
 throughput or isolation beyond PostgreSQL polling.
 
 ## References

@@ -27,10 +27,12 @@ The Phase 0 migrations enable PostGIS, create only `platform.outbox_events`, enf
 processing, published, and failed field combinations, and enforce the state transitions documented in
 ADR-008. New rows start pending; claims enter processing and increment attempts; processing alone may
 finish as published or failed; failed rows may be claimed again; published is terminal. Runtime DML
-has no DELETE or schema DDL permission. PostgreSQL extension provisioning may require a platform
+cannot update the immutable event envelope and may update lifecycle columns only through those
+transitions. It has no DELETE or schema DDL permission. PostgreSQL extension provisioning may require a platform
 administrator in production before the restricted migrator runs.
 
 `db:verify` creates isolated disposable databases and proves clean apply, repeat no-op, rollback and
 roll-forward, invalid SQL rollback, concurrent serialization, PostGIS, restricted session identity,
-role-escalation/DDL denial, outbox state shapes and transitions, DELETE denial, and commit/rollback atomicity.
+role-escalation/DDL denial, outbox immutability, controlled processing metadata, state shapes and
+transitions, DELETE denial, and commit/rollback atomicity.
 Disposable databases are removed in `finally` blocks.
