@@ -1,3 +1,5 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -9,6 +11,17 @@ import {
 } from './bounded-process.js';
 
 const root = resolve('.');
+
+async function processIsRunning(pid: number): Promise<boolean> {
+  try {
+    process.kill(pid, 0);
+    if (process.platform !== 'linux') return true;
+    const status = await readFile(`/proc/${String(pid)}/stat`, 'utf8');
+    return status.split(' ')[2] !== 'Z';
+  } catch {
+    return false;
+  }
+}
 
 describe('bounded security subprocess execution', () => {
   it('returns complete output only after normal success', async () => {
@@ -78,4 +91,45 @@ describe('bounded security subprocess execution', () => {
       });
     },
   );
+
+  it('terminates a resistant descendant before rejecting a timed-out process tree', async () => {
+    const directory = await mkdtemp(resolve(tmpdir(), 'trayvi-process-tree-'));
+    const descendantPidFile = resolve(directory, 'descendant.pid');
+    let descendantPid: number | undefined;
+    const descendantSource = [
+      "if (process.platform !== 'win32') process.on('SIGTERM', () => undefined);",
+      'setInterval(() => undefined, 1000);',
+    ].join(' ');
+    const parentSource = [
+      "const { spawn } = require('node:child_process');",
+      "const { writeFileSync } = require('node:fs');",
+      `const descendant = spawn(process.execPath, ['-e', ${JSON.stringify(descendantSource)}], { stdio: 'ignore' });`,
+      `writeFileSync(${JSON.stringify(descendantPidFile)}, String(descendant.pid));`,
+      "if (process.platform !== 'win32') process.on('SIGTERM', () => undefined);",
+      'setInterval(() => undefined, 1000);',
+    ].join(' ');
+
+    try {
+      await expect(
+        runBoundedProcess(process.execPath, ['-e', parentSource], {
+          cwd: root,
+          label: 'process-tree fixture',
+          timeoutMs: 500,
+          terminationGraceMs: 150,
+        }),
+      ).rejects.toMatchObject({
+        name: SubprocessDeadlineError.name,
+        partialOutputDiscarded: true,
+        terminationEscalated: true,
+      });
+      descendantPid = Number.parseInt(await readFile(descendantPidFile, 'utf8'), 10);
+      expect(Number.isSafeInteger(descendantPid)).toBe(true);
+      expect(await processIsRunning(descendantPid)).toBe(false);
+    } finally {
+      if (descendantPid !== undefined && (await processIsRunning(descendantPid))) {
+        process.kill(descendantPid, 'SIGKILL');
+      }
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });

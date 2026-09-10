@@ -38,6 +38,78 @@ export class SubprocessExecutionError extends Error {
   }
 }
 
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function posixProcessGroupExists(pid: number): boolean {
+  try {
+    process.kill(-pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== 'ESRCH';
+  }
+}
+
+function signalPosixProcessGroup(pid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(-pid, signal);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error;
+  }
+}
+
+async function waitForPosixProcessGroupExit(pid: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (posixProcessGroupExists(pid)) {
+    if (Date.now() >= deadline) return false;
+    await delay(10);
+  }
+  return true;
+}
+
+async function terminateWindowsProcessTree(pid: number, label: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const terminator = spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], {
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    terminator.once('error', (error) => {
+      reject(new Error(`Unable to terminate ${label} process tree`, { cause: error }));
+    });
+    terminator.once('close', (code) => {
+      if (code === 0) resolve();
+      else {
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') {
+            reject(new Error(`Unable to terminate ${label} process tree`, { cause: error }));
+            return;
+          }
+        }
+        reject(new Error(`Unable to confirm ${label} process tree cleanup`));
+      }
+    });
+  });
+}
+
+async function terminatePosixProcessTree(
+  pid: number,
+  graceMs: number,
+  markEscalated: () => void,
+  label: string,
+): Promise<void> {
+  signalPosixProcessGroup(pid, 'SIGTERM');
+  if (await waitForPosixProcessGroupExit(pid, graceMs)) return;
+
+  markEscalated();
+  signalPosixProcessGroup(pid, 'SIGKILL');
+  if (!(await waitForPosixProcessGroupExit(pid, Math.max(graceMs, 1_000)))) {
+    throw new Error(`Unable to confirm ${label} process tree cleanup`);
+  }
+}
+
 export async function runBoundedProcess(
   command: string,
   arguments_: readonly string[],
@@ -52,6 +124,7 @@ export async function runBoundedProcess(
   return await new Promise((fulfill, reject) => {
     const child = spawn(command, [...arguments_], {
       cwd: options.cwd,
+      detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
@@ -62,19 +135,32 @@ export async function runBoundedProcess(
     let outputLimitExceeded = false;
     let terminationEscalated = false;
     let terminationRequested = false;
-    let forceTimer: NodeJS.Timeout | undefined;
+    let terminationPromise: Promise<void> | undefined;
 
     const terminate = (): void => {
       if (terminationRequested || child.exitCode !== null || child.signalCode !== null) return;
       terminationRequested = true;
-      child.kill('SIGTERM');
-      forceTimer = setTimeout(() => {
-        if (child.exitCode === null && child.signalCode === null) {
-          terminationEscalated = true;
-          child.kill('SIGKILL');
-        }
-      }, terminationGraceMs);
-      forceTimer.unref();
+      const pid = child.pid;
+      if (pid === undefined) {
+        terminationPromise = Promise.reject(
+          new Error(`Unable to identify ${options.label} process tree`),
+        );
+        return;
+      }
+      if (process.platform === 'win32') {
+        terminationEscalated = true;
+        terminationPromise = terminateWindowsProcessTree(pid, options.label);
+      } else {
+        terminationPromise = terminatePosixProcessTree(
+          pid,
+          terminationGraceMs,
+          () => {
+            terminationEscalated = true;
+          },
+          options.label,
+        );
+      }
+      void terminationPromise.catch(() => undefined);
     };
     const deadline = setTimeout(() => {
       timedOut = true;
@@ -109,29 +195,37 @@ export async function runBoundedProcess(
     child.stderr.setEncoding('utf8').on('data', (chunk: string) => capture(chunk, 'stderr'));
     child.once('error', (error) => {
       clearTimeout(deadline);
-      if (forceTimer) clearTimeout(forceTimer);
       reject(new Error(`Unable to start ${options.label}`, { cause: error }));
     });
     child.once('close', (code) => {
-      clearTimeout(deadline);
-      if (forceTimer) clearTimeout(forceTimer);
-      if (timedOut) {
-        reject(new SubprocessDeadlineError(options.label, options.timeoutMs, terminationEscalated));
-        return;
-      }
-      if (outputLimitExceeded) {
-        reject(
-          new Error(
-            `${options.label} exceeded its safe output limit; partial output was discarded`,
-          ),
-        );
-        return;
-      }
-      if (code === null || !acceptedExitCodes.includes(code)) {
-        reject(new SubprocessExecutionError(options.label, code));
-        return;
-      }
-      fulfill({ stdout, stderr, exitCode: code });
+      void (async () => {
+        clearTimeout(deadline);
+        try {
+          await terminationPromise;
+        } catch (error) {
+          reject(error);
+          return;
+        }
+        if (timedOut) {
+          reject(
+            new SubprocessDeadlineError(options.label, options.timeoutMs, terminationEscalated),
+          );
+          return;
+        }
+        if (outputLimitExceeded) {
+          reject(
+            new Error(
+              `${options.label} exceeded its safe output limit; partial output was discarded`,
+            ),
+          );
+          return;
+        }
+        if (code === null || !acceptedExitCodes.includes(code)) {
+          reject(new SubprocessExecutionError(options.label, code));
+          return;
+        }
+        fulfill({ stdout, stderr, exitCode: code });
+      })();
     });
   });
 }
