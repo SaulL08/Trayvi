@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
-  "recordedAtUtc": "2026-09-10T03:02:30.3080217Z",
+  "recordedAtUtc": "2026-09-10T03:40:06.9266287Z",
   "baseCommit": "c017a269fa7cdb94eb25cf7a77c3e5c3b702eac9",
-  "verifiedCodeHead": "fc8dd16c87ee93b2eb00f1b980f52bedd5a54110",
-  "verifiedCodeTree": "b5b50ffa4dc32fde186de25a081f85a33ade6fc7",
+  "preHostedLocalTarget": "fc8dd16c87ee93b2eb00f1b980f52bedd5a54110",
+  "verifiedCodeHead": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+  "verifiedCodeTree": "e2436359fba5d6aed5ae6027391746e2dce41e43",
   "windowsLocal": {
     "rootVerify": "PASS",
     "format": "PASS",
@@ -66,6 +67,15 @@
     "compiledApiSigterm": "PASS",
     "compiledWorkerSigterm": "PASS"
   },
+  "postCorrectionWindowsLocal": {
+    "target": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+    "rootVerify": "PASS",
+    "licensesChecked": 332,
+    "unitTestsPassed": 75,
+    "unitTestsSkippedPosixOnly": 1,
+    "workspaceBuildsPassed": 5,
+    "liveDependencyAdvisories": 0
+  },
   "database": {
     "postgis": true,
     "cleanApply": true,
@@ -83,12 +93,40 @@
     "concurrentSerialized": true
   },
   "dependencyAudit": {
-    "result": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
+    "initialLocalResult": "FAILED_CLOSED_INVALID_REGISTRY_REPORT",
+    "initialHostedRun": 34432793731,
+    "initialHostedResult": "FAILED_GHSA-82fw-gwwq-j7x9",
+    "correctionCommit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+    "result": "PASS_ZERO_ADVISORIES",
     "tlsVerificationDisabled": false,
-    "lockfileChangedByRemediation": false,
-    "hostedVerification": "PENDING_AUTHORIZATION"
+    "lockfileChangedByCorrection": true,
+    "hostedVerification": "PASS"
+  },
+  "hostedVerification": {
+    "runId": 34433832761,
+    "runner": "ubuntu-24.04",
+    "security": "PASS",
+    "quality": "PASS",
+    "integration": "PASS",
+    "requiredGate": "PASS",
+    "unitTestsPassed": 76,
+    "integrationTestsPassed": 19,
+    "databaseInvariantsPassed": 14,
+    "workspaceBuildsPassed": 5,
+    "dependencyAdvisories": 0,
+    "criticalFindings": 0,
+    "highFindings": 0,
+    "moderateFindings": 0,
+    "repositoryAndHistorySecretFindings": 0,
+    "trivyFilesystemFindings": 0,
+    "trivyMisconfigurationFindings": 0,
+    "trivyPostgisImageFindings": 0,
+    "artifactFilesInspected": 44,
+    "artifactTextFilesScanned": 42,
+    "artifactSecretFindings": 0,
+    "artifactSensitiveMaterialFindings": 0
   },
   "temporaryResourcesCleaned": true,
   "result": "PASS",
-  "maximumStatus": "FINAL REMEDIATION LOCALLY VERIFIED — READY FOR HOSTED CI AUTHORIZATION"
+  "maximumStatus": "READY FOR PHASE 0 FINAL RE-AUDIT"
 }

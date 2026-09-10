@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-10T11:50:16.869Z",
+  "repository": "SaulL08/Trayvi",
+  "branch": "main",
+  "failedPrecursor": {
+    "runId": 34432793731,
+    "commit": "076d4700b6ae147d4d9b8fa29faa03d8c978ecdb",
+    "conclusion": "failure",
+    "securityJobId": 102731627757,
+    "securityJobConclusion": "failure",
+    "qualityJobId": 102731627927,
+    "qualityJobConclusion": "success",
+    "integrationJobId": 102731627900,
+    "integrationJobConclusion": "success",
+    "requiredGateJobId": 102732088036,
+    "requiredGateConclusion": "failure",
+    "failureStep": "Retain and enforce dependency advisory detail",
+    "category": "HOSTED REMEDIATION DEFECT",
+    "finding": "GHSA-82fw-gwwq-j7x9",
+    "severity": "moderate",
+    "affectedPackages": ["vitest@4.1.1", "@vitest/mocker@4.1.1"],
+    "affectedRange": ">=2.1.0 <4.1.11",
+    "packageFindings": 2,
+    "uniqueAdvisories": 1,
+    "lifecycle": ["discovered", "fixed", "regression verified", "hosted verified"],
+    "artifactsPreserved": true,
+    "artifactFilesInspected": 42,
+    "artifactSecretFindings": 0,
+    "artifacts": [
+      {
+        "id": 10135134454,
+        "name": "phase-00-quality",
+        "sizeBytes": 100516,
+        "createdAtUtc": "2026-09-10T03:20:21Z",
+        "expiresAtUtc": "2026-09-24T03:20:20Z",
+        "expired": false
+      },
+      {
+        "id": 10135116216,
+        "name": "phase-00-integration",
+        "sizeBytes": 6468,
+        "createdAtUtc": "2026-09-10T03:19:31Z",
+        "expiresAtUtc": "2026-09-24T03:19:30Z",
+        "expired": false
+      },
+      {
+        "id": 10135094004,
+        "name": "phase-00-security",
+        "sizeBytes": 1356,
+        "createdAtUtc": "2026-09-10T03:18:31Z",
+        "expiresAtUtc": "2026-09-24T03:18:30Z",
+        "expired": false
+      }
+    ]
+  },
+  "correction": {
+    "commit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+    "tree": "e2436359fba5d6aed5ae6027391746e2dce41e43",
+    "vitest": "4.1.11",
+    "coverageV8": "4.1.11",
+    "localLiveAuditAdvisories": 0,
+    "tlsVerificationDisabled": false
+  },
+  "finalRun": {
+    "runId": 34433832761,
+    "runAttempt": 1,
+    "event": "push",
+    "commit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+    "status": "completed",
+    "conclusion": "success",
+    "runnerLabel": "ubuntu-24.04",
+    "createdAtUtc": "2026-09-10T03:34:14Z",
+    "completedAtUtc": "2026-09-10T03:36:44Z",
+    "url": "https://github.com/SaulL08/Trayvi/actions/runs/34433832761",
+    "jobs": [
+      {
+        "id": 102734701227,
+        "name": "Dependency, secret, filesystem, and image scans",
+        "runnerName": "GitHub Actions 1000000169",
+        "conclusion": "success"
+      },
+      {
+        "id": 102734701490,
+        "name": "PostgreSQL/PostGIS and process integration",
+        "runnerName": "GitHub Actions 1000000171",
+        "conclusion": "success"
+      },
+      {
+        "id": 102734701504,
+        "name": "Static, unit, and build",
+        "runnerName": "GitHub Actions 1000000170",
+        "conclusion": "success"
+      },
+      {
+        "id": 102735147666,
+        "name": "Phase 0 required gate",
+        "runnerName": "GitHub Actions 1000000172",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "results": {
+    "unit": { "passed": 76, "total": 76 },
+    "integration": { "passed": 19, "total": 19 },
+    "databaseInvariants": { "passed": 14, "total": 14 },
+    "workspaceBuilds": { "passed": 5, "total": 5 },
+    "apiSigterm": "PASS",
+    "workerSigterm": "PASS",
+    "processTreeTermination": "PASS",
+    "sigtermToSigkill": "PASS",
+    "architectureViolations": 0,
+    "repositoryAndHistorySecretFindings": 0,
+    "dependencyAdvisories": {
+      "critical": 0,
+      "high": 0,
+      "moderate": 0,
+      "low": 0,
+      "info": 0
+    },
+    "secrets": 0,
+    "misconfigurations": 0,
+    "trivyFilesystemVulnerabilities": 0,
+    "trivyDockerfileMisconfigurations": 0,
+    "trivyPostgisImageVulnerabilities": 0
+  },
+  "artifacts": [
+    {
+      "id": 10135489392,
+      "name": "phase-00-quality",
+      "runId": 34433832761,
+      "commit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+      "sizeBytes": 100491,
+      "createdAtUtc": "2026-09-10T03:36:35Z",
+      "digest": "sha256:dcd95664eafbdb83f1465f4ac45793fe0da66eb1dd9a353af4757ba31ba0a567",
+      "expiresAtUtc": "2026-09-24T03:36:35Z",
+      "expired": false
+    },
+    {
+      "id": 10135471383,
+      "name": "phase-00-integration",
+      "runId": 34433832761,
+      "commit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+      "sizeBytes": 6464,
+      "createdAtUtc": "2026-09-10T03:35:45Z",
+      "digest": "sha256:ce9dfbf72dcf81f0afd24f3b349c6162031adb605ad32c2133cecce990681547",
+      "expiresAtUtc": "2026-09-24T03:35:45Z",
+      "expired": false
+    },
+    {
+      "id": 10135467926,
+      "name": "phase-00-security",
+      "runId": 34433832761,
+      "commit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+      "sizeBytes": 1851,
+      "createdAtUtc": "2026-09-10T03:35:36Z",
+      "digest": "sha256:c3f23d36c7e699a18f65809f20bd1e3e2ff7cc7580366a295fd968730b9e5225",
+      "expiresAtUtc": "2026-09-24T03:35:36Z",
+      "expired": false
+    }
+  ],
+  "artifactInspection": {
+    "files": 44,
+    "textFiles": 42,
+    "binaryFiles": 2,
+    "allContentsRead": true,
+    "utf8ReplacementCharacters": 0,
+    "filesByArtifact": {
+      "phase-00-security": 6,
+      "phase-00-integration": 3,
+      "phase-00-quality": 35
+    },
+    "uncompressedBytesByArtifact": {
+      "phase-00-security": 3305,
+      "phase-00-integration": 30821,
+      "phase-00-quality": 453805
+    },
+    "secretFindings": 0,
+    "suspiciousFilenames": 0,
+    "plaintextValuesReported": false,
+    "contextualKeywordOccurrences": {
+      "password": 5,
+      "passwd": 1,
+      "credential": 12,
+      "secret": 38,
+      "secretKey": 2,
+      "privateKey": 3,
+      "sslKey": 2,
+      "token": 19,
+      "apiKey": 2,
+      "authorization": 1,
+      "bearer": 1,
+      "connectionString": 1
+    },
+    "classifiedSafeKeywordContexts": true,
+    "results": {
+      "secrets": 0,
+      "credentials": 0,
+      "privateKeys": 0,
+      "envFilesOrReferences": 0,
+      "privateCertificatesOrTlsMaterial": 0,
+      "databaseCredentialUrls": 0,
+      "bearerCredentials": 0,
+      "apiCredentials": 0
+    },
+    "binaryValidation": {
+      "pngFiles": 2,
+      "invalidPngSignatures": 0
+    }
+  },
+  "historicalIntegrity": {
+    "algorithm": "SHA-256",
+    "allMatched": true,
+    "files": {
+      "AUDIT.md": "3EF87D28459B5B5F608CBC202253EACF0F2D27F84E6EC6354601AF7A292F22F1",
+      "REMEDIATION.md": "BC1E7A9AEBCC70DA2159A051BB277B7A05531FD19886A5B2A719C6F954BB00A2",
+      "RE-AUDIT.md": "B1BD26F64A4DBBB584C6ED29A2DF42C465618C634E4965AEA85449256320B328",
+      "REMEDIATION-2.md": "1DFA947E520CD024BACC7FFDBB836AEDE1EF1FE347D43B3154B522B15BE80BD8",
+      "SECOND-RE-AUDIT.md": "07803A2831908B5CE803F974C0E656C8903C2ED7EAAEA4C72FAC3653C28E98B0"
+    }
+  },
+  "acceptance": {
+    "AC-031": "DEFERRED — PRE-PRODUCTION GOVERNANCE",
+    "AC-035": "PENDING FINAL RE-AUDIT",
+    "AC-036": "PASS"
+  },
+  "historicalEvidenceDeleted": false,
+  "decision": "READY FOR PHASE 0 FINAL RE-AUDIT"
+}
