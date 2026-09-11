@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "audit": "phase-00-final-re-audit",
+  "environment": {
+    "windowsDeveloperPath": {
+      "node": "22.14.0",
+      "corepack": "0.31.0",
+      "vitest": "4.1.11"
+    },
+    "linuxCleanCheckout": {
+      "os": "Debian GNU/Linux 12 (bookworm)",
+      "node": "22.14.0",
+      "pnpm": "11.25.0",
+      "filesystem": "native Docker volume"
+    },
+    "docker": {
+      "client": "29.7.2",
+      "server": "29.7.2"
+    },
+    "databaseImage": {
+      "postgresql": "17.11",
+      "postgisLine": "3.5",
+      "alpine": "3.24.1",
+      "baseDigest": "sha256:894f570c0cf0664ed5576a8fd5d5bfb8fb1b19d592885b686c3a88c8bd90c41f",
+      "auditImageDigest": "sha256:8c8f557a38e1980cdf060ca5850cec9e5244d93a989ea76240e49143e7247bc1",
+      "rebuiltWithoutCache": true,
+      "runtimeUser": "70:70",
+      "capabilitiesDropped": ["ALL"],
+      "noNewPrivileges": true,
+      "publishedPorts": 0
+    }
+  },
+  "windowsCleanCheckout": {
+    "targetCommitMatched": true,
+    "targetTreeMatched": true,
+    "initialStatus": "clean",
+    "frozenInstall": {
+      "passed": true,
+      "offline": true,
+      "packages": 267,
+      "reused": 267,
+      "downloaded": 0,
+      "lockfileChanged": false
+    },
+    "verify": {
+      "passed": true,
+      "toolchain": true,
+      "format": true,
+      "lint": true,
+      "typecheckTasksPassed": 8,
+      "typecheckCacheHits": 0,
+      "architectureViolations": 0,
+      "secretFindings": 0,
+      "licensesChecked": 267,
+      "licenseFindings": 0,
+      "unitPassed": 75,
+      "posixOnlySkipped": 1,
+      "buildTasksPassed": 5
+    }
+  },
+  "linuxCleanCheckout": {
+    "targetCommit": "cf0b577f25dbb4a35ae3923a7659513249b7be23",
+    "targetTree": "031a8eaf5e9a6967ea56b10a5743430973d20eaf",
+    "initialStatus": "clean",
+    "finalTrackedStatus": "clean",
+    "frozenInstall": {
+      "passed": true,
+      "packages": 266,
+      "reused": 266,
+      "downloaded": 0,
+      "lockfileChanged": false
+    },
+    "verify": {
+      "passed": true,
+      "toolchain": true,
+      "format": true,
+      "lint": true,
+      "typecheckTasksPassed": 8,
+      "typecheckCacheHits": 0,
+      "architectureViolations": 0,
+      "secretFindings": 0,
+      "licensesChecked": 266,
+      "licenseFindings": 0,
+      "unitFilesPassed": 15,
+      "unitTestsPassed": 76,
+      "unitTestsSkipped": 0,
+      "buildTasksPassed": 5
+    },
+    "integration": {
+      "passed": true,
+      "filesPassed": 8,
+      "testsPassed": 19,
+      "apiSigterm": true,
+      "workerSigterm": true,
+      "realPostgresqlPostgis": true
+    },
+    "databaseVerification": {
+      "passed": true,
+      "invariantsPassed": 14,
+      "invariantsTotal": 14,
+      "postgis": true,
+      "cleanApply": true,
+      "repeatNoOp": true,
+      "rollbackRollForward": true,
+      "invalidMigrationRolledBack": true,
+      "concurrentSerialized": true,
+      "runtimeDdlDenied": true,
+      "runtimeIdentityRestricted": true,
+      "outboxAtomicity": true,
+      "outboxStateIntegrity": true,
+      "outboxStateTransitions": true,
+      "outboxImmutableDataDenied": true,
+      "outboxMetadataMutationDenied": true,
+      "outboxDeleteDenied": true
+    }
+  },
+  "independentAdversarialSuite": {
+    "passed": true,
+    "filesPassed": 1,
+    "testsPassed": 6,
+    "testsFailed": 0,
+    "loggingFinalBytes": true,
+    "architectureCompilingFixtures": true,
+    "scannerPositiveNegativeTreeHistory": true,
+    "dependencyPolicyFailClosed": true
+  },
+  "liveDependencyAudit": {
+    "source": "pnpm-audit/npm-registry",
+    "passed": true,
+    "versions": {
+      "vitest": "4.1.11",
+      "@vitest/coverage-v8": "4.1.11",
+      "@vitest/mocker": "4.1.11"
+    },
+    "summary": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "discardedEnvironmentalAttempts": [
+    {
+      "surface": "Docker Desktop Windows bind mount",
+      "result": "not used as pass evidence",
+      "reason": "three architecture unit cases exceeded their unchanged 10-second timeout under slow cross-filesystem I/O",
+      "control": "the unmodified suite passed 76/76 in 2.14 seconds on a native Linux volume"
+    },
+    {
+      "surface": "first database verification invocation",
+      "result": "not used as pass evidence",
+      "reason": "the audit harness omitted the required explicit NODE_ENV",
+      "control": "the unmodified command passed 14/14 with the documented test environment"
+    }
+  ],
+  "tlsHandling": {
+    "certificateVerificationDisabled": false,
+    "hostTrustedAvastInspectionRootProvidedToEphemeralRunner": true,
+    "insecureRegistryFallbackUsed": false
+  }
+}

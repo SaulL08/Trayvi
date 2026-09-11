@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "audit": "phase-00-final-re-audit",
+  "runs": [
+    {
+      "id": 34433832761,
+      "headSha": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": {
+        "security": { "id": 102734701227, "conclusion": "success" },
+        "integration": { "id": 102734701490, "conclusion": "success" },
+        "quality": { "id": 102734701504, "conclusion": "success" },
+        "requiredGate": { "id": 102735147666, "conclusion": "success" }
+      },
+      "artifacts": [
+        {
+          "id": 10135467926,
+          "name": "phase-00-security",
+          "sizeBytes": 1851,
+          "expiresAt": "2026-09-24T03:35:36Z"
+        },
+        {
+          "id": 10135471383,
+          "name": "phase-00-integration",
+          "sizeBytes": 6464,
+          "expiresAt": "2026-09-24T03:35:45Z"
+        },
+        {
+          "id": 10135489392,
+          "name": "phase-00-quality",
+          "sizeBytes": 100491,
+          "expiresAt": "2026-09-24T03:36:35Z"
+        }
+      ]
+    },
+    {
+      "id": 34473800572,
+      "headSha": "cf0b577f25dbb4a35ae3923a7659513249b7be23",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": {
+        "quality": { "id": 102859645299, "conclusion": "success" },
+        "security": { "id": 102859645578, "conclusion": "success" },
+        "integration": { "id": 102859645679, "conclusion": "success" },
+        "requiredGate": { "id": 102860325781, "conclusion": "success" }
+      },
+      "artifacts": [
+        {
+          "id": 10150664639,
+          "name": "phase-00-integration",
+          "sizeBytes": 6480,
+          "expiresAt": "2026-09-24T11:56:23Z"
+        },
+        {
+          "id": 10150668999,
+          "name": "phase-00-security",
+          "sizeBytes": 1852,
+          "expiresAt": "2026-09-24T11:56:31Z"
+        },
+        {
+          "id": 10150690118,
+          "name": "phase-00-quality",
+          "sizeBytes": 100470,
+          "expiresAt": "2026-09-24T11:57:06Z"
+        }
+      ]
+    }
+  ],
+  "workflowReview": {
+    "permissions": "contents: read",
+    "actionUses": 11,
+    "actionUsesPinnedToFullCommit": 11,
+    "jobTimeoutsPresent": true,
+    "securityRunsRepositoryScanner": true,
+    "securityRunsDependencyPolicy": true,
+    "securityRunsTrivyFilesystem": true,
+    "securityRunsTrivyImage": true,
+    "integrationUsesRealPostgis": true,
+    "requiredGateAggregatesMandatoryJobs": true
+  },
+  "artifactReview": {
+    "runsReviewed": 2,
+    "artifactsReviewed": 6,
+    "filesReviewed": 88,
+    "textFilesReviewed": 84,
+    "binaryFilesReviewed": 4,
+    "allContentsRead": true,
+    "invalidUtf8Files": 0,
+    "invalidBinarySignatures": 0,
+    "repositoryScannerFindings": 0,
+    "sensitiveMaterialFilenames": 0,
+    "postgresCredentialUrls": 0,
+    "bearerCredentials": 0,
+    "apiCredentials": 0,
+    "privateKeyMaterial": 0,
+    "privateCertificateMaterial": 0,
+    "environmentFilesOrReferences": 0,
+    "artifactExposure": 0
+  },
+  "security": {
+    "technicalRun": {
+      "dependencyAdvisories": 0,
+      "filesystemVulnerabilities": 0,
+      "dockerfileMisconfigurations": 0,
+      "postgisImageVulnerabilities": 0,
+      "repositoryHistorySecrets": 0
+    },
+    "headRun": {
+      "dependencyAdvisories": 0,
+      "filesystemVulnerabilities": 0,
+      "dockerfileMisconfigurations": 0,
+      "postgisImageVulnerabilities": 0,
+      "repositoryHistorySecrets": 0
+    }
+  }
+}

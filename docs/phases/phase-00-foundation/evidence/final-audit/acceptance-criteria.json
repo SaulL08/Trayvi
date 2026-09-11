@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "audit": "phase-00-final-re-audit",
+  "summary": {
+    "pass": 35,
+    "fail": 0,
+    "deferred": 1,
+    "total": 36
+  },
+  "criteria": [
+    {
+      "id": "AC-001",
+      "status": "PASS",
+      "evidence": "Exact clean main target, line-ending policy, tracked-file inventory, and secret/generated exclusions were rechecked."
+    },
+    {
+      "id": "AC-002",
+      "status": "PASS",
+      "evidence": "Node 22.14.0 and pnpm 11.25.0 are pinned and passed local, Linux, and hosted toolchain checks."
+    },
+    {
+      "id": "AC-003",
+      "status": "PASS",
+      "evidence": "Independent Windows and native-volume Debian checkouts matched the target and completed setup without undocumented project tools."
+    },
+    {
+      "id": "AC-004",
+      "status": "PASS",
+      "evidence": "Frozen installs passed from the committed lockfile on Windows, Linux, and Hosted CI without lockfile changes."
+    },
+    {
+      "id": "AC-005",
+      "status": "PASS",
+      "evidence": "The root verify command passed on both developer and clean Linux paths and in Hosted CI."
+    },
+    {
+      "id": "AC-006",
+      "status": "PASS",
+      "evidence": "The workspace remains limited to the Phase 0 API, worker, and justified foundation packages; no functional domain placeholder was found."
+    },
+    {
+      "id": "AC-007",
+      "status": "PASS",
+      "evidence": "Format, lint, strict typecheck, and all five build tasks passed."
+    },
+    {
+      "id": "AC-008",
+      "status": "PASS",
+      "evidence": "The real graph has zero violations and compiling forbidden dependency, alias, re-export, deep-import, and dynamic-import fixtures are detected."
+    },
+    {
+      "id": "AC-009",
+      "status": "PASS",
+      "evidence": "Direct process environment access remains confined to packages/config/src/environment.ts; reflective aliases are rejected."
+    },
+    {
+      "id": "AC-010",
+      "status": "PASS",
+      "evidence": "ADR-001 through ADR-010 remain Accepted and survived source, test, database, and workflow consistency checks."
+    },
+    {
+      "id": "AC-011",
+      "status": "PASS",
+      "evidence": "Configuration tests and the intentionally incomplete audit invocation confirm fail-fast validation without secret values."
+    },
+    {
+      "id": "AC-012",
+      "status": "PASS",
+      "evidence": "Unsafe production defaults, wildcard credentialed CORS, and example-secret forms remain rejected by the configuration suite."
+    },
+    {
+      "id": "AC-013",
+      "status": "PASS",
+      "evidence": "Current-tree/reachable-history scans and both hosted artifact samples report zero secrets; examples remain non-usable."
+    },
+    {
+      "id": "AC-014",
+      "status": "PASS",
+      "evidence": "Final Pino-byte attacks covered 21 key classes, casing variants, strings, nesting, arrays, Error/cause/AggregateError, URLs, encodings, and subsystem diagnostics with zero canary leaks."
+    },
+    {
+      "id": "AC-015",
+      "status": "PASS",
+      "evidence": "Safe exception unit/integration tests retain the stable request-ID envelope without stack, query, path, or input disclosure."
+    },
+    {
+      "id": "AC-016",
+      "status": "PASS",
+      "evidence": "Live dependency audit and hosted filesystem/image reports contain zero Critical, High, Moderate, or other advisories/findings."
+    },
+    {
+      "id": "AC-017",
+      "status": "PASS",
+      "evidence": "The digest-pinned PostgreSQL 17/PostGIS 3.5 image rebuilt without cache and became healthy as user 70:70."
+    },
+    {
+      "id": "AC-018",
+      "status": "PASS",
+      "evidence": "Four migrations applied to disposable empty databases and repeat execution was a no-op."
+    },
+    {
+      "id": "AC-019",
+      "status": "PASS",
+      "evidence": "Rollback/roll-forward, invalid migration rollback, checksum/prefix integrity, and concurrent serialization passed on real PostgreSQL."
+    },
+    {
+      "id": "AC-020",
+      "status": "PASS",
+      "evidence": "A physical restricted runtime login was denied DDL, role escalation, and unauthorized outbox operations."
+    },
+    {
+      "id": "AC-021",
+      "status": "PASS",
+      "evidence": "No product/domain table or Villa Altagracia runtime hardcoding was found in the foundation surface."
+    },
+    {
+      "id": "AC-022",
+      "status": "PASS",
+      "evidence": "Compiled API and worker processes emitted structured lifecycle logs, received real SIGTERM, drained, and stopped within bounds."
+    },
+    {
+      "id": "AC-023",
+      "status": "PASS",
+      "evidence": "Liveness independence and readiness failure/recovery against real PostgreSQL passed."
+    },
+    {
+      "id": "AC-024",
+      "status": "PASS",
+      "evidence": "Health and error responses remained free of secrets, topology, dependency exception text, and configuration."
+    },
+    {
+      "id": "AC-025",
+      "status": "PASS",
+      "evidence": "Valid request/correlation IDs propagate and malformed, oversized, and control-character inputs are safely replaced."
+    },
+    {
+      "id": "AC-026",
+      "status": "PASS",
+      "evidence": "Final log bytes, low-risk telemetry fields, and bounded exporter failure/hang behavior passed adversarial regression."
+    },
+    {
+      "id": "AC-027",
+      "status": "PASS",
+      "evidence": "Body/header/URL/request/readiness/shutdown bounds and process-tree grace/force intervals remain explicit and tested."
+    },
+    {
+      "id": "AC-028",
+      "status": "PASS",
+      "evidence": "Windows verification passed 75 tests with one POSIX-only skip; Linux passed 76/76 and integration passed 19/19 locally and hosted."
+    },
+    {
+      "id": "AC-029",
+      "status": "PASS",
+      "evidence": "Integration and DB suites used isolated disposable databases on real PostgreSQL/PostGIS and were repeatable."
+    },
+    {
+      "id": "AC-030",
+      "status": "PASS",
+      "evidence": "Invalid config, DB loss, telemetry loss, malformed/oversized input, migration failure, timeout, and shutdown paths passed."
+    },
+    {
+      "id": "AC-031",
+      "status": "DEFERRED",
+      "qualifier": "PRE-PRODUCTION GOVERNANCE",
+      "evidence": "PR/main and push/main triggers, least permissions, timeouts, SHA pins, and required jobs are verified; live read-back shows no production deployment/environment or second merge-capable collaborator, so documented reopening triggers remain absent."
+    },
+    {
+      "id": "AC-032",
+      "status": "PASS",
+      "evidence": "Both hosted runs retain quality, integration, and security artifacts; all six archives were independently inspected."
+    },
+    {
+      "id": "AC-033",
+      "status": "PASS",
+      "evidence": "Setup, architecture, configuration, migrations, testing, security, observability, and operations documentation match executed behavior."
+    },
+    {
+      "id": "AC-034",
+      "status": "PASS",
+      "evidence": "Implementation and the audit/remediation chain map AC-001 through AC-033 to concrete retained or reproduced evidence."
+    },
+    {
+      "id": "AC-035",
+      "status": "PASS",
+      "evidence": "This final independent adversarial audit records all results; the five blocking findings are CLOSED and no Critical, High, or blocking Medium remains."
+    },
+    {
+      "id": "AC-036",
+      "status": "PASS",
+      "evidence": "The historical failed AUDIT.md remains immutable while FINAL-AUDIT.md is the truthful terminal report with counts, residual risks, evidence, and PASS, as explicitly required by the final-audit authorization."
+    }
+  ]
+}

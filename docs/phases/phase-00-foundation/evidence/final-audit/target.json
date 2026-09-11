@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "audit": "phase-00-final-re-audit",
+  "generatedAt": "2026-09-11T01:07:35Z",
+  "localAuditDate": "2026-09-10",
+  "target": {
+    "repository": "SaulL08/Trayvi",
+    "remote": "https://github.com/SaulL08/Trayvi.git",
+    "branch": "main",
+    "commit": "cf0b577f25dbb4a35ae3923a7659513249b7be23",
+    "tree": "031a8eaf5e9a6967ea56b10a5743430973d20eaf",
+    "headBeforeAudit": "cf0b577f25dbb4a35ae3923a7659513249b7be23",
+    "originMainBeforeAudit": "cf0b577f25dbb4a35ae3923a7659513249b7be23",
+    "githubMainBeforeAudit": "cf0b577f25dbb4a35ae3923a7659513249b7be23",
+    "worktreeBeforeAudit": "clean",
+    "matchedAuthorizedTarget": true
+  },
+  "historicalIntegrity": {
+    "passed": true,
+    "files": {
+      "AUDIT.md": "3EF87D28459B5B5F608CBC202253EACF0F2D27F84E6EC6354601AF7A292F22F1",
+      "REMEDIATION.md": "BC1E7A9AEBCC70DA2159A051BB277B7A05531FD19886A5B2A719C6F954BB00A2",
+      "RE-AUDIT.md": "B1BD26F64A4DBBB584C6ED29A2DF42C465618C634E4965AEA85449256320B328",
+      "REMEDIATION-2.md": "1DFA947E520CD024BACC7FFDBB836AEDE1EF1FE347D43B3154B522B15BE80BD8",
+      "SECOND-RE-AUDIT.md": "07803A2831908B5CE803F974C0E656C8903C2ED7EAAEA4C72FAC3653C28E98B0"
+    }
+  },
+  "finalRemediation": {
+    "file": "FINAL-REMEDIATION.md",
+    "sha256": "9E00534F8BC3867D870DBEBB3154E8E96A60DC0425353A5CF87E32C35111F7E3",
+    "verifiedCodeCommit": "9c7c48103672de2bf78d63be2272418c7cbf7f4a",
+    "documentedHead": "cf0b577f25dbb4a35ae3923a7659513249b7be23"
+  },
+  "governance": {
+    "repositoryPrivate": true,
+    "mergeCapableCollaborators": 1,
+    "deployments": 0,
+    "environments": 0,
+    "mainProtected": false,
+    "requiredStatusChecksEnforcement": "off",
+    "documentedReopeningTriggersPresent": false,
+    "classification": "DEFERRED_PRE_PRODUCTION_GOVERNANCE"
+  }
+}

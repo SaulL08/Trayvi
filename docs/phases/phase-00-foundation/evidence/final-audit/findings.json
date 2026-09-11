@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "audit": "phase-00-final-re-audit",
+  "finalBlockingFindings": [
+    {
+      "id": "P0-AUD-001",
+      "previousSeverity": "HIGH",
+      "status": "CLOSED",
+      "evidence": {
+        "boundary": "final serialized Pino JSON bytes",
+        "sensitiveKeyClasses": 21,
+        "keyVariants": ["camelCase", "snake_case", "kebab-case", "uppercase", "mixed-case"],
+        "valueForms": [
+          "key=value",
+          "key: value",
+          "JSON-like",
+          "query-like",
+          "percent-encoded",
+          "database URL",
+          "bearer",
+          "PEM"
+        ],
+        "contexts": [
+          "string",
+          "structured object",
+          "nested object",
+          "array",
+          "Error",
+          "cause",
+          "AggregateError",
+          "API diagnostics",
+          "worker diagnostics",
+          "subprocess diagnostics",
+          "database diagnostics"
+        ],
+        "secretCanariesInOutput": 0,
+        "safeFieldsRetained": ["safeId", "keyboardKey"],
+        "independentProbePassed": true
+      }
+    },
+    {
+      "id": "P0-AUD-004",
+      "previousSeverity": "MEDIUM",
+      "status": "CLOSED",
+      "evidence": {
+        "reflectiveProcessEnvironmentFixturesDetected": true,
+        "staticAliasAndComputedFixturesDetected": true,
+        "staticDynamicImportsDetected": true,
+        "workspaceAliasDeepImportAndReexportDetected": true,
+        "unresolvedFoundationDynamicImportFailsClosed": true,
+        "realRepositoryViolations": 0,
+        "independentProbePassed": true
+      }
+    },
+    {
+      "id": "P0-AUD-007",
+      "previousSeverity": "MEDIUM",
+      "status": "CLOSED",
+      "evidence": {
+        "database": "PostgreSQL 17.11/PostGIS 3.5",
+        "physicalRuntimeIdentity": true,
+        "migrationsApplied": 4,
+        "eventTypeMutationDenied": true,
+        "payloadMutationDenied": true,
+        "attemptsMutationDenied": true,
+        "lockedByMutationDenied": true,
+        "availableAtMutationDenied": true,
+        "lockPairMutationDenied": true,
+        "errorMetadataMutationDenied": true,
+        "publishedAtMutationDenied": true,
+        "deleteDenied": true,
+        "illegalTransitionDenied": true,
+        "ddlDenied": true,
+        "roleEscalationDenied": true,
+        "legitimateLifecyclePassed": true,
+        "contentPreserved": true,
+        "databaseInvariantCountPassed": 14
+      }
+    },
+    {
+      "id": "P0-REAUD-001",
+      "previousSeverity": "LOW",
+      "status": "CLOSED",
+      "evidence": {
+        "platform": "Debian GNU/Linux 12",
+        "posixProcessTestsPassed": 6,
+        "resistantDescendantProbePassed": true,
+        "sigtermThenSigkillPassed": true,
+        "descendantsRemaining": 0,
+        "streamsClosedBeforeResult": true,
+        "deterministicTimeoutResult": true,
+        "windowsRegressionPassed": true
+      }
+    },
+    {
+      "id": "P0-REAUD2-001",
+      "previousSeverity": "MEDIUM",
+      "status": "CLOSED",
+      "evidence": {
+        "positiveContextualCorpusDetected": true,
+        "negativePlaceholderAndPublicIdentifierCorpusClean": true,
+        "currentTreeScanFindings": 0,
+        "reachableHistoryScanFindings": 0,
+        "historyOnlyFixtureDetected": true,
+        "invalidGitRepositoryFailsClosed": true,
+        "findingValuesRetained": false,
+        "independentProbePassed": true
+      }
+    }
+  ],
+  "newFindings": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "info": 0,
+    "blockingMedium": 0,
+    "items": []
+  },
+  "decisionThreshold": {
+    "criticalOpen": 0,
+    "highOpen": 0,
+    "blockingMediumOpen": 0,
+    "passed": true
+  }
+}
