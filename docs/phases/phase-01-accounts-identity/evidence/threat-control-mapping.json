@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "status": "IMPLEMENTATION_CONTROL_MAPPING",
+  "silentCriticalOrHighAcceptance": false,
+  "threats": [
+    {
+      "threat": "Duplicate accounts",
+      "code": ["NodeIdentityDocumentProtector.protect", "PostgresPhaseOneStore.submit"],
+      "constraints": ["document_fingerprint_blocking_unique"],
+      "tests": ["50 concurrent attempts x 10 PostgreSQL rounds", "dual-key duplicate cutover"],
+      "documentation": ["ADR-011", "ADR-012"],
+      "residual": "Different genuine documents cannot be linked to one person without trusted evidence.",
+      "productionBlocker": "Provider assurance and cross-document recovery policy"
+    },
+    {
+      "threat": "Concurrency race",
+      "code": ["single PostgreSQL transaction", "operation row lock", "deterministic alias order"],
+      "constraints": ["document_fingerprint_blocking_unique"],
+      "tests": ["500 independently submitted attempts", "zero-orphan row counts"],
+      "documentation": ["ADR-011"],
+      "residual": "Database or key-service outage fails the request closed.",
+      "productionBlocker": "Operational retry and availability SLOs"
+    },
+    {
+      "threat": "Identity theft",
+      "code": ["format-only normalized result", "trusted-verification input seam"],
+      "constraints": [
+        "account_active_identity_required",
+        "identity_establishment_evidence_required"
+      ],
+      "tests": ["format-only activation direct-SQL denial", "trusted evidence activation"],
+      "documentation": ["PLAN section 6", "ADR-011"],
+      "residual": "Phase 1 synthetic evidence is not a production identity-proof method.",
+      "productionBlocker": "Verification provider, assurance level, and review policy"
+    },
+    {
+      "threat": "Enumeration",
+      "code": ["EnrollmentPublicResult", "SafePublicError", "generic duplicate operation outcome"],
+      "constraints": ["conflict operation has no account_id"],
+      "tests": [
+        "new/duplicate shape and serialized-size comparison",
+        "concurrent duplicate public-code equality"
+      ],
+      "documentation": ["ADR-011", "PLAN section 9.3"],
+      "residual": "Network timing behavior cannot be measured until a transport endpoint exists.",
+      "productionBlocker": "Phase 2 recovery proof, transport rate limits, and hosted timing review"
+    },
+    {
+      "threat": "Offline fingerprint guessing",
+      "code": ["HMAC-SHA-256 external keyring", "exact NUL-separated domain input"],
+      "constraints": ["32-byte fingerprint", "restricted fingerprint SELECT"],
+      "tests": ["published HMAC vector", "scope/key/separator/encoding mutation table"],
+      "documentation": ["ADR-012"],
+      "residual": "A combined database and HMAC-key compromise enables guessing.",
+      "productionBlocker": "External key custody, quotas, monitoring, and compromise procedure"
+    },
+    {
+      "threat": "Database dump",
+      "code": ["per-record AES-256-GCM DEK", "external KEK port", "no plaintext model field"],
+      "constraints": ["identity_document_envelope_shape", "restricted envelope-column SELECT"],
+      "tests": ["AES-GCM vector and round trip", "runtime restricted reads denied"],
+      "documentation": ["ADR-012", "data-inventory.json"],
+      "residual": "Relationship and lifecycle metadata remain visible to a database administrator.",
+      "productionBlocker": "Encrypted backup and database-admin monitoring policy"
+    },
+    {
+      "threat": "Log or trace leakage",
+      "code": ["Foundation recursive redaction", "safe fixed-message exceptions"],
+      "constraints": ["restricted columns omitted from runtime grants"],
+      "tests": ["redaction canary tests", "no-echo malformed-input tests", "secret scan"],
+      "documentation": ["ADR-009", "ADR-012"],
+      "residual": "Third-party production exporters require configuration review.",
+      "productionBlocker": "Production sink and tracing-agent review"
+    },
+    {
+      "threat": "Event or analytics leakage",
+      "code": ["allowlisted outbox payload construction"],
+      "constraints": ["transactional outbox immutable payload guards"],
+      "tests": ["outbox canary/forbidden-key scan"],
+      "documentation": ["ADR-008", "data-inventory.json"],
+      "residual": "Authorized consumers can join opaque IDs with other data.",
+      "productionBlocker": "Consumer purpose/access review before subscription"
+    },
+    {
+      "threat": "HMAC key compromise",
+      "code": ["versioned PRIMARY/LOOKUP_ACTIVE/RETIRED keyring", "resumable dual-alias backfill"],
+      "constraints": ["one alias per document/key version", "all active aliases stay blocking"],
+      "tests": [
+        "dual-key backfill",
+        "rotation concurrency",
+        "new-only cutover",
+        "reused key-material rejection"
+      ],
+      "documentation": ["ADR-012"],
+      "residual": "Historic guesses may have occurred while the key was compromised.",
+      "productionBlocker": "External key incident owner and rotation SLO"
+    },
+    {
+      "threat": "KEK or workload compromise",
+      "code": ["narrow KeyEncryptionProvider", "DEK zeroization", "KEK rewrap"],
+      "constraints": ["runtime cannot read envelope material"],
+      "tests": ["wrong/missing KEK denial", "rewrap without ciphertext rewrite"],
+      "documentation": ["ADR-012"],
+      "residual": "A live authorized crypto workload can decrypt selected records.",
+      "productionBlocker": "KMS workload identity, quotas, audit, break-glass, and monitoring"
+    },
+    {
+      "threat": "Ciphertext substitution",
+      "code": ["AAD binds document, identity, country, issuer, type, profile, and schema"],
+      "constraints": ["immutable document context trigger"],
+      "tests": ["ciphertext/tag/nonce/all-AAD-field tampering matrix"],
+      "documentation": ["ADR-012"],
+      "residual": "An authorized compromised application can create a fresh valid bad envelope.",
+      "productionBlocker": "Workload change control and KMS-use anomaly detection"
+    },
+    {
+      "threat": "Malicious retries",
+      "code": ["keyed length-framed idempotency commitments", "operation expiry", "row lock"],
+      "constraints": ["account_creation_operation_idempotency_unique", "result-shape checks"],
+      "tests": [
+        "same-request replay",
+        "mismatched reuse",
+        "concurrent replay",
+        "expired operation"
+      ],
+      "documentation": ["ADR-011", "ADR-012"],
+      "residual": "Distributed bot volume needs transport controls.",
+      "productionBlocker": "Rate limits, quotas, and abuse monitoring"
+    },
+    {
+      "threat": "Reservation denial of service",
+      "code": ["pending identity never activates from formatting alone", "operation expiry"],
+      "constraints": ["claim remains RESERVED and blocking"],
+      "tests": ["activation precondition denial", "expired operation outcome"],
+      "documentation": ["ADR-011 open decisions"],
+      "residual": "A malicious reservation can lock out the real holder.",
+      "productionBlocker": "Product/Trust and Safety reservation release and recovery policy"
+    },
+    {
+      "threat": "Support bypass",
+      "code": ["no support mutation API", "guarded domain commands"],
+      "constraints": [
+        "runtime DDL/delete/direct-transition denials",
+        "unique index cannot be bypassed"
+      ],
+      "tests": ["physical runtime-role negative matrix"],
+      "documentation": ["ADR-011"],
+      "residual": "Authorized reviewer controls are not present in Phase 1.",
+      "productionBlocker": "Phase 3 permissions, separation of duties, and audit"
+    },
+    {
+      "threat": "Insider access",
+      "code": ["restricted Identity crypto boundary", "provider-neutral external keys"],
+      "constraints": ["column-level grants", "PUBLIC revoked", "no runtime role escalation"],
+      "tests": ["restricted-column and SET ROLE denials"],
+      "documentation": ["ADR-012", "data-inventory.json"],
+      "residual": "Database/KMS administrators remain privileged.",
+      "productionBlocker": "Governance, monitored break-glass, and key-custodian approval"
+    },
+    {
+      "threat": "Account-takeover preparation",
+      "code": ["no authentication/recovery endpoint", "generic public operation result"],
+      "constraints": ["opaque operation identifiers", "no credential or recovery proof model"],
+      "tests": ["anti-enumeration response comparison", "public-result identifier scan"],
+      "documentation": ["ADR-011", "PLAN threat model"],
+      "residual": "Authentication and recovery proof are deliberately unavailable in Phase 1.",
+      "productionBlocker": "Phase 2 authentication and recovery ADR"
+    },
+    {
+      "threat": "Human-review abuse",
+      "code": ["explicit review lifecycle", "actor/reason/evidence transition command"],
+      "constraints": ["terminal review/case guards", "append-only verification evidence"],
+      "tests": ["review/case exhaustive matrices", "direct terminal-state rejection"],
+      "documentation": ["ADR-011", "PLAN threat model"],
+      "residual": "Strong reviewer authorization and audit are deliberately unavailable in Phase 1.",
+      "productionBlocker": "Phase 3 reviewer authorization, separation of duties, and audit"
+    }
+  ]
+}

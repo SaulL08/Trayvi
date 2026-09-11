@@ -71,9 +71,15 @@ importers:
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
+      '@trayvi/accounts':
+        specifier: workspace:*
+        version: link:../../modules/accounts
       '@trayvi/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@trayvi/identity':
+        specifier: workspace:*
+        version: link:../../modules/identity
       '@trayvi/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -117,6 +123,10 @@ importers:
       rxjs:
         specifier: 7.8.2
         version: 7.8.2
+
+  modules/accounts: {}
+
+  modules/identity: {}
 
   packages/config:
     dependencies:

@@ -7,7 +7,13 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
+      '@trayvi/accounts': fileURLToPath(
+        new URL('./modules/accounts/src/index.ts', import.meta.url),
+      ),
       '@trayvi/config': fileURLToPath(new URL('./packages/config/src/index.ts', import.meta.url)),
+      '@trayvi/identity': fileURLToPath(
+        new URL('./modules/identity/src/index.ts', import.meta.url),
+      ),
       '@trayvi/observability': fileURLToPath(
         new URL('./packages/observability/src/index.ts', import.meta.url),
       ),

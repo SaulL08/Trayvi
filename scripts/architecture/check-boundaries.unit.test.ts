@@ -10,7 +10,7 @@ import {
 } from './check-boundaries.js';
 
 describe('architecture boundary enforcement', () => {
-  it('accepts the real Phase 0 dependency graph', async () => {
+  it('accepts the approved repository dependency graph', async () => {
     await expect(checkRepositoryArchitecture()).resolves.toEqual([]);
   });
 
@@ -90,5 +90,16 @@ describe('architecture boundary enforcement', () => {
         file: 'packages/config/package.json',
       }),
     );
+  });
+
+  it('enforces business-module and inward layer boundaries', async () => {
+    const fixtures = [
+      resolve('modules/accounts/test/fixtures/domain/imports-infrastructure.ts'),
+      resolve('modules/accounts/test/fixtures/cross-module-import.ts'),
+    ];
+    const violations = await inspectArchitectureFiles(process.cwd(), fixtures);
+
+    expect(violations).toContainEqual(expect.objectContaining({ code: 'DOMAIN_IMPORTS_OUTWARD' }));
+    expect(violations).toContainEqual(expect.objectContaining({ code: 'MODULE_IMPORTS_MODULE' }));
   });
 });

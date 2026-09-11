@@ -12,11 +12,12 @@ export interface ArchitectureViolation {
 
 const allowedApps = new Set(['api', 'worker']);
 const allowedPackages = new Set(['config', 'observability', 'test-support']);
+const allowedModules = new Set(['accounts', 'identity']);
 
 interface WorkspaceUnit {
   readonly name: string;
   readonly directory: string;
-  readonly kind: 'app' | 'package';
+  readonly kind: 'app' | 'package' | 'module';
   readonly manifest: {
     readonly dependencies?: Readonly<Record<string, string>>;
     readonly devDependencies?: Readonly<Record<string, string>>;
@@ -269,9 +270,11 @@ async function workspaceUnits(root: string): Promise<readonly WorkspaceUnit[]> {
   const units: WorkspaceUnit[] = [];
   for (const [topLevel, kind] of [
     ['apps', 'app'],
+    ['modules', 'module'],
     ['packages', 'package'],
   ] as const) {
     const topLevelDirectory = resolve(root, topLevel);
+    if (!existsSync(topLevelDirectory)) continue;
     for (const entry of await readdir(topLevelDirectory, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
       const directory = resolve(topLevelDirectory, entry.name);
@@ -354,7 +357,7 @@ export async function inspectArchitectureFiles(
         detail: 'Only packages/config/src/environment.ts may read process.env.',
       });
     }
-    if (/villa\s+altagracia/iu.test(source) && /^(apps|packages)\//u.test(file)) {
+    if (/villa\s+altagracia/iu.test(source) && /^(apps|modules|packages)\//u.test(file)) {
       violations.push({
         code: 'MARKET_HARDCODE',
         file,
@@ -363,11 +366,14 @@ export async function inspectArchitectureFiles(
     }
 
     const importAnalysis = importsFrom(source, file);
-    if (importer?.kind === 'package' && importAnalysis.unresolvedDynamicImport) {
+    if (
+      (importer?.kind === 'package' || importer?.kind === 'module') &&
+      importAnalysis.unresolvedDynamicImport
+    ) {
       violations.push({
         code: 'UNRESOLVED_FOUNDATION_DYNAMIC_IMPORT',
         file,
-        detail: 'Foundation package dynamic imports must have a statically resolvable target.',
+        detail: 'Package/module dynamic imports must have a statically resolvable target.',
       });
     }
     for (const specifier of importAnalysis.specifiers) {
@@ -380,6 +386,49 @@ export async function inspectArchitectureFiles(
           code: 'FOUNDATION_IMPORTS_APP',
           file,
           detail: `Foundation package imports application boundary: ${specifier}`,
+        });
+      }
+      if (importer?.kind === 'package' && target?.kind === 'module') {
+        violations.push({
+          code: 'FOUNDATION_IMPORTS_MODULE',
+          file,
+          detail: `Foundation package imports business module: ${specifier}`,
+        });
+      }
+      if (importer?.kind === 'module' && target?.kind === 'app') {
+        violations.push({
+          code: 'MODULE_IMPORTS_APP',
+          file,
+          detail: `Business module imports application boundary: ${specifier}`,
+        });
+      }
+      if (importer?.kind === 'module' && target?.kind === 'module' && target !== importer) {
+        violations.push({
+          code: 'MODULE_IMPORTS_MODULE',
+          file,
+          detail: `Business modules collaborate through application ports, not direct imports: ${specifier}`,
+        });
+      }
+      if (
+        importer?.kind === 'module' &&
+        file.includes('/domain/') &&
+        (resolvedImport.includes('/application/') || resolvedImport.includes('/infrastructure/'))
+      ) {
+        violations.push({
+          code: 'DOMAIN_IMPORTS_OUTWARD',
+          file,
+          detail: `Domain code imports an outward layer: ${specifier}`,
+        });
+      }
+      if (
+        importer?.kind === 'module' &&
+        file.includes('/application/') &&
+        resolvedImport.includes('/infrastructure/')
+      ) {
+        violations.push({
+          code: 'APPLICATION_IMPORTS_INFRASTRUCTURE',
+          file,
+          detail: `Application code imports infrastructure: ${specifier}`,
         });
       }
       if (!isTest && specifier === '@trayvi/test-support') {
@@ -415,15 +464,17 @@ async function workspaceShapeViolations(root: string): Promise<readonly Architec
   const violations: ArchitectureViolation[] = [];
   for (const [directory, allowed, code] of [
     ['apps', allowedApps, 'UNAPPROVED_APP'],
+    ['modules', allowedModules, 'UNAPPROVED_MODULE'],
     ['packages', allowedPackages, 'UNAPPROVED_PACKAGE'],
   ] as const) {
+    if (!existsSync(resolve(root, directory))) continue;
     const entries = await readdir(resolve(root, directory), { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && !allowed.has(entry.name)) {
         violations.push({
           code,
           file: `${directory}/${entry.name}`,
-          detail: 'Workspace unit is not authorized by the Phase 0 plan.',
+          detail: 'Workspace unit is not authorized by the accepted phase plans.',
         });
       }
     }
@@ -437,7 +488,7 @@ export async function inspectWorkspacePackageGraph(
   const units = await workspaceUnits(root);
   const violations: ArchitectureViolation[] = [];
   for (const unit of units) {
-    if (unit.kind !== 'package') continue;
+    if (unit.kind === 'app') continue;
     for (const dependencyName of Object.keys({
       ...(unit.manifest.dependencies ?? {}),
       ...(unit.manifest.devDependencies ?? {}),
@@ -445,9 +496,23 @@ export async function inspectWorkspacePackageGraph(
       const target = units.find((candidate) => candidate.name === dependencyName);
       if (target?.kind === 'app') {
         violations.push({
-          code: 'FOUNDATION_DEPENDS_ON_APP',
+          code: unit.kind === 'package' ? 'FOUNDATION_DEPENDS_ON_APP' : 'MODULE_DEPENDS_ON_APP',
           file: normalized(relative(root, resolve(unit.directory, 'package.json'))),
-          detail: `Foundation package depends on application package: ${dependencyName}`,
+          detail: `${unit.kind === 'package' ? 'Foundation package' : 'Business module'} depends on application package: ${dependencyName}`,
+        });
+      }
+      if (unit.kind === 'package' && target?.kind === 'module') {
+        violations.push({
+          code: 'FOUNDATION_DEPENDS_ON_MODULE',
+          file: normalized(relative(root, resolve(unit.directory, 'package.json'))),
+          detail: `Foundation package depends on business module: ${dependencyName}`,
+        });
+      }
+      if (unit.kind === 'module' && target?.kind === 'module' && target !== unit) {
+        violations.push({
+          code: 'MODULE_DEPENDS_ON_MODULE',
+          file: normalized(relative(root, resolve(unit.directory, 'package.json'))),
+          detail: `Business module depends directly on another business module: ${dependencyName}`,
         });
       }
     }
@@ -460,6 +525,7 @@ export async function checkRepositoryArchitecture(
 ): Promise<readonly ArchitectureViolation[]> {
   const candidates = [
     ...(await sourceFiles(resolve(root, 'apps'))),
+    ...(await sourceFiles(resolve(root, 'modules'))),
     ...(await sourceFiles(resolve(root, 'packages'))),
     ...(await sourceFiles(resolve(root, 'scripts'))),
   ].filter((file) => !/(^|\\|\/)(test|tests|fixtures)(\\|\/)/u.test(file));

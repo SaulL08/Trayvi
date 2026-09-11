@@ -34,9 +34,26 @@ const sensitiveKeyNames = [
   'database_url',
   'connection_string',
   'documents',
+  'identity_document',
+  'document_value',
+  'normalized_document',
+  'canonical_document',
   'document_number',
   'national_id',
   'cedula',
+  'fingerprint',
+  'fingerprint_claim',
+  'hmac',
+  'ciphertext',
+  'wrapped_dek',
+  'authentication_tag',
+  'encryption_tag',
+  'nonce',
+  'kek_key_version',
+  'hmac_key_version',
+  'idempotency_key',
+  'request_commitment',
+  'caller_binding',
   'card',
   'card_number',
   'pan',
@@ -91,6 +108,10 @@ function isSensitiveKey(key: string): boolean {
     normalized.endsWith('password') ||
     normalized.endsWith('secret') ||
     normalized.endsWith('token') ||
+    normalized.endsWith('fingerprint') ||
+    normalized.endsWith('ciphertext') ||
+    normalized.endsWith('wrappeddek') ||
+    normalized.endsWith('commitment') ||
     normalized.endsWith('apikey')
   );
 }

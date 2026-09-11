@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "status": "IMPLEMENTED_PENDING_GOVERNANCE_APPROVAL",
+  "productionEnablement": "BLOCKED",
+  "note": "Every Phase 1 column is inventoried. Retention durations, lawful basis, legal-hold ownership, and deletion authorization require Product/Privacy/Legal approval before real-data collection.",
+  "tables": [
+    {
+      "table": "accounts.accounts",
+      "owner": "Accounts",
+      "fieldGroups": [
+        {
+          "fields": ["id"],
+          "classification": "Confidential",
+          "purpose": "Opaque base-account identity",
+          "readers": ["Accounts", "authorized future role modules"],
+          "writers": ["Accounts enrollment unit of work"],
+          "retentionTrigger": "account relationship ends and approved audit window expires",
+          "deletionAction": "policy-governed relationship deletion; never reuse as identity proof",
+          "legalHold": "preserve when an approved hold applies",
+          "eventPolicy": "allowed only in declared internal account events",
+          "telemetryPolicy": "never a metric label; correlated logs only when authorized"
+        },
+        {
+          "fields": ["status", "status_reason_code", "version"],
+          "classification": "Confidential",
+          "purpose": "Guarded account lifecycle and optimistic concurrency",
+          "readers": ["Accounts", "authorized self-service in later phases"],
+          "writers": ["guarded Accounts commands"],
+          "retentionTrigger": "account lifecycle retention expires",
+          "deletionAction": "retain minimum transition proof or delete under approved policy",
+          "legalHold": "preserve lifecycle state and evidence references",
+          "eventPolicy": "safe state and reason codes allowed in declared internal events",
+          "telemetryPolicy": "aggregate state counts only; no row identifiers"
+        },
+        {
+          "fields": ["created_at", "updated_at", "closed_at"],
+          "classification": "Confidential",
+          "purpose": "Lifecycle ordering and retention triggers",
+          "readers": ["Accounts", "governed audit operations"],
+          "writers": ["guarded Accounts commands"],
+          "retentionTrigger": "account lifecycle retention expires",
+          "deletionAction": "delete or minimize with account under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "occurred-at may be emitted; row timestamps otherwise forbidden",
+          "telemetryPolicy": "aggregate latency/age only"
+        }
+      ]
+    },
+    {
+      "table": "accounts.account_creation_operations",
+      "owner": "Accounts",
+      "fieldGroups": [
+        {
+          "fields": ["id"],
+          "classification": "Confidential",
+          "purpose": "Opaque enrollment capability/reference",
+          "readers": ["Accounts enrollment use case", "presenting client"],
+          "writers": ["Accounts enrollment use case"],
+          "retentionTrigger": "bounded replay/recovery window expires",
+          "deletionAction": "delete after approved anti-abuse window",
+          "legalHold": "preserve only when attempt evidence is explicitly held",
+          "eventPolicy": "not emitted beyond declared safe correlation",
+          "telemetryPolicy": "not a metric label"
+        },
+        {
+          "fields": [
+            "caller_binding_commitment",
+            "idempotency_key_commitment",
+            "request_commitment",
+            "request_commitment_key_version",
+            "submission_commitment",
+            "submission_commitment_key_version"
+          ],
+          "classification": "Restricted security metadata",
+          "purpose": "Keyed/domain-separated replay and request-integrity enforcement",
+          "readers": ["Accounts idempotency component"],
+          "writers": ["Accounts idempotency component"],
+          "retentionTrigger": "short idempotency window expires",
+          "deletionAction": "delete commitments and key-version metadata",
+          "legalHold": "retain only by approved security/legal exception",
+          "eventPolicy": "forbidden",
+          "telemetryPolicy": "forbidden"
+        },
+        {
+          "fields": ["state", "safe_result_code", "safe_internal_code"],
+          "classification": "Confidential",
+          "purpose": "Stored replay result and safe internal diagnosis",
+          "readers": ["Accounts enrollment use case", "governed security operations"],
+          "writers": ["Accounts enrollment use case"],
+          "retentionTrigger": "operation retention expires",
+          "deletionAction": "delete with operation",
+          "legalHold": "preserve safe evidence only when held",
+          "eventPolicy": "public result code allowed; internal reason forbidden externally",
+          "telemetryPolicy": "aggregate safe reason counts only"
+        },
+        {
+          "fields": ["account_id"],
+          "classification": "Restricted relationship metadata",
+          "purpose": "Internal successful-operation linkage",
+          "readers": ["Accounts enrollment use case"],
+          "writers": ["Accounts enrollment unit of work"],
+          "retentionTrigger": "operation retention expires",
+          "deletionAction": "remove operation link without deleting account",
+          "legalHold": "preserve when attempt evidence is held",
+          "eventPolicy": "forbidden in unauthenticated outcomes",
+          "telemetryPolicy": "forbidden"
+        },
+        {
+          "fields": ["created_at", "updated_at", "expires_at"],
+          "classification": "Confidential",
+          "purpose": "Replay ordering, expiry, and retention",
+          "readers": ["Accounts enrollment use case"],
+          "writers": ["Accounts enrollment use case"],
+          "retentionTrigger": "expires_at plus approved anti-abuse window",
+          "deletionAction": "delete with operation",
+          "legalHold": "preserve when explicitly held",
+          "eventPolicy": "expiry may inform a safe generic result; exact values forbidden",
+          "telemetryPolicy": "aggregate durations only"
+        }
+      ]
+    },
+    {
+      "table": "accounts.account_status_transitions",
+      "owner": "Accounts",
+      "fieldGroups": [
+        {
+          "fields": ["id", "account_id"],
+          "classification": "Confidential",
+          "purpose": "Immutable account transition linkage",
+          "readers": ["Accounts", "governed audit operations"],
+          "writers": ["guarded Accounts commands"],
+          "retentionTrigger": "approved audit window expires",
+          "deletionAction": "policy-governed archival/deletion; never mutate",
+          "legalHold": "preserve while held",
+          "eventPolicy": "account ID allowed only in declared internal events",
+          "telemetryPolicy": "no row identifiers"
+        },
+        {
+          "fields": ["from_status", "to_status", "aggregate_version", "reason_code"],
+          "classification": "Confidential",
+          "purpose": "Lifecycle proof",
+          "readers": ["Accounts", "governed audit operations"],
+          "writers": ["guarded Accounts commands"],
+          "retentionTrigger": "approved audit window expires",
+          "deletionAction": "archive/delete only as an immutable set",
+          "legalHold": "preserve while held",
+          "eventPolicy": "safe state/reason allowed",
+          "telemetryPolicy": "aggregate transition counts only"
+        },
+        {
+          "fields": ["actor_class", "actor_reference", "evidence_reference", "occurred_at"],
+          "classification": "Restricted accountability metadata",
+          "purpose": "Actor/evidence attribution and ordering",
+          "readers": ["governed audit/review operations"],
+          "writers": ["guarded Accounts commands"],
+          "retentionTrigger": "approved accountability window expires",
+          "deletionAction": "minimize/archive under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "class/time may be allowed; actor/evidence refs forbidden publicly",
+          "telemetryPolicy": "actor/evidence refs forbidden"
+        }
+      ]
+    },
+    {
+      "table": "identity.person_identities",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "account_id"],
+          "classification": "Confidential relationship metadata",
+          "purpose": "One-to-one identity/account binding",
+          "readers": ["Identity", "Accounts activation unit of work"],
+          "writers": ["Identity enrollment unit of work"],
+          "retentionTrigger": "identity relationship and approved audit window end",
+          "deletionAction": "governed deletion; never release uniqueness implicitly",
+          "legalHold": "preserve while held",
+          "eventPolicy": "allowed only in declared internal binding events",
+          "telemetryPolicy": "no row identifiers"
+        },
+        {
+          "fields": ["status", "status_reason_code", "version"],
+          "classification": "Confidential",
+          "purpose": "Identity lifecycle and optimistic concurrency",
+          "readers": ["Identity", "Accounts activation unit of work"],
+          "writers": ["guarded Identity commands"],
+          "retentionTrigger": "identity lifecycle retention expires",
+          "deletionAction": "retain minimum proof or delete under approved policy",
+          "legalHold": "preserve lifecycle state",
+          "eventPolicy": "safe state/reason allowed internally",
+          "telemetryPolicy": "aggregate state counts only"
+        },
+        {
+          "fields": ["created_at", "updated_at", "established_at", "restricted_at", "retired_at"],
+          "classification": "Confidential",
+          "purpose": "Lifecycle ordering and retention triggers",
+          "readers": ["Identity", "governed audit operations"],
+          "writers": ["guarded Identity commands"],
+          "retentionTrigger": "identity retention expires",
+          "deletionAction": "minimize/delete with identity",
+          "legalHold": "preserve while held",
+          "eventPolicy": "occurred-at only in declared events",
+          "telemetryPolicy": "aggregate durations only"
+        }
+      ]
+    },
+    {
+      "table": "identity.identity_status_transitions",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "identity_id"],
+          "classification": "Confidential",
+          "purpose": "Immutable identity transition linkage",
+          "readers": ["Identity", "governed audit operations"],
+          "writers": ["guarded Identity commands"],
+          "retentionTrigger": "approved audit window expires",
+          "deletionAction": "policy-governed archival/deletion; never mutate",
+          "legalHold": "preserve while held",
+          "eventPolicy": "identity ID allowed only internally",
+          "telemetryPolicy": "no row identifiers"
+        },
+        {
+          "fields": ["from_status", "to_status", "aggregate_version", "reason_code"],
+          "classification": "Confidential",
+          "purpose": "Identity lifecycle proof",
+          "readers": ["Identity", "governed audit operations"],
+          "writers": ["guarded Identity commands"],
+          "retentionTrigger": "approved audit window expires",
+          "deletionAction": "archive/delete only as an immutable set",
+          "legalHold": "preserve while held",
+          "eventPolicy": "safe state/reason allowed internally",
+          "telemetryPolicy": "aggregate transition counts only"
+        },
+        {
+          "fields": ["actor_class", "actor_reference", "evidence_reference", "occurred_at"],
+          "classification": "Restricted accountability metadata",
+          "purpose": "Actor/evidence attribution and ordering",
+          "readers": ["governed audit/review operations"],
+          "writers": ["guarded Identity commands"],
+          "retentionTrigger": "approved accountability window expires",
+          "deletionAction": "minimize/archive under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "class/time may be allowed; refs forbidden publicly",
+          "telemetryPolicy": "actor/evidence refs forbidden"
+        }
+      ]
+    },
+    {
+      "table": "identity.identity_documents",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "identity_id"],
+          "classification": "Confidential relationship metadata",
+          "purpose": "Opaque document-to-identity linkage",
+          "readers": ["Identity use case", "restricted rotation workload"],
+          "writers": ["Identity enrollment use case"],
+          "retentionTrigger": "document purpose/identity retention expires",
+          "deletionAction": "delete only after claim/hold disposition",
+          "legalHold": "preserve while held",
+          "eventPolicy": "opaque document ID allowed only in declared internal events",
+          "telemetryPolicy": "no row identifiers"
+        },
+        {
+          "fields": ["country_code", "issuer_code", "document_type", "normalization_profile"],
+          "classification": "Confidential protected context",
+          "purpose": "Scope normalization, encryption AAD, and equality claims",
+          "readers": ["Identity use case", "restricted rotation workload"],
+          "writers": ["Identity enrollment use case"],
+          "retentionTrigger": "aligned with identity/document purpose",
+          "deletionAction": "delete/minimize with document under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "forbidden in general/public events",
+          "telemetryPolicy": "forbidden at row level"
+        },
+        {
+          "fields": [
+            "encryption_algorithm",
+            "encryption_schema_version",
+            "kek_key_version",
+            "ciphertext",
+            "nonce",
+            "authentication_tag",
+            "wrapped_dek"
+          ],
+          "classification": "Restricted cryptographic material",
+          "purpose": "Authenticated envelope decryption, rewrap, and crypto-erasure",
+          "readers": ["restricted Identity crypto/rotation workload"],
+          "writers": ["Identity crypto workload", "restricted KEK rewrap workload"],
+          "retentionTrigger": "purpose ends and deletion/hold decision permits erasure",
+          "deletionAction": "destroy/revoke wrapped DEK and clear envelope fields",
+          "legalHold": "follow approved hold and key-custody procedure",
+          "eventPolicy": "forbidden",
+          "telemetryPolicy": "forbidden"
+        },
+        {
+          "fields": ["state", "created_at", "updated_at", "superseded_at", "cryptoshredded_at"],
+          "classification": "Confidential",
+          "purpose": "Document lifecycle and erasure evidence",
+          "readers": ["Identity", "governed privacy/security operations"],
+          "writers": ["guarded Identity document commands"],
+          "retentionTrigger": "approved document/erasure audit window expires",
+          "deletionAction": "retain minimum erasure proof or delete by policy",
+          "legalHold": "preserve lifecycle proof while held",
+          "eventPolicy": "safe state/time allowed only in declared internal events",
+          "telemetryPolicy": "aggregate state counts only"
+        }
+      ]
+    },
+    {
+      "table": "identity.document_fingerprint_claims",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "document_id"],
+          "classification": "Restricted relationship metadata",
+          "purpose": "Opaque uniqueness-alias linkage",
+          "readers": ["Identity repository", "restricted rotation workload"],
+          "writers": ["Identity enrollment/rotation workloads"],
+          "retentionTrigger": "claim disposition and approved tombstone period end",
+          "deletionAction": "delete only under approved release policy",
+          "legalHold": "preserve blocking proof while held",
+          "eventPolicy": "forbidden publicly; document ID only in declared internal event",
+          "telemetryPolicy": "forbidden at row level"
+        },
+        {
+          "fields": [
+            "country_code",
+            "issuer_code",
+            "document_type",
+            "normalization_profile",
+            "hmac_algorithm",
+            "hmac_key_version",
+            "fingerprint"
+          ],
+          "classification": "Restricted security derivative",
+          "purpose": "Domain-scoped document equality and database uniqueness",
+          "readers": ["restricted Identity repository/rotation workload"],
+          "writers": ["Identity enrollment/rotation workloads"],
+          "retentionTrigger": "approved claim/tombstone policy permits release",
+          "deletionAction": "delete aliases only after approved non-duplication disposition",
+          "legalHold": "preserve when held",
+          "eventPolicy": "forbidden",
+          "telemetryPolicy": "forbidden"
+        },
+        {
+          "fields": ["state", "created_at", "bound_at", "tombstoned_at", "abandoned_at"],
+          "classification": "Confidential",
+          "purpose": "Claim lifecycle and retention evidence",
+          "readers": ["Identity", "governed privacy/security operations"],
+          "writers": ["guarded Identity claim commands"],
+          "retentionTrigger": "approved state-specific retention expires",
+          "deletionAction": "retain/delete according to claim disposition policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "safe state allowed only internally",
+          "telemetryPolicy": "aggregate state counts only"
+        }
+      ]
+    },
+    {
+      "table": "identity.verification_cases",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "identity_id", "previous_case_id", "decision_id"],
+          "classification": "Restricted relationship metadata",
+          "purpose": "Immutable verification lineage and idempotent decision binding",
+          "readers": ["Identity verification workload", "governed review operations"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "verification/evidence retention expires",
+          "deletionAction": "delete/detach under approved evidence policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "causation/aggregate IDs only in declared internal events",
+          "telemetryPolicy": "no row identifiers"
+        },
+        {
+          "fields": ["method_class", "status", "result_code", "policy_version"],
+          "classification": "Confidential trust metadata",
+          "purpose": "Provider-neutral verification outcome and policy attribution",
+          "readers": ["Identity", "governed review operations"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "verification retention expires",
+          "deletionAction": "minimize/delete under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "allowlisted safe outcome/policy only internally",
+          "telemetryPolicy": "aggregate method/result counts only"
+        },
+        {
+          "fields": ["opened_at", "resolved_at", "expires_at"],
+          "classification": "Confidential",
+          "purpose": "Verification lifecycle ordering and expiry",
+          "readers": ["Identity", "governed review operations"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "expires/retention policy",
+          "deletionAction": "delete/minimize with case",
+          "legalHold": "preserve while held",
+          "eventPolicy": "occurred-at allowed internally",
+          "telemetryPolicy": "aggregate durations only"
+        }
+      ]
+    },
+    {
+      "table": "identity.verification_evidence",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "case_id"],
+          "classification": "Restricted relationship metadata",
+          "purpose": "Immutable evidence-to-case linkage",
+          "readers": ["trusted verification/review workloads"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "evidence retention expires",
+          "deletionAction": "delete/detach under approved provider/legal policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "evidence ID only as restricted internal reference",
+          "telemetryPolicy": "forbidden"
+        },
+        {
+          "fields": ["evidence_type", "provider_alias", "retention_class"],
+          "classification": "Restricted evidence metadata",
+          "purpose": "Evidence interpretation and retention routing",
+          "readers": ["trusted verification/review workloads"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "retention class plus approved provider policy",
+          "deletionAction": "delete metadata with evidence disposition",
+          "legalHold": "preserve while held",
+          "eventPolicy": "forbidden outside governed review",
+          "telemetryPolicy": "aggregate provider health only without person linkage"
+        },
+        {
+          "fields": ["digest_algorithm", "evidence_digest", "restricted_reference"],
+          "classification": "Restricted evidence/security material",
+          "purpose": "Integrity and opaque restricted-store reference",
+          "readers": ["trusted verification/review workloads"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "evidence deletion/hold decision",
+          "deletionAction": "delete or detach with external evidence",
+          "legalHold": "preserve integrity/reference while held",
+          "eventPolicy": "forbidden",
+          "telemetryPolicy": "forbidden"
+        },
+        {
+          "fields": ["collected_at", "created_at"],
+          "classification": "Confidential",
+          "purpose": "Evidence freshness and ordering",
+          "readers": ["trusted verification/review workloads"],
+          "writers": ["trusted verification adapter"],
+          "retentionTrigger": "evidence retention expires",
+          "deletionAction": "delete/minimize with evidence",
+          "legalHold": "preserve while held",
+          "eventPolicy": "coarse occurred-at only if allowlisted",
+          "telemetryPolicy": "aggregate freshness only"
+        }
+      ]
+    },
+    {
+      "table": "identity.identity_reviews",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "case_id", "evidence_reference"],
+          "classification": "Restricted relationship metadata",
+          "purpose": "Immutable review/case/evidence binding",
+          "readers": ["governed review/audit workloads"],
+          "writers": ["trusted policy adapter", "future authorized reviewer"],
+          "retentionTrigger": "approved review/audit window expires",
+          "deletionAction": "archive/delete under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "forbidden publicly; opaque refs only in governed events",
+          "telemetryPolicy": "no row identifiers"
+        },
+        {
+          "fields": ["state", "actor_class", "actor_reference", "reason_code", "policy_version"],
+          "classification": "Restricted accountability metadata",
+          "purpose": "Governed review state and decision attribution",
+          "readers": ["governed review/audit workloads"],
+          "writers": ["trusted policy adapter", "future authorized reviewer"],
+          "retentionTrigger": "approved review/audit window expires",
+          "deletionAction": "minimize/archive under approved policy",
+          "legalHold": "preserve while held",
+          "eventPolicy": "safe state/reason only; actor ref forbidden publicly",
+          "telemetryPolicy": "aggregate state/reason only"
+        },
+        {
+          "fields": ["created_at", "updated_at", "resolved_at"],
+          "classification": "Confidential",
+          "purpose": "Review ordering and resolution evidence",
+          "readers": ["governed review/audit workloads"],
+          "writers": ["trusted policy adapter", "future authorized reviewer"],
+          "retentionTrigger": "approved review/audit window expires",
+          "deletionAction": "delete/minimize with review",
+          "legalHold": "preserve while held",
+          "eventPolicy": "occurred-at allowed internally",
+          "telemetryPolicy": "aggregate review durations only"
+        }
+      ]
+    }
+  ]
+}
