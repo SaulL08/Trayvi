@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY",
+  "implementationCodeCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "summary": {
+    "PASS": 32,
+    "FAIL": 0,
+    "DEFERRED": 4,
+    "NOT_APPLICABLE": 0
+  },
+  "criteria": [
+    {
+      "id": "P1-AC-001",
+      "status": "PASS",
+      "evidence": ["changed-files.json", "architecture boundary gate"],
+      "reason": "The diff is limited to Accounts/Identity foundations and approved composition, migration, test, observability, and documentation seams."
+    },
+    {
+      "id": "P1-AC-002",
+      "status": "PASS",
+      "evidence": ["scripts/architecture/check-boundaries.ts", "boundary fixtures"],
+      "reason": "The repository boundary gate reports zero violations and exercises module-layer and cross-infrastructure denials."
+    },
+    {
+      "id": "P1-AC-003",
+      "status": "PASS",
+      "evidence": ["ADR-011", "ADR-012", "migrations 0005-0007", "domain tests"],
+      "reason": "Account, identity, document, claim, case, evidence, review, and operation are separate concepts with explicit ownership."
+    },
+    {
+      "id": "P1-AC-004",
+      "status": "PASS",
+      "evidence": ["Phase 1 PostgreSQL integration UUIDv7 assertions"],
+      "reason": "Exposed entity identifiers are opaque UUIDv7 values."
+    },
+    {
+      "id": "P1-AC-005",
+      "status": "PASS",
+      "evidence": ["ADR-011", "Accounts boundary fixture"],
+      "reason": "The base Account is role-neutral; no future role implementation was introduced."
+    },
+    {
+      "id": "P1-AC-006",
+      "status": "PASS",
+      "evidence": ["account-lifecycle.unit.test.ts complete matrix"],
+      "reason": "All 25 Account state pairs and terminal CLOSED behavior are exercised."
+    },
+    {
+      "id": "P1-AC-007",
+      "status": "PASS",
+      "evidence": ["identity-lifecycle.unit.test.ts matrices", "direct PostgreSQL denial tests"],
+      "reason": "Identity, case, review, document, and claim transitions are separate and guarded."
+    },
+    {
+      "id": "P1-AC-008",
+      "status": "PASS",
+      "evidence": [
+        "transition command tests",
+        "transition-row integration assertions",
+        "outbox assertions"
+      ],
+      "reason": "Material transitions require and persist actor class/ref, reason, evidence/policy ref, old/new state, version, and timestamp."
+    },
+    {
+      "id": "P1-AC-009",
+      "status": "PASS",
+      "evidence": ["terminal lifecycle matrices", "direct SQL reopening denials"],
+      "reason": "Terminal relationships cannot be silently reopened and blocking claims cannot be silently released."
+    },
+    {
+      "id": "P1-AC-010",
+      "status": "PASS",
+      "evidence": ["document-normalization.unit.test.ts"],
+      "reason": "do-cedula-v1 and every PLAN vector pass, including 500 deterministic formatting/idempotence iterations."
+    },
+    {
+      "id": "P1-AC-011",
+      "status": "PASS",
+      "evidence": [
+        "distinct normalization/assessment/verification types",
+        "format-only activation PostgreSQL denial"
+      ],
+      "reason": "Formatting, structural assessment, and trusted verification are distinct; formatting alone cannot activate an account."
+    },
+    {
+      "id": "P1-AC-012",
+      "status": "PASS",
+      "evidence": ["published HMAC vector unit test"],
+      "reason": "The exact domain-separated HMAC-SHA-256 byte contract reproduces the PLAN vector."
+    },
+    {
+      "id": "P1-AC-013",
+      "status": "PASS",
+      "evidence": ["HMAC scope/key/value/separator/encoding mutation tests"],
+      "reason": "Every scoped mutation changes the fingerprint."
+    },
+    {
+      "id": "P1-AC-014",
+      "status": "PASS",
+      "evidence": ["schema and code scan", "HMAC implementation tests"],
+      "reason": "Uniqueness uses external-key HMAC aliases; plaintext and plain digests are not persisted."
+    },
+    {
+      "id": "P1-AC-015",
+      "status": "PASS",
+      "evidence": ["AES-256-GCM vector and tampering matrix"],
+      "reason": "The envelope vector, round trip, every AAD field, nonce, tag, ciphertext, missing data, and wrong KEK are exercised fail closed."
+    },
+    {
+      "id": "P1-AC-016",
+      "status": "PASS",
+      "evidence": ["separate crypto ports", "schema inventory", "secret scan"],
+      "reason": "KEK, per-record DEK, fingerprint HMAC key, and idempotency-integrity key are purpose-separated and only synthetic test material exists."
+    },
+    {
+      "id": "P1-AC-017",
+      "status": "PASS",
+      "evidence": [
+        "dual-alias PostgreSQL drill",
+        "collision completeness check",
+        "KEK rewrap/replay tests"
+      ],
+      "reason": "HMAC backfill and KEK rewrap are resumable, idempotent, verified before mutation/promotion, and fail closed."
+    },
+    {
+      "id": "P1-AC-018",
+      "status": "PASS",
+      "evidence": [
+        "redaction canary tests",
+        "safe-error no-echo tests",
+        "outbox payload scans",
+        "secret scan"
+      ],
+      "reason": "Restricted document values and key/envelope derivatives are excluded from observable public and event surfaces."
+    },
+    {
+      "id": "P1-AC-019",
+      "status": "PASS",
+      "evidence": ["migration-evidence.json", "db:verify", "three-down/three-up integration test"],
+      "reason": "Immutable migrations 0005-0007 follow 0001-0004 and pass clean, repeat, rollback, roll-forward, and refusal-with-data checks."
+    },
+    {
+      "id": "P1-AC-020",
+      "status": "PASS",
+      "evidence": ["database constraints/triggers", "direct SQL activation denials"],
+      "reason": "PostgreSQL enforces account/identity cardinality and activation prerequisites."
+    },
+    {
+      "id": "P1-AC-021",
+      "status": "PASS",
+      "evidence": [
+        "document_fingerprint_blocking_unique",
+        "collision and rotation integration tests"
+      ],
+      "reason": "Every blocking alias participates in the partial unique index across the complete fingerprint scope."
+    },
+    {
+      "id": "P1-AC-022",
+      "status": "PASS",
+      "evidence": ["seven-checkpoint failure-injection matrix"],
+      "reason": "All aggregate rows, idempotency result, and outbox are atomic; each injected failure leaves zero orphans."
+    },
+    {
+      "id": "P1-AC-023",
+      "status": "PASS",
+      "evidence": ["verification-summary.json concurrency result"],
+      "reason": "Ten real-PostgreSQL rounds of 50 attempts produced 10 winners, 490 generic conflicts, and no duplicates or orphans."
+    },
+    {
+      "id": "P1-AC-024",
+      "status": "PASS",
+      "evidence": [
+        "replay, concurrent replay, mismatched reuse, expiry, and rotation-period tests"
+      ],
+      "reason": "Keyed commitments replay only the identical request and mismatched reuse mutates nothing."
+    },
+    {
+      "id": "P1-AC-025",
+      "status": "PASS",
+      "evidence": ["physical runtime-role negative matrix", "db:verify"],
+      "reason": "Runtime restricted reads, protected updates/deletes, DDL, SET ROLE, and lifecycle bypass are denied."
+    },
+    {
+      "id": "P1-AC-026",
+      "status": "PASS",
+      "evidence": ["anti-enumeration schema/size/identifier integration comparison"],
+      "reason": "New and duplicate submissions return the same public code, next step, schema, size class, and no entity identifier."
+    },
+    {
+      "id": "P1-AC-027",
+      "status": "PASS",
+      "evidence": ["safe reason codes", "redaction/no-echo captures", "event forbidden-key scans"],
+      "reason": "Diagnostics preserve safe operational causes without restricted identity or crypto material."
+    },
+    {
+      "id": "P1-AC-028",
+      "status": "PASS",
+      "evidence": ["problem-details.unit.test.ts", "SafePublicError"],
+      "reason": "Conceptual outcomes use Foundation-compatible Problem Details and stable safe codes without a Phase 2 transport/auth contract."
+    },
+    {
+      "id": "P1-AC-029",
+      "status": "DEFERRED",
+      "evidence": ["data-inventory.json"],
+      "reason": "All 115 columns are inventoried, but approval of retention, lawful basis, legal holds, and deletion authority is production governance work."
+    },
+    {
+      "id": "P1-AC-030",
+      "status": "DEFERRED",
+      "evidence": ["data-inventory.json", "ADR-012 open decisions"],
+      "reason": "The code fails closed, but retention, closure, crypto-erasure, tombstone, legal-hold, and backup behavior require approved Legal/Product policy and a production drill."
+    },
+    {
+      "id": "P1-AC-031",
+      "status": "PASS",
+      "evidence": ["threat-control-mapping.json"],
+      "reason": "All 17 PLAN threats map to controls/tests/docs and an explicit later-phase or production blocker; none is silently accepted."
+    },
+    {
+      "id": "P1-AC-032",
+      "status": "PASS",
+      "evidence": ["clean-checkout verify:full unit results", "verification-summary.json"],
+      "reason": "Normalization, crypto, lifecycle, idempotency, redaction, event, and rotation tests pass."
+    },
+    {
+      "id": "P1-AC-033",
+      "status": "PASS",
+      "evidence": ["real PostgreSQL integration suite", "db:verify", "verification-summary.json"],
+      "reason": "Real PostgreSQL/PostGIS proves constraints, grants, rollback, concurrency, migration behavior, and rotations."
+    },
+    {
+      "id": "P1-AC-034",
+      "status": "PASS",
+      "evidence": ["ADR-011", "ADR-012", "docs/adr/README.md"],
+      "reason": "Both implementation ADRs are accepted in the implementation commit and linked without rewriting prior ADR content."
+    },
+    {
+      "id": "P1-AC-035",
+      "status": "DEFERRED",
+      "evidence": ["clean-checkout verify:full PASS", "hosted CI not run"],
+      "reason": "The uncached fresh-checkout gate passes, but the implementation commits are intentionally unpushed and therefore have no final required hosted-CI run yet."
+    },
+    {
+      "id": "P1-AC-036",
+      "status": "DEFERRED",
+      "evidence": ["IMPLEMENTATION.md", "evidence manifest pending independent audit extension"],
+      "reason": "An independent Phase 1 adversarial/final audit is explicitly outside this task and requires separate human authorization."
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "implementationCodeCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "priorMigrationsChanged": false,
+  "phaseOneMigrations": [
+    {
+      "version": "0005",
+      "name": "accounts_identity_core",
+      "upSha256": "7177e295f3b57406228806b10bf52c6ab2691752e5a944b5ddb53d29efb44258",
+      "downSha256": "24d70d2970cf76ae4114b2a8bb6bfe9ab1e7cd2bbab8ef6cc17681d6fe6f2ead"
+    },
+    {
+      "version": "0006",
+      "name": "identity_document_protection",
+      "upSha256": "2fd982828e7b9ca6a3f7e8972dbf0e0428711081224d6509cf6c3f98f9c9b04e",
+      "downSha256": "610d3eb76651dc9d02e97c4649e6de27dcdd5e448d805f32e154a98ce801b9af"
+    },
+    {
+      "version": "0007",
+      "name": "identity_verification_lifecycle_guards",
+      "upSha256": "48116cea88ffaee454af220a887b8907db0a58499204b58c69041041edb3be06",
+      "downSha256": "6074848b3eff307b707f63ad55c06d8f6d9474f3179cf0dfe66017b1f7e267f9"
+    }
+  ],
+  "tables": [
+    "accounts.accounts",
+    "accounts.account_creation_operations",
+    "accounts.account_status_transitions",
+    "identity.person_identities",
+    "identity.identity_status_transitions",
+    "identity.identity_documents",
+    "identity.document_fingerprint_claims",
+    "identity.verification_cases",
+    "identity.verification_evidence",
+    "identity.identity_reviews"
+  ],
+  "principalConstraints": [
+    "one person identity per base account",
+    "one current document per document scope",
+    "document_fingerprint_blocking_unique partial index",
+    "account activation requires exactly one established identity and a bound claim",
+    "guarded account, identity, document, claim, case, and review transitions",
+    "terminal state reopening denied",
+    "transition evidence required",
+    "verification evidence append-only",
+    "protected document context immutable",
+    "outbox event and idempotency result are transactionally coupled"
+  ],
+  "runtimeRole": {
+    "publicRevoked": true,
+    "columnLevelGrants": true,
+    "restrictedEnvelopeReadDenied": true,
+    "restrictedFingerprintReadDenied": true,
+    "protectedRewriteDenied": true,
+    "forbiddenDeletesDenied": true,
+    "ddlDenied": true,
+    "setRoleAdminDenied": true,
+    "directLifecycleBypassDenied": true
+  },
+  "verification": {
+    "cleanApply": "PASS",
+    "repeatNoOp": "PASS",
+    "refuseDownWithPhaseOneData": "PASS",
+    "threeDownThreeUpCycle": "PASS",
+    "priorMigrationChecksumsPreserved": "PASS",
+    "invalidMigrationRollback": "PASS",
+    "concurrentMigrationSerialization": "PASS"
+  }
+}

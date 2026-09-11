@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "baseline": "56e0065f8eee35f79e819455564e0e9ab3dec7db",
+  "functionalCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "scope": "Phase 1 Accounts and Identity implementation plus approved seams and implementation evidence",
+  "summary": {
+    "files": 54,
+    "added": 40,
+    "modified": 14,
+    "deleted": 0,
+    "phaseZeroFilesChanged": 0,
+    "phaseTwoFeaturesAdded": 0
+  },
+  "files": [
+    { "status": "M", "path": "apps/api/package.json" },
+    { "status": "M", "path": "apps/api/src/http/problem-details.ts" },
+    { "status": "A", "path": "apps/api/src/http/safe-public-error.ts" },
+    { "status": "A", "path": "apps/api/src/phase-01/phase-one-enrollment.ts" },
+    { "status": "A", "path": "apps/api/src/phase-01/postgres-fingerprint-rotation.ts" },
+    { "status": "A", "path": "apps/api/src/phase-01/postgres-phase-one-store.ts" },
+    { "status": "A", "path": "apps/api/test/phase-one-identity.integration.test.ts" },
+    { "status": "M", "path": "apps/api/test/problem-details.unit.test.ts" },
+    { "status": "M", "path": "apps/api/tsconfig.json" },
+    { "status": "A", "path": "docs/adr/ADR-011-account-person-identity-model.md" },
+    { "status": "A", "path": "docs/adr/ADR-012-national-identity-protection-and-key-rotation.md" },
+    { "status": "M", "path": "docs/adr/README.md" },
+    { "status": "A", "path": "docs/phases/phase-01-accounts-identity/IMPLEMENTATION.md" },
+    {
+      "status": "A",
+      "path": "docs/phases/phase-01-accounts-identity/evidence/acceptance-criteria.json"
+    },
+    { "status": "A", "path": "docs/phases/phase-01-accounts-identity/evidence/changed-files.json" },
+    {
+      "status": "A",
+      "path": "docs/phases/phase-01-accounts-identity/evidence/data-inventory.json"
+    },
+    { "status": "A", "path": "docs/phases/phase-01-accounts-identity/evidence/manifest.json" },
+    {
+      "status": "A",
+      "path": "docs/phases/phase-01-accounts-identity/evidence/migration-evidence.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/phases/phase-01-accounts-identity/evidence/threat-control-mapping.json"
+    },
+    {
+      "status": "A",
+      "path": "docs/phases/phase-01-accounts-identity/evidence/verification-summary.json"
+    },
+    { "status": "A", "path": "infra/database/migrations/0005_accounts_identity_core.down.sql" },
+    { "status": "A", "path": "infra/database/migrations/0005_accounts_identity_core.up.sql" },
+    {
+      "status": "A",
+      "path": "infra/database/migrations/0006_identity_document_protection.down.sql"
+    },
+    { "status": "A", "path": "infra/database/migrations/0006_identity_document_protection.up.sql" },
+    {
+      "status": "A",
+      "path": "infra/database/migrations/0007_identity_verification_lifecycle_guards.down.sql"
+    },
+    {
+      "status": "A",
+      "path": "infra/database/migrations/0007_identity_verification_lifecycle_guards.up.sql"
+    },
+    { "status": "A", "path": "modules/accounts/package.json" },
+    { "status": "A", "path": "modules/accounts/src/domain/account-lifecycle.ts" },
+    { "status": "A", "path": "modules/accounts/src/domain/enrollment-operation.ts" },
+    { "status": "A", "path": "modules/accounts/src/index.ts" },
+    { "status": "A", "path": "modules/accounts/test/account-lifecycle.unit.test.ts" },
+    { "status": "A", "path": "modules/accounts/test/fixtures/cross-module-import.ts" },
+    { "status": "A", "path": "modules/accounts/test/fixtures/domain/imports-infrastructure.ts" },
+    { "status": "A", "path": "modules/accounts/test/fixtures/infrastructure/adapter.ts" },
+    { "status": "A", "path": "modules/accounts/tsconfig.json" },
+    { "status": "A", "path": "modules/identity/package.json" },
+    { "status": "A", "path": "modules/identity/src/application/document-protection.ts" },
+    { "status": "A", "path": "modules/identity/src/domain/document-normalization.ts" },
+    { "status": "A", "path": "modules/identity/src/domain/identity-lifecycle.ts" },
+    { "status": "A", "path": "modules/identity/src/index.ts" },
+    { "status": "A", "path": "modules/identity/src/infrastructure/node-document-protection.ts" },
+    { "status": "A", "path": "modules/identity/test/document-normalization.unit.test.ts" },
+    { "status": "A", "path": "modules/identity/test/document-protection.unit.test.ts" },
+    { "status": "A", "path": "modules/identity/test/identity-lifecycle.unit.test.ts" },
+    { "status": "A", "path": "modules/identity/tsconfig.json" },
+    { "status": "M", "path": "packages/observability/src/redaction.ts" },
+    { "status": "M", "path": "packages/observability/test/redaction.unit.test.ts" },
+    { "status": "M", "path": "pnpm-lock.yaml" },
+    { "status": "M", "path": "pnpm-workspace.yaml" },
+    { "status": "M", "path": "scripts/architecture/check-boundaries.ts" },
+    { "status": "M", "path": "scripts/architecture/check-boundaries.unit.test.ts" },
+    { "status": "M", "path": "scripts/db/verification.ts" },
+    { "status": "M", "path": "tsconfig.json" },
+    { "status": "M", "path": "vitest.config.ts" }
+  ]
+}

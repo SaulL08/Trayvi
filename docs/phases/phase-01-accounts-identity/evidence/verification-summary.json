@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_IMPLEMENTATION",
+  "generatedAt": "2026-09-11T16:21:17.000Z",
+  "planBaseline": {
+    "commit": "56e0065f8eee35f79e819455564e0e9ab3dec7db",
+    "tree": "cd211ea955bc03c72e486a3d1c887225fa6994cd",
+    "hostedCiRunId": "34558292580",
+    "hostedCiStatus": "PASS"
+  },
+  "implementationTarget": {
+    "commit": "ac90421068185706f49919384b98ffedfcc70001",
+    "tree": "7d9e9257ea484b50339fc5aa66825c7c49385ba5",
+    "scope": "functional implementation, migrations, tests, ADRs, privacy inventory, and threat-control mapping"
+  },
+  "environment": {
+    "node": "v22.14.0",
+    "pnpm": "11.25.0",
+    "database": "PostgreSQL 17 plus PostGIS 3.5 hardened local ephemeral container",
+    "databaseImage": "trayvi/postgis:17-3.5-alpine-hardened",
+    "keyProviders": "provider-neutral ports with synthetic test-only adapters",
+    "tls": "strict verification preserved; NODE_EXTRA_CA_CERTS referenced an exported Windows-trusted inspection root",
+    "tlsWeakening": false
+  },
+  "cleanCheckout": {
+    "status": "PASS",
+    "targetCommit": "ac90421068185706f49919384b98ffedfcc70001",
+    "detached": true,
+    "freshNodeModules": true,
+    "developmentNodeModulesReused": false,
+    "developmentDistReused": false,
+    "developmentBuildCacheReused": false,
+    "frozenInstall": {
+      "status": "PASS",
+      "lockfilePolicy": "PASS",
+      "workspaceProjects": 8,
+      "packages": 267
+    },
+    "command": "TURBO_FORCE=true corepack pnpm verify:full",
+    "turbo": {
+      "typecheckTasks": 12,
+      "typecheckCached": 0,
+      "buildTasks": 7,
+      "buildCached": 0
+    },
+    "worktreeAfterVerification": "CLEAN"
+  },
+  "gates": {
+    "toolchain": "PASS",
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "architecture": {
+      "status": "PASS",
+      "violations": 0
+    },
+    "secrets": {
+      "status": "PASS",
+      "findings": 0
+    },
+    "licenses": {
+      "status": "PASS",
+      "packages": 267,
+      "findings": 0
+    },
+    "unit": {
+      "status": "PASS",
+      "filesPassed": 19,
+      "testsPassed": 126,
+      "testsSkipped": 1,
+      "testsTotal": 127,
+      "skipClassification": "Windows-inapplicable POSIX process-tree case"
+    },
+    "build": {
+      "status": "PASS",
+      "packages": 7,
+      "cachedTasks": 0
+    },
+    "integration": {
+      "status": "PASS",
+      "filesPassed": 8,
+      "filesSkipped": 1,
+      "testsPassed": 29,
+      "testsSkipped": 2,
+      "testsTotal": 31,
+      "skipClassification": "Windows-inapplicable compiled POSIX signal suite"
+    },
+    "dependencyAudit": {
+      "status": "PASS",
+      "source": "pnpm-audit/npm-registry",
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "postgresql": {
+    "status": "PASS",
+    "realDatabase": true,
+    "postgis": true,
+    "migrationCount": 7,
+    "phaseOneTableCount": 10,
+    "phaseOneInventoriedColumnCount": 115,
+    "checks": {
+      "cleanApply": true,
+      "repeatNoOp": true,
+      "rollbackRollForward": true,
+      "runtimeDdlDenied": true,
+      "runtimeIdentityRestricted": true,
+      "outboxAtomicity": true,
+      "outboxStateIntegrity": true,
+      "outboxStateTransitions": true,
+      "outboxImmutableDataDenied": true,
+      "outboxMetadataMutationDenied": true,
+      "outboxDeleteDenied": true,
+      "invalidMigrationRolledBack": true,
+      "concurrentSerialized": true
+    }
+  },
+  "concurrency": {
+    "status": "PASS",
+    "attemptsPerRound": 50,
+    "rounds": 10,
+    "totalAttempts": 500,
+    "winners": 10,
+    "safeConflicts": 490,
+    "duplicateAccounts": 0,
+    "duplicateIdentities": 0,
+    "orphans": 0
+  },
+  "failureInjection": {
+    "status": "PASS",
+    "checkpoints": [
+      "ACCOUNT_INSERTED",
+      "IDENTITY_INSERTED",
+      "DOCUMENT_ENVELOPE_INSERTED",
+      "FINGERPRINT_CLAIMS_INSERTED",
+      "TRANSITION_HISTORY_INSERTED",
+      "OUTBOX_INSERTED",
+      "IDEMPOTENCY_RESULT_RECORDED"
+    ],
+    "partialEnrollments": 0,
+    "orphanIdentities": 0,
+    "orphanDocuments": 0,
+    "danglingClaims": 0,
+    "invalidAccounts": 0
+  },
+  "rotation": {
+    "status": "PASS",
+    "hmac": "dual-active concurrent backfill, corrupt-alias fail-closed check, resumable replay, and new-only cutover passed",
+    "concurrentSubmissionsDuringHmacBackfill": 20,
+    "kek": "wrong-provider fail-closed check, verified rewrap, idempotent replay, unchanged ciphertext, and safe event passed"
+  },
+  "historicalIntegrity": {
+    "phaseZeroDocumentationChanged": false,
+    "migrations0001Through0004Changed": false
+  },
+  "hostedImplementationCi": {
+    "status": "DEFERRED",
+    "reason": "The implementation commits were not pushed because this task does not provide new final-push authorization."
+  }
+}

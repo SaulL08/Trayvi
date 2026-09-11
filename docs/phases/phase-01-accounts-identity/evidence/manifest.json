@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_IMPLEMENTATION",
+  "generatedAt": "2026-09-11T16:22:00.000Z",
+  "planBaseline": "56e0065f8eee35f79e819455564e0e9ab3dec7db",
+  "functionalImplementationCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "functionalImplementationTree": "7d9e9257ea484b50339fc5aa66825c7c49385ba5",
+  "hashAlgorithm": "SHA-256",
+  "files": [
+    {
+      "path": "docs/phases/phase-01-accounts-identity/IMPLEMENTATION.md",
+      "sha256": "587ffced3ccef5aa0974ed6e129496607a2a33ad9abca2e03651e1050417a676"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/acceptance-criteria.json",
+      "sha256": "805c35cc6756125fc588e032397735a780cb1069651ecca82f9800b0dd809836"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/changed-files.json",
+      "sha256": "b9c6cfe580d4144121642fa8716f6234085dac7df0af565966ffa550b4ffdd90"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/data-inventory.json",
+      "sha256": "750875859a3cc78e7603e756f462e52087b7a5d63e919f008bc689da739e735c"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/migration-evidence.json",
+      "sha256": "6d165f6cdf0fc6c3bdc014f3d8b8b0632a2601f08dc5502cd58a9a035e14d06a"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/threat-control-mapping.json",
+      "sha256": "4b05c2b591a62945f4df02f27e2225d374eaffc7c434f451cd0724641fb87805"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/verification-summary.json",
+      "sha256": "6e1200ec7433438c23bb23472a11ab30f11c651cbb9db658161dfef24e7ccd07"
+    },
+    {
+      "path": "docs/adr/ADR-011-account-person-identity-model.md",
+      "sha256": "8cee4a224dedc2e628e3fb87a0e0b5bba6af2e0ceba251da4e95c76673a0f136"
+    },
+    {
+      "path": "docs/adr/ADR-012-national-identity-protection-and-key-rotation.md",
+      "sha256": "c8ffc417d62c461460dbf725a8bebbeb04f80d9ca92c7c6ba6c9babe79a43b6f"
+    }
+  ],
+  "integrityNotes": [
+    "The manifest intentionally excludes its own hash.",
+    "The functional commit is the clean-checkout verification target.",
+    "The documentation commit that contains this manifest changes evidence only.",
+    "Independent adversarial/final audit evidence is not present because that task is not authorized.",
+    "Hosted implementation CI is deferred until a separate push authorization."
+  ]
+}
