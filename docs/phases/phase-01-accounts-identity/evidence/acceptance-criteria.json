@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
   "phase": "PHASE_1_ACCOUNTS_IDENTITY",
-  "implementationCodeCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "initialImplementationCodeCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "implementationCodeCommit": "b0375079e90d75482e7aa477492ddc3437e8f431",
   "summary": {
-    "PASS": 32,
+    "PASS": 33,
     "FAIL": 0,
-    "DEFERRED": 4,
+    "DEFERRED": 3,
     "NOT_APPLICABLE": 0
   },
   "criteria": [
@@ -236,9 +237,13 @@
     },
     {
       "id": "P1-AC-035",
-      "status": "DEFERRED",
-      "evidence": ["clean-checkout verify:full PASS", "hosted CI not run"],
-      "reason": "The uncached fresh-checkout gate passes, but the implementation commits are intentionally unpushed and therefore have no final required hosted-CI run yet."
+      "status": "PASS",
+      "evidence": [
+        "clean-checkout verify:full PASS at b0375079e90d75482e7aa477492ddc3437e8f431",
+        "hosted-verification.json",
+        "GitHub Actions run 34662427613 required gate PASS"
+      ],
+      "reason": "The final implementation commit passed the fresh uncached local gate and every mandatory hosted Ubuntu job, including the required gate; hosted artifacts were inspected and contain no restricted document values or secret material."
     },
     {
       "id": "P1-AC-036",

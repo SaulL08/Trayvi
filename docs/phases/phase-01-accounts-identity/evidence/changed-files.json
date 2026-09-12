@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "baseline": "56e0065f8eee35f79e819455564e0e9ab3dec7db",
-  "functionalCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "functionalCommit": "b0375079e90d75482e7aa477492ddc3437e8f431",
   "scope": "Phase 1 Accounts and Identity implementation plus approved seams and implementation evidence",
   "summary": {
-    "files": 54,
-    "added": 40,
-    "modified": 14,
+    "files": 60,
+    "added": 42,
+    "modified": 18,
     "deleted": 0,
     "phaseZeroFilesChanged": 0,
     "phaseTwoFeaturesAdded": 0
@@ -18,6 +18,7 @@
     { "status": "A", "path": "apps/api/src/phase-01/phase-one-enrollment.ts" },
     { "status": "A", "path": "apps/api/src/phase-01/postgres-fingerprint-rotation.ts" },
     { "status": "A", "path": "apps/api/src/phase-01/postgres-phase-one-store.ts" },
+    { "status": "M", "path": "apps/api/test/api-foundation.integration.test.ts" },
     { "status": "A", "path": "apps/api/test/phase-one-identity.integration.test.ts" },
     { "status": "M", "path": "apps/api/test/problem-details.unit.test.ts" },
     { "status": "M", "path": "apps/api/tsconfig.json" },
@@ -35,6 +36,10 @@
       "path": "docs/phases/phase-01-accounts-identity/evidence/data-inventory.json"
     },
     { "status": "A", "path": "docs/phases/phase-01-accounts-identity/evidence/manifest.json" },
+    {
+      "status": "A",
+      "path": "docs/phases/phase-01-accounts-identity/evidence/hosted-verification.json"
+    },
     {
       "status": "A",
       "path": "docs/phases/phase-01-accounts-identity/evidence/migration-evidence.json"
@@ -83,10 +88,14 @@
     { "status": "A", "path": "modules/identity/tsconfig.json" },
     { "status": "M", "path": "packages/observability/src/redaction.ts" },
     { "status": "M", "path": "packages/observability/test/redaction.unit.test.ts" },
+    { "status": "M", "path": "packages/test-support/src/database.ts" },
+    { "status": "M", "path": "packages/test-support/src/index.ts" },
+    { "status": "A", "path": "packages/test-support/test/database.unit.test.ts" },
     { "status": "M", "path": "pnpm-lock.yaml" },
     { "status": "M", "path": "pnpm-workspace.yaml" },
     { "status": "M", "path": "scripts/architecture/check-boundaries.ts" },
     { "status": "M", "path": "scripts/architecture/check-boundaries.unit.test.ts" },
+    { "status": "M", "path": "scripts/db/migrate.integration.test.ts" },
     { "status": "M", "path": "scripts/db/verification.ts" },
     { "status": "M", "path": "tsconfig.json" },
     { "status": "M", "path": "vitest.config.ts" }

@@ -6,6 +6,11 @@ Plan baseline: `56e0065f8eee35f79e819455564e0e9ab3dec7db`
 
 Functional implementation commit: `ac90421068185706f49919384b98ffedfcc70001`
 
+Implementation evidence commit: `efe7fee3b639d5c76c8337285b6948dea8d01cd3`
+
+Hosted harness fix and verified implementation commit:
+`b0375079e90d75482e7aa477492ddc3437e8f431`
+
 This document records the authorized Phase 1 implementation. It is not an
 adversarial audit, does not close Phase 1, and does not authorize Phase 2.
 
@@ -264,7 +269,7 @@ typecheck:            PASS (12/12 tasks, 0 cached)
 architecture:         PASS (0 violations)
 secret scan:          PASS (0 findings)
 licenses:             PASS (267 packages, 0 findings)
-unit:                 PASS (126 passed, 1 Windows-inapplicable skipped)
+unit:                 PASS (127 passed, 1 Windows-inapplicable skipped)
 build:                PASS (7/7 tasks, 0 cached)
 integration:          PASS (29 passed, 2 Windows-inapplicable skipped)
 PostgreSQL/db verify: PASS (14/14 evidence flags)
@@ -277,56 +282,98 @@ exported Windows-trusted inspection root through `NODE_EXTRA_CA_CERTS`. No
 `strict-ssl=false`, `NODE_TLS_REJECT_UNAUTHORIZED=0`, or equivalent bypass was
 used.
 
+### 9.1 Hosted verification
+
+The first hosted implementation run, `34628242412` at evidence commit
+`efe7fee3b639d5c76c8337285b6948dea8d01cd3`, is preserved as a failed run.
+Quality and security passed, while integration failed before the Phase 1 tests
+could execute. The root cause was a hosted harness ordering defect: the temporary
+database was migrated before the cluster-level roles from
+`infra/database/bootstrap/0001_roles.sql` existed. A secondary cleanup error then
+attempted to close an uninitialized pool. This was not a regression in the
+Accounts or Identity implementation.
+
+Commit `b0375079e90d75482e7aa477492ddc3437e8f431` applies the minimum harness
+correction. It runs the idempotent cluster bootstrap under a session advisory
+lock before temporary-database migration, exercises concurrent bootstrap calls,
+and closes only resources that initialized successfully while preserving the
+primary setup error. It also prevents synthetic document fixtures from appearing
+in machine-readable unit test names. No migration, Phase 0 file, or Phase 2
+feature changed.
+
+Hosted run `34662427613` executed that exact commit on GitHub-hosted
+`ubuntu-24.04` runners and passed every mandatory job:
+
+```text
+quality job:          PASS (128/128 unit tests)
+integration job:      PASS (31/31 integration tests; 14/14 DB checks)
+security job:         PASS (0 dependency, secret, license, filesystem, image,
+                      or misconfiguration findings under the enforced policy)
+required gate:        PASS
+concurrency contract: PASS (500 attempts, 10 winners, 490 safe conflicts,
+                      0 duplicate Accounts, 0 duplicate Identities, 0 orphans)
+failure injection:    PASS (7/7 checkpoints)
+```
+
+All three hosted artifacts were downloaded and inspected. Across 58 files and
+794,838 expanded bytes there were no `.env` files or paths, private keys, bearer
+tokens, password-bearing database URLs, GitHub tokens, or formatted/canonical
+document values. The only 11-digit match was the expected GitHub Run ID in safe
+hosted metadata. The Node 20 action-runtime deprecation annotation is
+informational: GitHub forced those pinned actions to Node 24 and every required
+job still passed.
+
 Machine-readable results are in
-[`evidence/verification-summary.json`](evidence/verification-summary.json).
+[`evidence/verification-summary.json`](evidence/verification-summary.json) and
+[`evidence/hosted-verification.json`](evidence/hosted-verification.json).
 
 ## 10. Acceptance criteria
 
-| Criterion | Status   | Implementation evidence                                                        |
-| --------- | -------- | ------------------------------------------------------------------------------ |
-| P1-AC-001 | PASS     | scope manifest and zero-violation boundary report                              |
-| P1-AC-002 | PASS     | module/layer checker and negative fixtures                                     |
-| P1-AC-003 | PASS     | ADR-011/012, schema, domain tests                                              |
-| P1-AC-004 | PASS     | UUIDv7 integration assertions                                                  |
-| P1-AC-005 | PASS     | role-neutral base Account; no roles implemented                                |
-| P1-AC-006 | PASS     | exhaustive Account transition matrix                                           |
-| P1-AC-007 | PASS     | exhaustive separate lifecycle matrices and SQL denials                         |
-| P1-AC-008 | PASS     | required atomic transition evidence row/outbox assertions                      |
-| P1-AC-009 | PASS     | terminal/release domain and SQL denials                                        |
-| P1-AC-010 | PASS     | exact normalization vectors and 500-iteration property-style test              |
-| P1-AC-011 | PASS     | distinct result types and format-only activation denial                        |
-| P1-AC-012 | PASS     | exact HMAC vector                                                              |
-| P1-AC-013 | PASS     | scope/key/value/separator/encoding mutation matrix                             |
-| P1-AC-014 | PASS     | HMAC uniqueness; no plaintext/plain digest persistence                         |
-| P1-AC-015 | PASS     | AES-GCM vector and complete tampering matrix                                   |
-| P1-AC-016 | PASS     | purpose-separated key ports and secret/schema scans                            |
-| P1-AC-017 | PASS     | concurrent HMAC rotation and verified KEK rewrap drills                        |
-| P1-AC-018 | PASS     | redaction, no-echo, event, and secret scans                                    |
-| P1-AC-019 | PASS     | immutable checksums and clean/repeat/down/up verification                      |
-| P1-AC-020 | PASS     | PostgreSQL cardinality/activation constraints                                  |
-| P1-AC-021 | PASS     | blocking partial unique index and collision tests                              |
-| P1-AC-022 | PASS     | seven-checkpoint rollback matrix with zero orphans                             |
-| P1-AC-023 | PASS     | real PostgreSQL 50-by-10 result                                                |
-| P1-AC-024 | PASS     | same/concurrent/expired/malicious/rotation replay matrix                       |
-| P1-AC-025 | PASS     | physical runtime-role negative matrix                                          |
-| P1-AC-026 | PASS     | equal public shape/size/status and no entity ID                                |
-| P1-AC-027 | PASS     | safe diagnostics and restricted-value scans                                    |
-| P1-AC-028 | PASS     | versioned Foundation Problem Details compatibility                             |
-| P1-AC-029 | DEFERRED | complete inventory exists; production governance approval pending              |
-| P1-AC-030 | DEFERRED | retention/legal approval and production deletion drill pending                 |
-| P1-AC-031 | PASS     | 17-threat executable/control/blocker mapping                                   |
-| P1-AC-032 | PASS     | required unit/property/crypto/lifecycle suites pass                            |
-| P1-AC-033 | PASS     | real PostgreSQL constraints/grants/rollback/concurrency/rotation pass          |
-| P1-AC-034 | PASS     | ADR-011/012 accepted and linked                                                |
-| P1-AC-035 | DEFERRED | fresh uncached `verify:full` passes; final hosted CI awaits push authorization |
-| P1-AC-036 | DEFERRED | independent adversarial/final audit is separately authorized work              |
+| Criterion | Status   | Implementation evidence                                                  |
+| --------- | -------- | ------------------------------------------------------------------------ |
+| P1-AC-001 | PASS     | scope manifest and zero-violation boundary report                        |
+| P1-AC-002 | PASS     | module/layer checker and negative fixtures                               |
+| P1-AC-003 | PASS     | ADR-011/012, schema, domain tests                                        |
+| P1-AC-004 | PASS     | UUIDv7 integration assertions                                            |
+| P1-AC-005 | PASS     | role-neutral base Account; no roles implemented                          |
+| P1-AC-006 | PASS     | exhaustive Account transition matrix                                     |
+| P1-AC-007 | PASS     | exhaustive separate lifecycle matrices and SQL denials                   |
+| P1-AC-008 | PASS     | required atomic transition evidence row/outbox assertions                |
+| P1-AC-009 | PASS     | terminal/release domain and SQL denials                                  |
+| P1-AC-010 | PASS     | exact normalization vectors and 500-iteration property-style test        |
+| P1-AC-011 | PASS     | distinct result types and format-only activation denial                  |
+| P1-AC-012 | PASS     | exact HMAC vector                                                        |
+| P1-AC-013 | PASS     | scope/key/value/separator/encoding mutation matrix                       |
+| P1-AC-014 | PASS     | HMAC uniqueness; no plaintext/plain digest persistence                   |
+| P1-AC-015 | PASS     | AES-GCM vector and complete tampering matrix                             |
+| P1-AC-016 | PASS     | purpose-separated key ports and secret/schema scans                      |
+| P1-AC-017 | PASS     | concurrent HMAC rotation and verified KEK rewrap drills                  |
+| P1-AC-018 | PASS     | redaction, no-echo, event, and secret scans                              |
+| P1-AC-019 | PASS     | immutable checksums and clean/repeat/down/up verification                |
+| P1-AC-020 | PASS     | PostgreSQL cardinality/activation constraints                            |
+| P1-AC-021 | PASS     | blocking partial unique index and collision tests                        |
+| P1-AC-022 | PASS     | seven-checkpoint rollback matrix with zero orphans                       |
+| P1-AC-023 | PASS     | real PostgreSQL 50-by-10 result                                          |
+| P1-AC-024 | PASS     | same/concurrent/expired/malicious/rotation replay matrix                 |
+| P1-AC-025 | PASS     | physical runtime-role negative matrix                                    |
+| P1-AC-026 | PASS     | equal public shape/size/status and no entity ID                          |
+| P1-AC-027 | PASS     | safe diagnostics and restricted-value scans                              |
+| P1-AC-028 | PASS     | versioned Foundation Problem Details compatibility                       |
+| P1-AC-029 | DEFERRED | complete inventory exists; production governance approval pending        |
+| P1-AC-030 | DEFERRED | retention/legal approval and production deletion drill pending           |
+| P1-AC-031 | PASS     | 17-threat executable/control/blocker mapping                             |
+| P1-AC-032 | PASS     | required unit/property/crypto/lifecycle suites pass                      |
+| P1-AC-033 | PASS     | real PostgreSQL constraints/grants/rollback/concurrency/rotation pass    |
+| P1-AC-034 | PASS     | ADR-011/012 accepted and linked                                          |
+| P1-AC-035 | PASS     | clean uncached gate plus hosted run `34662427613` and required gate pass |
+| P1-AC-036 | DEFERRED | independent adversarial/final audit is separately authorized work        |
 
 Summary:
 
 ```text
-PASS:           32
+PASS:           33
 FAIL:            0
-DEFERRED:        4
+DEFERRED:        3
 NOT APPLICABLE:  0
 ```
 
@@ -374,9 +421,11 @@ evidence are the only delivered behavior.
 The Phase 0 documentation tree and migrations `0001` through `0004` have no diff
 from the published Phase 1 PLAN baseline. Phase 0 remains closed.
 
-The implementation commits are intentionally not pushed without a new explicit
-authorization. Consequently hosted implementation CI remains deferred even
-though the authoritative clean local gate passes.
+The implementation, evidence, and minimum hosted-harness fix were published by
+normal fast-forward pushes after explicit authorization. Hosted run
+`34662427613` passed on the final implementation commit, including its required
+gate. P1-AC-035 is therefore PASS. P1-AC-029, P1-AC-030, and P1-AC-036 remain
+DEFERRED; no adversarial audit has started and Phase 1 is not closed.
 
 ```text
 PHASE 1 IMPLEMENTATION — COMPLETE

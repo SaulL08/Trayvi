@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "phase": "PHASE_1_ACCOUNTS_IDENTITY_IMPLEMENTATION",
-  "generatedAt": "2026-09-11T16:21:17.000Z",
+  "generatedAt": "2026-09-12T00:43:02.000Z",
   "planBaseline": {
     "commit": "56e0065f8eee35f79e819455564e0e9ab3dec7db",
     "tree": "cd211ea955bc03c72e486a3d1c887225fa6994cd",
@@ -9,9 +9,9 @@
     "hostedCiStatus": "PASS"
   },
   "implementationTarget": {
-    "commit": "ac90421068185706f49919384b98ffedfcc70001",
-    "tree": "7d9e9257ea484b50339fc5aa66825c7c49385ba5",
-    "scope": "functional implementation, migrations, tests, ADRs, privacy inventory, and threat-control mapping"
+    "commit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+    "tree": "44839f2610bc2ae634a73a0acb1b981682dca4d8",
+    "scope": "functional implementation, migrations, tests, ADRs, privacy inventory, threat-control mapping, and the minimum hosted integration-harness bootstrap fix"
   },
   "environment": {
     "node": "v22.14.0",
@@ -24,7 +24,7 @@
   },
   "cleanCheckout": {
     "status": "PASS",
-    "targetCommit": "ac90421068185706f49919384b98ffedfcc70001",
+    "targetCommit": "b0375079e90d75482e7aa477492ddc3437e8f431",
     "detached": true,
     "freshNodeModules": true,
     "developmentNodeModulesReused": false,
@@ -65,10 +65,10 @@
     },
     "unit": {
       "status": "PASS",
-      "filesPassed": 19,
-      "testsPassed": 126,
+      "filesPassed": 20,
+      "testsPassed": 127,
       "testsSkipped": 1,
-      "testsTotal": 127,
+      "testsTotal": 128,
       "skipClassification": "Windows-inapplicable POSIX process-tree case"
     },
     "build": {
@@ -121,6 +121,7 @@
   },
   "concurrency": {
     "status": "PASS",
+    "hostedExecution": "GitHub Actions run 34662427613 integration test PASS",
     "attemptsPerRound": 50,
     "rounds": 10,
     "totalAttempts": 500,
@@ -132,6 +133,7 @@
   },
   "failureInjection": {
     "status": "PASS",
+    "hostedExecution": "GitHub Actions run 34662427613 integration test PASS",
     "checkpoints": [
       "ACCOUNT_INSERTED",
       "IDENTITY_INSERTED",
@@ -158,7 +160,43 @@
     "migrations0001Through0004Changed": false
   },
   "hostedImplementationCi": {
-    "status": "DEFERRED",
-    "reason": "The implementation commits were not pushed because this task does not provide new final-push authorization."
+    "status": "PASS",
+    "preservedFailedRun": {
+      "runId": "34628242412",
+      "commit": "efe7fee3b639d5c76c8337285b6948dea8d01cd3",
+      "classification": "HOSTED_IMPLEMENTATION_HARNESS_DEFECT",
+      "quality": "PASS",
+      "security": "PASS",
+      "integration": "FAILURE_BEFORE_PHASE_1_TEST_EXECUTION",
+      "requiredGate": "FAILURE"
+    },
+    "successfulRun": {
+      "runId": "34662427613",
+      "commit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+      "runner": "GitHub-hosted ubuntu-24.04",
+      "quality": {
+        "status": "PASS",
+        "unitPassed": 128,
+        "unitTotal": 128
+      },
+      "integration": {
+        "status": "PASS",
+        "testsPassed": 31,
+        "testsTotal": 31,
+        "databaseChecksPassed": 14,
+        "databaseChecksTotal": 14
+      },
+      "security": {
+        "status": "PASS",
+        "dependencyAdvisories": 0,
+        "secretFindings": 0,
+        "licenseFindings": 0,
+        "trivyHighCriticalFindings": 0,
+        "trivyMisconfigurationFindings": 0
+      },
+      "requiredGate": "PASS",
+      "artifactInspection": "PASS"
+    },
+    "evidence": "hosted-verification.json"
   }
 }

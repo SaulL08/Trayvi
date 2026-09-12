@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_IMPLEMENTATION_HOSTED_VERIFICATION",
+  "generatedAt": "2026-09-12T00:43:02.000Z",
+  "repository": "SaulL08/Trayvi",
+  "branch": "main",
+  "implementationCommit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+  "implementationTree": "44839f2610bc2ae634a73a0acb1b981682dca4d8",
+  "push": {
+    "mode": "normal fast-forward",
+    "from": "efe7fee3b639d5c76c8337285b6948dea8d01cd3",
+    "to": "b0375079e90d75482e7aa477492ddc3437e8f431",
+    "forceUsed": false,
+    "remoteOnlyCommitsBeforePush": 0
+  },
+  "preservedFailedRun": {
+    "runId": "34628242412",
+    "commit": "efe7fee3b639d5c76c8337285b6948dea8d01cd3",
+    "status": "FAILURE",
+    "classification": "HOSTED_IMPLEMENTATION_HARNESS_DEFECT",
+    "primaryFailure": "Migration 0001 failed because the hosted integration harness created its temporary database before applying the cluster-level role bootstrap.",
+    "secondaryCleanupFailure": "Cleanup attempted to close an uninitialized pool after setup failed; this did not replace the migration failure as the root cause.",
+    "jobs": {
+      "quality": { "id": "103358460901", "status": "SUCCESS" },
+      "integration": { "id": "103358461194", "status": "FAILURE" },
+      "security": { "id": "103358461303", "status": "SUCCESS" },
+      "requiredGate": { "id": "103359160856", "status": "FAILURE" }
+    },
+    "results": {
+      "unit": { "passed": 127, "failed": 0, "total": 127 },
+      "integration": {
+        "passed": 19,
+        "failedAssertions": 0,
+        "skippedAfterSetupFailure": 12,
+        "total": 31
+      },
+      "securityFindings": 0
+    },
+    "artifacts": [
+      {
+        "id": "10275845835",
+        "name": "phase-00-integration",
+        "sizeBytes": 7765,
+        "expiresAt": "2026-09-25T17:33:48Z"
+      },
+      {
+        "id": "10275227506",
+        "name": "phase-00-quality",
+        "sizeBytes": 146746,
+        "expiresAt": "2026-09-25T17:34:26Z"
+      },
+      {
+        "id": "10275102571",
+        "name": "phase-00-security",
+        "sizeBytes": 1852,
+        "expiresAt": "2026-09-25T17:33:30Z"
+      }
+    ]
+  },
+  "fix": {
+    "commit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+    "parent": "efe7fee3b639d5c76c8337285b6948dea8d01cd3",
+    "tree": "44839f2610bc2ae634a73a0acb1b981682dca4d8",
+    "scope": [
+      "idempotent cluster-role bootstrap under a session advisory lock",
+      "bootstrap before temporary-database migrations in integration and verification harnesses",
+      "cleanup of only initialized database resources while preserving the primary setup error",
+      "concurrent bootstrap regression coverage",
+      "machine-readable unit artifact names no longer contain synthetic document values"
+    ],
+    "migrationsChanged": false,
+    "phaseZeroFilesChanged": false,
+    "phaseTwoFeaturesAdded": false
+  },
+  "cleanCheckoutVerification": {
+    "status": "PASS",
+    "commit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+    "freshFrozenInstall": true,
+    "turboForce": true,
+    "typecheck": { "passedTasks": 12, "totalTasks": 12, "cachedTasks": 0 },
+    "build": { "passedTasks": 7, "totalTasks": 7, "cachedTasks": 0 },
+    "unit": { "passed": 127, "skipped": 1, "failed": 0, "total": 128 },
+    "integration": { "passed": 29, "skipped": 2, "failed": 0, "total": 31 },
+    "databaseChecks": { "passed": 14, "total": 14 },
+    "dependencyAdvisories": 0,
+    "worktreeAfterVerification": "CLEAN"
+  },
+  "successfulHostedRun": {
+    "runId": "34662427613",
+    "runAttempt": 1,
+    "commit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+    "event": "push",
+    "status": "SUCCESS",
+    "startedAt": "2026-09-12T00:40:39Z",
+    "completedAt": "2026-09-12T00:43:02Z",
+    "runner": {
+      "provider": "GitHub Actions",
+      "label": "ubuntu-24.04",
+      "jobRunnerNames": [
+        "GitHub Actions 1000000189",
+        "GitHub Actions 1000000190",
+        "GitHub Actions 1000000191",
+        "GitHub Actions 1000000192"
+      ]
+    },
+    "jobs": {
+      "integration": { "id": "103467503839", "status": "SUCCESS" },
+      "security": { "id": "103467503926", "status": "SUCCESS" },
+      "quality": { "id": "103467503983", "status": "SUCCESS" },
+      "requiredGate": { "id": "103467857764", "status": "SUCCESS" }
+    },
+    "quality": {
+      "unit": { "passed": 128, "failed": 0, "skipped": 0, "total": 128 },
+      "coveragePercent": {
+        "statements": 75.1,
+        "branches": 72.93,
+        "functions": 81.81,
+        "lines": 76.36
+      }
+    },
+    "integration": {
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "total": 31,
+      "databaseChecksPassed": 14,
+      "databaseChecksTotal": 14,
+      "concurrencyAssertion": {
+        "rounds": 10,
+        "attemptsPerRound": 50,
+        "totalAttempts": 500,
+        "winners": 10,
+        "safeConflicts": 490,
+        "duplicateAccounts": 0,
+        "duplicateIdentities": 0,
+        "orphans": 0
+      },
+      "failureInjectionCheckpointsPassed": 7
+    },
+    "security": {
+      "dependencyAdvisories": 0,
+      "secretFindings": 0,
+      "licenseFindings": 0,
+      "licensePackages": 266,
+      "trivyFilesystemHighCriticalFindings": 0,
+      "trivyImageHighCriticalFindings": 0,
+      "trivyMisconfigurationFindings": 0
+    },
+    "artifacts": [
+      {
+        "id": "10288335658",
+        "name": "phase-00-integration",
+        "sizeBytes": 7321,
+        "digest": "sha256:640ec4bbfcdc2bc6bde849ebb7c127a6d7ac7391125165511d1838223aa1a766",
+        "expiresAt": "2026-09-26T00:42:26Z"
+      },
+      {
+        "id": "10287876385",
+        "name": "phase-00-security",
+        "sizeBytes": 1851,
+        "digest": "sha256:1344521c8e53bbd8904b6f1f19f8600fee97c986a2d8a9e36a3f545af7758ca7",
+        "expiresAt": "2026-09-26T00:41:56Z"
+      },
+      {
+        "id": "10287453268",
+        "name": "phase-00-quality",
+        "sizeBytes": 156094,
+        "digest": "sha256:a5b826f1776ee9d4d313b99ee189bc56eb9da3bfed676f079d1795f3abad0ef1",
+        "expiresAt": "2026-09-26T00:42:52Z"
+      }
+    ],
+    "artifactInspection": {
+      "files": 58,
+      "expandedBytes": 794838,
+      "envFilesOrPaths": 0,
+      "privateKeys": 0,
+      "bearerTokens": 0,
+      "databaseUrlsWithPasswords": 0,
+      "githubTokens": 0,
+      "formattedDocumentValues": 0,
+      "canonicalDocumentValues": 0,
+      "allowedElevenDigitRunIdOccurrences": 1
+    },
+    "informationalWarnings": [
+      "GitHub forced actions pinned to the deprecated Node.js 20 action runtime to Node.js 24; project Node remained pinned and all required jobs passed."
+    ]
+  },
+  "acceptance": {
+    "P1-AC-035": "PASS",
+    "P1-AC-036": "DEFERRED"
+  }
+}

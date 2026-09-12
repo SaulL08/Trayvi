@@ -1,27 +1,33 @@
 {
   "schemaVersion": 1,
   "phase": "PHASE_1_ACCOUNTS_IDENTITY_IMPLEMENTATION",
-  "generatedAt": "2026-09-11T16:22:00.000Z",
+  "generatedAt": "2026-09-12T00:48:55.732Z",
   "planBaseline": "56e0065f8eee35f79e819455564e0e9ab3dec7db",
-  "functionalImplementationCommit": "ac90421068185706f49919384b98ffedfcc70001",
-  "functionalImplementationTree": "7d9e9257ea484b50339fc5aa66825c7c49385ba5",
+  "initialFunctionalImplementationCommit": "ac90421068185706f49919384b98ffedfcc70001",
+  "implementationEvidenceCommit": "efe7fee3b639d5c76c8337285b6948dea8d01cd3",
+  "functionalImplementationCommit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+  "functionalImplementationTree": "44839f2610bc2ae634a73a0acb1b981682dca4d8",
   "hashAlgorithm": "SHA-256",
   "files": [
     {
       "path": "docs/phases/phase-01-accounts-identity/IMPLEMENTATION.md",
-      "sha256": "587ffced3ccef5aa0974ed6e129496607a2a33ad9abca2e03651e1050417a676"
+      "sha256": "23ad95c4ebdf31e5c09ab642b76d773c5f016ac946d6ab9a921f4ff0d547c7ba"
     },
     {
       "path": "docs/phases/phase-01-accounts-identity/evidence/acceptance-criteria.json",
-      "sha256": "805c35cc6756125fc588e032397735a780cb1069651ecca82f9800b0dd809836"
+      "sha256": "bc055c38388bc8b42ac6ceef8de442346b72c049d041cc1bb54992cff87e728d"
     },
     {
       "path": "docs/phases/phase-01-accounts-identity/evidence/changed-files.json",
-      "sha256": "b9c6cfe580d4144121642fa8716f6234085dac7df0af565966ffa550b4ffdd90"
+      "sha256": "5f47e5b7795023874418acd5e310f2aba8a6ae14e9886c1ed100658e0972a461"
     },
     {
       "path": "docs/phases/phase-01-accounts-identity/evidence/data-inventory.json",
       "sha256": "750875859a3cc78e7603e756f462e52087b7a5d63e919f008bc689da739e735c"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/hosted-verification.json",
+      "sha256": "409f5ed4928e36255816ff5925c578adbd86764c6cf7cb6268bb57f267366cc8"
     },
     {
       "path": "docs/phases/phase-01-accounts-identity/evidence/migration-evidence.json",
@@ -33,7 +39,7 @@
     },
     {
       "path": "docs/phases/phase-01-accounts-identity/evidence/verification-summary.json",
-      "sha256": "6e1200ec7433438c23bb23472a11ab30f11c651cbb9db658161dfef24e7ccd07"
+      "sha256": "fe21ba40ea4347d0eede06f8f0f295d580142a0c43381e56a826a3d6409c9666"
     },
     {
       "path": "docs/adr/ADR-011-account-person-identity-model.md",
@@ -46,9 +52,9 @@
   ],
   "integrityNotes": [
     "The manifest intentionally excludes its own hash.",
-    "The functional commit is the clean-checkout verification target.",
+    "The final functional implementation commit is the clean-checkout and successful hosted-run target.",
     "The documentation commit that contains this manifest changes evidence only.",
     "Independent adversarial/final audit evidence is not present because that task is not authorized.",
-    "Hosted implementation CI is deferred until a separate push authorization."
+    "The first failed hosted run is preserved and classified; the corrected hosted implementation run and required gate passed."
   ]
 }
