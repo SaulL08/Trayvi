@@ -15,7 +15,7 @@ describe('do-cedula-v1 normalization', () => {
     '001\t1234567\r\n8',
   ] as const;
 
-  it.each(accepted)('normalizes %j deterministically', (input) => {
+  it.each(accepted)('normalizes accepted vector %# deterministically', (input) => {
     expect(normalizeDominicanCedula(input)).toEqual({
       kind: 'NORMALIZED_FORMAT',
       profile: 'do-cedula-v1',
@@ -33,7 +33,7 @@ describe('do-cedula-v1 normalization', () => {
     [' '.repeat(65), 'INPUT_TOO_LONG'],
     ['001\u000012345678', 'INVALID_CONTROL_CHARACTER'],
     ['\ud80000112345678', 'INVALID_UNICODE'],
-  ])('rejects malformed input without echoing it: %j', (input, code) => {
+  ])('rejects malformed vector %# without echoing it', (input, code) => {
     let caught: unknown;
     try {
       normalizeDominicanCedula(input);

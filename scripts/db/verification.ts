@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 import { Client } from 'pg';
@@ -9,7 +8,7 @@ import {
   createRestrictedRuntimeLogin,
   dropDisposableDatabase,
   dropRestrictedRuntimeLogin,
-  executeSqlFile,
+  ensureDatabaseBootstrap,
 } from '../../packages/test-support/src/index.js';
 import { MigrationExecutionError, SqlMigrator } from './migrate.js';
 
@@ -382,8 +381,7 @@ async function verifyConcurrency(adminUrl: string): Promise<boolean> {
 export async function runDatabaseVerification(
   adminUrl: string,
 ): Promise<DatabaseVerificationEvidence> {
-  const bootstrap = await readFile(resolve('infra/database/bootstrap/0001_roles.sql'), 'utf8');
-  await executeSqlFile(adminUrl, bootstrap);
+  await ensureDatabaseBootstrap(adminUrl);
   const main = await verifyMainScenario(adminUrl);
   return {
     ...main,

@@ -14,10 +14,12 @@ import {
 } from '@trayvi/identity';
 import { createOpaqueId } from '@trayvi/observability';
 import {
+  closeInitializedDatabaseClients,
   createDisposableDatabase,
   createRestrictedRuntimeLogin,
   dropDisposableDatabase,
   dropRestrictedRuntimeLogin,
+  ensureDatabaseBootstrap,
 } from '@trayvi/test-support';
 
 import { loadMigrationConfig } from '../../../packages/config/src/index';
@@ -158,6 +160,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   };
 
   beforeAll(async () => {
+    await ensureDatabaseBootstrap(adminConfig.databaseUrl);
     database = await createDisposableDatabase(adminConfig.databaseUrl, 'trayvi_phase_one');
     migrator = new SqlMigrator(database.url);
     await migrator.up();
@@ -165,10 +168,11 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
-    await migrator.close();
-    await delay(100);
-    await dropDisposableDatabase(adminConfig.databaseUrl, database.name);
+    await closeInitializedDatabaseClients({ pool, migrator });
+    if (database) {
+      await delay(100);
+      await dropDisposableDatabase(adminConfig.databaseUrl, database.name);
+    }
   });
 
   it('applies all seven migrations and rejects invalid direct initial states', async () => {

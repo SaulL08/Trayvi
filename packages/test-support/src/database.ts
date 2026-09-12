@@ -1,6 +1,18 @@
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 import { Client } from 'pg';
+
+const DATABASE_BOOTSTRAP_LOCK_ID = '84932675001376';
+
+interface EndableDatabaseClient {
+  end(): Promise<void>;
+}
+
+interface CloseableDatabaseClient {
+  close(): Promise<void>;
+}
 
 function safeDatabaseName(prefix: string): string {
   const normalized = prefix
@@ -68,6 +80,65 @@ export async function executeSqlFile(databaseUrl: string, sql: string): Promise<
   } finally {
     await client.end();
   }
+}
+
+export async function ensureDatabaseBootstrap(adminUrl: string): Promise<void> {
+  const client = new Client({ connectionString: adminUrl, connectionTimeoutMillis: 5_000 });
+  let connected = false;
+  let locked = false;
+  let primaryError: unknown;
+
+  try {
+    await client.connect();
+    connected = true;
+    await client.query('SELECT pg_advisory_lock($1::bigint)', [DATABASE_BOOTSTRAP_LOCK_ID]);
+    locked = true;
+    const bootstrap = await readFile(resolve('infra/database/bootstrap/0001_roles.sql'), 'utf8');
+    await client.query(bootstrap);
+  } catch (error: unknown) {
+    primaryError = error;
+  }
+
+  let cleanupError: unknown;
+  if (locked) {
+    try {
+      await client.query('SELECT pg_advisory_unlock($1::bigint)', [DATABASE_BOOTSTRAP_LOCK_ID]);
+    } catch (error: unknown) {
+      cleanupError = error;
+    }
+  }
+  if (connected) {
+    try {
+      await client.end();
+    } catch (error: unknown) {
+      cleanupError ??= error;
+    }
+  }
+  if (primaryError !== undefined) throw primaryError;
+  if (cleanupError !== undefined) throw cleanupError;
+}
+
+export async function closeInitializedDatabaseClients(resources: {
+  readonly pool?: EndableDatabaseClient;
+  readonly migrator?: CloseableDatabaseClient;
+}): Promise<void> {
+  const errors: unknown[] = [];
+  if (resources.pool) {
+    try {
+      await resources.pool.end();
+    } catch (error: unknown) {
+      errors.push(error);
+    }
+  }
+  if (resources.migrator) {
+    try {
+      await resources.migrator.close();
+    } catch (error: unknown) {
+      errors.push(error);
+    }
+  }
+  if (errors.length === 1) throw errors[0];
+  if (errors.length > 1) throw new AggregateError(errors, 'Database client cleanup failed.');
 }
 
 export async function createRestrictedRuntimeLogin(

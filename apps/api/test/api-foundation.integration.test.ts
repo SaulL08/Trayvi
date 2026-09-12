@@ -1,6 +1,3 @@
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { loadMigrationConfig, parseAppConfig } from '@trayvi/config';
@@ -10,7 +7,7 @@ import {
   createRestrictedRuntimeLogin,
   dropDisposableDatabase,
   dropRestrictedRuntimeLogin,
-  executeSqlFile,
+  ensureDatabaseBootstrap,
 } from '@trayvi/test-support';
 
 import { createApiApplication } from '../src/bootstrap';
@@ -19,8 +16,7 @@ import { SqlMigrator } from '../../../scripts/db/migrate.js';
 describe('API foundation with real PostgreSQL/PostGIS', () => {
   it('separates liveness/readiness and recovers readiness after database restoration', async () => {
     const adminUrl = loadMigrationConfig().databaseUrl;
-    const bootstrapSql = await readFile(resolve('infra/database/bootstrap/0001_roles.sql'), 'utf8');
-    await executeSqlFile(adminUrl, bootstrapSql);
+    await ensureDatabaseBootstrap(adminUrl);
     const database = await createDisposableDatabase(adminUrl, 'trayvi_api');
     let databaseExists = true;
     let migrator = new SqlMigrator(database.url);
