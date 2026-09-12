@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_ADVERSARIAL_AUDIT",
+  "targetCommit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+  "scope": {
+    "implementationChangedFiles": 60,
+    "phaseZeroFilesChanged": 0,
+    "migrations0001Through0004Changed": 0,
+    "phaseTwoFeaturesAdded": 0,
+    "architectureGate": { "status": "PASS", "violations": 0 }
+  },
+  "migrationIntegrity": {
+    "manifestHashesMatched": true,
+    "manifestFilesChecked": 10,
+    "phaseOneMigrations": [
+      {
+        "path": "infra/database/migrations/0005_accounts_identity_core.up.sql",
+        "sha256": "7177e295f3b57406228806b10bf52c6ab2691752e5a944b5ddb53d29efb44258"
+      },
+      {
+        "path": "infra/database/migrations/0005_accounts_identity_core.down.sql",
+        "sha256": "24d70d2970cf76ae4114b2a8bb6bfe9ab1e7cd2bbab8ef6cc17681d6fe6f2ead"
+      },
+      {
+        "path": "infra/database/migrations/0006_identity_document_protection.up.sql",
+        "sha256": "2fd982828e7b9ca6a3f7e8972dbf0e0428711081224d6509cf6c3f98f9c9b04e"
+      },
+      {
+        "path": "infra/database/migrations/0006_identity_document_protection.down.sql",
+        "sha256": "610d3eb76651dc9d02e97c4649e6de27dcdd5e448d805f32e154a98ce801b9af"
+      },
+      {
+        "path": "infra/database/migrations/0007_identity_verification_lifecycle_guards.up.sql",
+        "sha256": "48116cea88ffaee454af220a887b8907db0a58499204b58c69041041edb3be06"
+      },
+      {
+        "path": "infra/database/migrations/0007_identity_verification_lifecycle_guards.down.sql",
+        "sha256": "6074848b3eff307b707f63ad55c06d8f6d9474f3179cf0dfe66017b1f7e267f9"
+      }
+    ],
+    "cleanApply": "PASS",
+    "repeatNoOp": "PASS",
+    "emptyDownUp": "PASS",
+    "populatedDownRefusal": "PASS",
+    "concurrentSerialization": "PASS"
+  },
+  "privacy": {
+    "inventoriedColumns": 115,
+    "inventoryCompleteness": "PASS",
+    "inventoryApproval": "DEFERRED_PRE_PRODUCTION_GOVERNANCE",
+    "retentionDeletionLegalHold": "DEFERRED_PRE_PRODUCTION_GOVERNANCE",
+    "repositorySecretScan": { "status": "PASS", "findings": 0 },
+    "downloadedArtifactLeakScan": "PASS",
+    "outboxProductPathLeakScan": "PASS",
+    "auditEvidenceContainsRealDocuments": false,
+    "auditEvidenceContainsRealSecrets": false
+  },
+  "antiEnumeration": {
+    "conceptualResponseStatusShapeSizeAndNextStep": "PASS",
+    "existingEntityIdentifiersExposed": false,
+    "httpHeadersRedirectsAndNetworkTiming": "NOT_APPLICABLE_NO_PHASE_1_TRANSPORT_ENDPOINT"
+  }
+}

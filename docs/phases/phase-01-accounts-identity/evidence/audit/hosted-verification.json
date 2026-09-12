@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_ADVERSARIAL_AUDIT",
+  "verifiedAt": "2026-09-12T18:07:09.862Z",
+  "repository": "SaulL08/Trayvi",
+  "implementationRun": {
+    "runId": "34662427613",
+    "commit": "b0375079e90d75482e7aa477492ddc3437e8f431",
+    "status": "SUCCESS",
+    "jobs": {
+      "integration": { "id": "103467503839", "status": "SUCCESS" },
+      "security": { "id": "103467503926", "status": "SUCCESS" },
+      "quality": { "id": "103467503983", "status": "SUCCESS" },
+      "requiredGate": { "id": "103467857764", "status": "SUCCESS" }
+    },
+    "artifacts": [
+      {
+        "id": "10288335658",
+        "name": "phase-00-integration",
+        "digest": "sha256:640ec4bbfcdc2bc6bde849ebb7c127a6d7ac7391125165511d1838223aa1a766",
+        "expired": false
+      },
+      {
+        "id": "10287876385",
+        "name": "phase-00-security",
+        "digest": "sha256:1344521c8e53bbd8904b6f1f19f8600fee97c986a2d8a9e36a3f545af7758ca7",
+        "expired": false
+      },
+      {
+        "id": "10287453268",
+        "name": "phase-00-quality",
+        "digest": "sha256:a5b826f1776ee9d4d313b99ee189bc56eb9da3bfed676f079d1795f3abad0ef1",
+        "expired": false
+      }
+    ],
+    "downloadedArtifactInspection": {
+      "files": 58,
+      "expandedBytes": 794838,
+      "unit": { "passed": 128, "failed": 0, "total": 128 },
+      "integration": { "passed": 31, "failed": 0, "total": 31 },
+      "dependencyAdvisories": 0,
+      "trivyFilesystemHighCritical": 0,
+      "trivyImageHighCritical": 0,
+      "privateKeys": 0,
+      "githubTokens": 0,
+      "databaseUrlsWithPasswords": 0,
+      "formattedDocumentValues": 0,
+      "canonicalDocumentValues": 0,
+      "allowedElevenDigitRunIdOccurrences": 1,
+      "status": "PASS"
+    }
+  },
+  "finalDocumentationRun": {
+    "runId": "34663017247",
+    "commit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+    "status": "SUCCESS",
+    "jobs": {
+      "security": { "id": "103469273798", "status": "SUCCESS" },
+      "quality": { "id": "103469273883", "status": "SUCCESS" },
+      "integration": { "id": "103469273912", "status": "SUCCESS" },
+      "requiredGate": { "id": "103469691469", "status": "SUCCESS" }
+    },
+    "artifacts": [
+      {
+        "id": "10288406405",
+        "name": "phase-00-integration",
+        "digest": "sha256:9bf253440064b6460b9d71a45b061dc5801e9095c7c7e02009d36f980eb268a4",
+        "expired": false
+      },
+      {
+        "id": "10288012012",
+        "name": "phase-00-security",
+        "digest": "sha256:499b45b423b081bfdfda220bf186c4e0d091eb6f80a50fb267c190bb216cbcbb",
+        "expired": false
+      },
+      {
+        "id": "10287838198",
+        "name": "phase-00-quality",
+        "digest": "sha256:0ec125bd576a0fa0f2ecac870b58fdc18d534c103d3c6edc9422fc9b6b6e29b8",
+        "expired": false
+      }
+    ]
+  },
+  "conclusion": "HOSTED_BASELINE_GREEN_BUT_NOT_ADVERSARIAL_FINDING_COVERAGE"
+}

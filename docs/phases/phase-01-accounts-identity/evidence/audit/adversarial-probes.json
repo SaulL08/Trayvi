@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_ADVERSARIAL_AUDIT",
+  "targetCommit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+  "generatedAt": "2026-09-12T18:07:09.862Z",
+  "syntheticDataOnly": true,
+  "probe": "probes/phase-one-adversarial.probe.ts",
+  "runtimeManufacturedLifecycle": {
+    "committed": true,
+    "resultingState": {
+      "account": "ACTIVE",
+      "identity": "ESTABLISHED",
+      "claim": "BOUND"
+    },
+    "activationOutboxEventsBefore": 0,
+    "activationOutboxEventsAfter": 0,
+    "expected": "DENIED",
+    "finding": "P1-AUD-001"
+  },
+  "crossCaseEvidence": {
+    "committed": true,
+    "reviewCaseDiffersFromEvidenceCase": true,
+    "resultingAccount": "ACTIVE",
+    "expected": "DENIED",
+    "finding": "P1-AUD-003"
+  },
+  "privileges": {
+    "restrictedCiphertextReadDenied": true,
+    "restrictedFingerprintReadDenied": true,
+    "documentRewrapUpdateDenied": true,
+    "ddlDenied": true,
+    "roleEscalationDenied": true,
+    "declaredNoLoginRoles": ["trayvi_migrator", "trayvi_runtime"],
+    "dedicatedRotationRolePresent": false,
+    "runtimeSearchPath": "\"$user\", public",
+    "triggerFunctionSearchPath": "pg_catalog, pg_temp",
+    "finding": "P1-AUD-005"
+  },
+  "concurrency": {
+    "alignedKeySet": {
+      "attempts": 120,
+      "completed": 1,
+      "safeConflicts": 119,
+      "duplicateAggregates": 0,
+      "status": "PASS"
+    },
+    "sameOperationReplay": {
+      "attempts": 120,
+      "completedAggregates": 1,
+      "status": "PASS"
+    },
+    "disjointRotationKeySets": {
+      "attempts": 120,
+      "completed": 2,
+      "safeConflicts": 118,
+      "winnerKeyVersions": ["fingerprint-audit-v1", "fingerprint-audit-v2"],
+      "status": "FAIL",
+      "finding": "P1-AUD-002"
+    }
+  },
+  "keyPurposeSeparation": {
+    "sameRawKeyAcceptedAcrossFingerprintKekAndIdempotency": true,
+    "expected": "REJECTED_OR_DETECTED",
+    "finding": "P1-AUD-004"
+  }
+}

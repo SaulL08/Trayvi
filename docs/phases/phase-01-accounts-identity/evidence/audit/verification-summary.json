@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_ADVERSARIAL_AUDIT",
+  "generatedAt": "2026-09-12T18:07:09.862Z",
+  "target": {
+    "commit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+    "tree": "b86fa9742f3f8eb25de0934ebc44629b1a18039b",
+    "originMain": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+    "githubMain": "d2ec8f2b2e79a413bec2b953da81c259984bb141"
+  },
+  "environment": {
+    "host": "Microsoft Windows 10.0.26200",
+    "node": "v22.14.0",
+    "pnpm": "11.25.0",
+    "database": "PostgreSQL 17.11",
+    "postgis": "3.5.7",
+    "databaseImage": "trayvi/postgis:17-3.5-alpine-hardened",
+    "testData": "synthetic only"
+  },
+  "developmentTreeGate": {
+    "toolchain": "PASS",
+    "format": "PASS",
+    "lint": "PASS",
+    "typecheck": { "passed": 12, "total": 12, "cached": 0 },
+    "architecture": { "status": "PASS", "violations": 0 },
+    "secretScan": { "status": "PASS", "findings": 0 },
+    "licenseScan": { "status": "PASS", "packages": 267, "findings": 0 },
+    "unit": { "passed": 127, "skipped": 1, "failed": 0, "total": 128 },
+    "build": { "passed": 7, "total": 7, "cached": 0 },
+    "integration": { "passed": 29, "skipped": 2, "failed": 0, "total": 31 },
+    "databaseVerification": { "passed": 14, "total": 14 },
+    "dependencyAudit": "INFRASTRUCTURE_UNAVAILABLE"
+  },
+  "freshCheckout": {
+    "commit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+    "tree": "b86fa9742f3f8eb25de0934ebc44629b1a18039b",
+    "detached": true,
+    "freshNodeModules": true,
+    "developmentNodeModulesReused": false,
+    "frozenInstall": "PASS",
+    "turboForce": true,
+    "typecheck": { "passed": 12, "total": 12, "cached": 0 },
+    "architecture": { "status": "PASS", "violations": 0 },
+    "secretScan": { "status": "PASS", "findings": 0 },
+    "licenseScan": { "status": "PASS", "packages": 267, "findings": 0 },
+    "unit": { "passed": 127, "skipped": 1, "failed": 0, "total": 128 },
+    "build": { "passed": 7, "total": 7, "cached": 0 },
+    "integration": { "passed": 29, "skipped": 2, "failed": 0, "total": 31 },
+    "databaseVerification": { "passed": 14, "total": 14 },
+    "dependencyAudit": {
+      "status": "INFRASTRUCTURE_UNAVAILABLE",
+      "attempts": 2,
+      "registryResponse": "fetch failed",
+      "productRegression": false,
+      "corroboration": "Hosted implementation artifact reports 0 advisories and successful security job"
+    },
+    "verifyFull": "INCOMPLETE_DUE_TO_EXTERNAL_REGISTRY"
+  },
+  "adversarial": {
+    "probeStatus": "COMPLETED",
+    "critical": 0,
+    "high": 2,
+    "medium": 3,
+    "low": 0,
+    "informational": 0
+  },
+  "decision": "PHASE_1_ADVERSARIAL_AUDIT_FAIL"
+}

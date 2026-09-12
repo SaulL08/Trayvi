@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "phase": "PHASE_1_ACCOUNTS_IDENTITY_ADVERSARIAL_AUDIT",
+  "generatedAt": "2026-09-12T18:07:09.862Z",
+  "targetCommit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+  "targetTree": "b86fa9742f3f8eb25de0934ebc44629b1a18039b",
+  "decision": "PHASE_1_ADVERSARIAL_AUDIT_FAIL",
+  "hashAlgorithm": "SHA-256",
+  "files": [
+    {
+      "path": "docs/phases/phase-01-accounts-identity/AUDIT.md",
+      "sha256": "ae53c17be9681925de66e0f6f4ce449416eb93f3012b64aab44924461016a52c"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/audit/acceptance-criteria.json",
+      "sha256": "627f6fb7e334cf4a28f298465d70f745368286729b729096044bf370ecf051dd"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/audit/adversarial-probes.json",
+      "sha256": "5cb779ae293edc63a05c053f591bde0540bcff68f50180dc7dd3d51ab0f097fb"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/audit/hosted-verification.json",
+      "sha256": "c606a6db65f84ad5f781cc9bb2232a442df774b2c41f6d9aad1b19f575190372"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/audit/scope-privacy-migrations.json",
+      "sha256": "6ba093f5f77ea49471ea74978e62a55932762aa02967c941675a5d4cdeec3493"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/audit/verification-summary.json",
+      "sha256": "486832102ca4c1750e533fe8b2a3602827a61cf6ff26a538f0db3eb40954c038"
+    },
+    {
+      "path": "docs/phases/phase-01-accounts-identity/evidence/audit/probes/phase-one-adversarial.probe.ts",
+      "sha256": "cf1144dbefe75c83c88533cc6f6c4d2ccae7651706a0217bf15484bd6945f4ab"
+    }
+  ],
+  "integrityNotes": [
+    "The manifest intentionally excludes its own hash.",
+    "All probe values are synthetic and minimized result evidence omits submitted document and key material.",
+    "No implementation, migration, historical report, or Phase 0 file is part of this audit output."
+  ]
+}
