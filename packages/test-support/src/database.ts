@@ -141,7 +141,7 @@ export async function closeInitializedDatabaseClients(resources: {
   if (errors.length > 1) throw new AggregateError(errors, 'Database client cleanup failed.');
 }
 
-export type RestrictedWorkloadRole = 'trayvi_runtime' | 'trayvi_verification';
+export type RestrictedWorkloadRole = 'trayvi_runtime' | 'trayvi_verification' | 'trayvi_rotation';
 
 export async function createRestrictedRuntimeLogin(
   adminUrl: string,

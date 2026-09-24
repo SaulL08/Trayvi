@@ -104,6 +104,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createDisposableDatabase>>;
   let migrator: SqlMigrator;
   let pool: Pool;
+  // HMAC backfill, KEK rewrap, and key-policy changes run as the least-privilege rotation workload.
+  let rotationPool: Pool | undefined;
+  let rotationLogin: Awaited<ReturnType<typeof createRestrictedRuntimeLogin>> | undefined;
 
   const createService = (
     protector = protectorFor(['v1']),
@@ -119,8 +122,13 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       operationTtlMs === undefined ? {} : { operationTtlMs },
     );
 
+  const rotation = (): Pool => {
+    if (!rotationPool) throw new Error('rotation pool is not initialized');
+    return rotationPool;
+  };
+
   const setFingerprintKeyPolicy = async (versions: readonly string[]): Promise<void> => {
-    await pool.query('SELECT identity.set_fingerprint_key_policy($1::varchar[])', [versions]);
+    await rotation().query('SELECT identity.set_fingerprint_key_policy($1::varchar[])', [versions]);
   };
 
   const start = async (service: PhaseOneEnrollmentService, suffix: string): Promise<string> => {
@@ -169,10 +177,24 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     migrator = new SqlMigrator(database.url);
     await migrator.up();
     pool = new Pool({ connectionString: database.url, max: 60, statement_timeout: 30_000 });
+    rotationLogin = await createRestrictedRuntimeLogin(
+      adminConfig.databaseUrl,
+      database.url,
+      'trayvi_rotation',
+    );
+    rotationPool = new Pool({ connectionString: rotationLogin.url, max: 4 });
     await setFingerprintKeyPolicy(['fingerprint-v1']);
   });
 
   afterAll(async () => {
+    await rotationPool?.end();
+    if (rotationLogin) {
+      await dropRestrictedRuntimeLogin(
+        adminConfig.databaseUrl,
+        rotationLogin.name,
+        'trayvi_rotation',
+      );
+    }
     await closeInitializedDatabaseClients({ pool, migrator });
     if (database) {
       await delay(100);
@@ -180,7 +202,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all nine migrations and rejects invalid direct initial states', async () => {
+  it('applies all ten migrations and rejects invalid direct initial states', async () => {
     expect((await migrator.status()).map((migration) => migration.version)).toEqual([
       '0001',
       '0002',
@@ -191,6 +213,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0007',
       '0008',
       '0009',
+      '0010',
     ]);
 
     await expect(
@@ -742,7 +765,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       { version: 'fingerprint-v1', key: fingerprintV1, state: 'LOOKUP_ACTIVE' },
       { version: 'fingerprint-v2', key: fingerprintV2, state: 'PRIMARY' },
     ]);
-    const rotation = new PostgresFingerprintRotationStore(pool, oldProtector);
+    const rotationStore = new PostgresFingerprintRotationStore(rotation(), oldProtector);
     const conflictingAliasId = createOpaqueId();
     await pool.query(
       `INSERT INTO identity.document_fingerprint_claims (
@@ -757,7 +780,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       [conflictingAliasId, Buffer.alloc(32, 9), document.rows[0]?.document_id],
     );
     await expect(
-      rotation.backfill({
+      rotationStore.backfill({
         documentId: document.rows[0]?.document_id ?? '',
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -776,7 +799,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const rotationEventId = createOpaqueId();
     const [backfillCount, rotationOutcomes] = await Promise.all([
-      rotation.backfill({
+      rotationStore.backfill({
         documentId: document.rows[0]?.document_id ?? '',
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -806,7 +829,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     expect(rotationStates.rows).toEqual([{ state: 'CONFLICT', count: '20' }]);
     await expect(
-      rotation.backfill({
+      rotationStore.backfill({
         documentId: document.rows[0]?.document_id ?? '',
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -851,7 +874,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       new NodeKeyedRequestCommitter('idempotency-test-v1', idempotencyKey),
     );
     await expect(
-      new PostgresDocumentKekRewrapStore(pool, wrongProvider, wrongProtector).rewrap({
+      new PostgresDocumentKekRewrapStore(rotation(), wrongProvider, wrongProtector).rewrap({
         documentId: document.rows[0]?.document_id ?? '',
         targetKekKeyVersion: 'kek-test-v2',
         eventId: createOpaqueId(),
@@ -872,7 +895,11 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       rewrapProvider,
       new NodeKeyedRequestCommitter('idempotency-test-v1', idempotencyKey),
     );
-    const rewrapStore = new PostgresDocumentKekRewrapStore(pool, rewrapProvider, rewrapProtector);
+    const rewrapStore = new PostgresDocumentKekRewrapStore(
+      rotation(),
+      rewrapProvider,
+      rewrapProtector,
+    );
     const rewrapEventId = createOpaqueId();
     const rewrapInput = {
       documentId: document.rows[0]?.document_id ?? '',
@@ -935,7 +962,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     expect(uncovered.rows.length).toBeGreaterThan(0);
     for (const { document_id: documentId } of uncovered.rows) {
-      await rotation.backfill({
+      await rotationStore.backfill({
         documentId,
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -1230,9 +1257,65 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
+  it('grants the rotation workload only its narrow privileges', async () => {
+    const client = await rotation().connect();
+    const denied = async (statement: string): Promise<boolean> => {
+      await client.query('BEGIN');
+      try {
+        await client.query(statement);
+        await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+        return false;
+      } catch {
+        return true;
+      } finally {
+        await client.query('ROLLBACK');
+      }
+    };
+    try {
+      await expect(
+        client.query(
+          'SELECT fingerprint, hmac_key_version FROM identity.document_fingerprint_claims LIMIT 1',
+        ),
+      ).resolves.toBeDefined();
+      const statements = [
+        'SELECT id FROM accounts.accounts LIMIT 1',
+        'SELECT id FROM identity.person_identities LIMIT 1',
+        `UPDATE identity.identity_documents SET ciphertext = decode('00', 'hex')`,
+        `UPDATE identity.identity_documents SET state = 'REVOKED'`,
+        `UPDATE identity.document_fingerprint_claims SET fingerprint = decode('00', 'hex')`,
+        'DELETE FROM identity.document_fingerprint_claims',
+        'SELECT id FROM identity.verification_evidence LIMIT 1',
+        'CREATE TABLE identity.rotation_bypass (id integer)',
+        'SET ROLE trayvi_migrator',
+        `SELECT identity.record_trusted_verification(
+           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+           NULL, NULL, NULL, NULL, NULL, NULL, NULL)`,
+      ];
+      const results: boolean[] = [];
+      for (const statement of statements) results.push(await denied(statement));
+      expect(results).toEqual(statements.map(() => true));
+    } finally {
+      client.release();
+    }
+
+    const runtime = await createRestrictedRuntimeLogin(adminConfig.databaseUrl, database.url);
+    const runtimeClient = new Client({ connectionString: runtime.url });
+    await runtimeClient.connect();
+    try {
+      await expect(
+        runtimeClient.query(
+          `SELECT identity.set_fingerprint_key_policy(ARRAY['fingerprint-v2']::varchar[])`,
+        ),
+      ).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await runtimeClient.end();
+      await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, runtime.name);
+    }
+  });
+
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
     await expect(migrator.down()).rejects.toThrow('rolled back');
-    expect((await migrator.status()).at(-1)?.version).toBe('0009');
+    expect((await migrator.status()).at(-1)?.version).toBe('0010');
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -1242,8 +1325,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(9);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(9);
+      expect((await cleanMigrator.up()).applied).toHaveLength(10);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(10);
+      expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
@@ -1255,7 +1339,14 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         '0003',
         '0004',
       ]);
-      expect((await cleanMigrator.up()).applied).toEqual(['0005', '0006', '0007', '0008', '0009']);
+      expect((await cleanMigrator.up()).applied).toEqual([
+        '0005',
+        '0006',
+        '0007',
+        '0008',
+        '0009',
+        '0010',
+      ]);
     } finally {
       await cleanMigrator.close();
       await delay(25);

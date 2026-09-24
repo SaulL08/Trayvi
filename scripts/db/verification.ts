@@ -309,10 +309,10 @@ async function verifyMainScenario(
     const rollForward = await migrator.up();
     return {
       postgis: extension.rows[0]?.installed === true,
-      cleanApply: first.applied.length === 9 && table.rows[0]?.name === 'platform.outbox_events',
-      repeatNoOp: second.applied.length === 0 && second.skipped.length === 9,
+      cleanApply: first.applied.length === 10 && table.rows[0]?.name === 'platform.outbox_events',
+      repeatNoOp: second.applied.length === 0 && second.skipped.length === 10,
       rollbackRollForward:
-        down.length === 1 && statusAfterDown.length === 8 && rollForward.applied.length === 1,
+        down.length === 1 && statusAfterDown.length === 9 && rollForward.applied.length === 1,
       runtimeDdlDenied,
       runtimeIdentityRestricted,
       outboxAtomicity: afterRollback.rows[0]?.count === '0' && afterCommit.rows[0]?.count === '1',
@@ -371,7 +371,7 @@ async function verifyConcurrency(adminUrl: string): Promise<boolean> {
     const results = await Promise.all([first.up(), second.up()]);
     const appliedCount = results.reduce((sum, result) => sum + result.applied.length, 0);
     const status = await first.status();
-    return appliedCount === 9 && status.length === 9;
+    return appliedCount === 10 && status.length === 10;
   } finally {
     await Promise.all([first.close(), second.close()]);
     await dropDisposableDatabase(adminUrl, database.name);

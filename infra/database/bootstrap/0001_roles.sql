@@ -15,6 +15,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_verification') THEN
     CREATE ROLE trayvi_verification NOLOGIN NOINHERIT;
   END IF;
+  -- HMAC backfill and KEK rewrap workload, including the shared fingerprint key policy.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_rotation') THEN
+    CREATE ROLE trayvi_rotation NOLOGIN NOINHERIT;
+  END IF;
   -- Owner of SECURITY DEFINER lifecycle commands; never granted to a login.
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_lifecycle_owner') THEN
     CREATE ROLE trayvi_lifecycle_owner NOLOGIN NOINHERIT;
