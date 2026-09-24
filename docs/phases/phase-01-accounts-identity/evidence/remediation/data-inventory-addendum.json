@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "status": "IMPLEMENTED_PENDING_GOVERNANCE_APPROVAL",
+  "productionEnablement": "BLOCKED",
+  "note": "Remediation addendum to data-inventory.json (unchanged, hash-pinned in manifest.json). Covers tables added by P1-AUD remediation migrations.",
+  "tables": [
+    {
+      "table": "identity.fingerprint_key_policy",
+      "owner": "Identity",
+      "fieldGroups": [
+        {
+          "fields": ["id", "required_versions", "generation"],
+          "classification": "Internal operational configuration (non-secret key version labels only)",
+          "purpose": "Shared set of HMAC key versions every new document must be fingerprinted under during rotation (P1-AUD-002)",
+          "readers": [
+            "lifecycle command owner inside document insertion guard",
+            "rotation operators"
+          ],
+          "writers": ["guarded set_fingerprint_key_policy command (rotation workload)"],
+          "retentionTrigger": "retained while Phase 1 identity documents exist",
+          "deletionAction": "none; single row is updated in place",
+          "legalHold": "not applicable (no personal data)",
+          "eventPolicy": "not published",
+          "telemetryPolicy": "generation number and version labels allowed; never key material"
+        },
+        {
+          "fields": ["updated_at"],
+          "classification": "Internal operational metadata",
+          "purpose": "Audit when the rotation policy last changed",
+          "readers": ["rotation operators"],
+          "writers": ["guarded set_fingerprint_key_policy command (rotation workload)"],
+          "retentionTrigger": "retained while Phase 1 identity documents exist",
+          "deletionAction": "none; single row is updated in place",
+          "legalHold": "not applicable (no personal data)",
+          "eventPolicy": "not published",
+          "telemetryPolicy": "allowed"
+        }
+      ]
+    }
+  ]
+}

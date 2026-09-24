@@ -119,6 +119,10 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       operationTtlMs === undefined ? {} : { operationTtlMs },
     );
 
+  const setFingerprintKeyPolicy = async (versions: readonly string[]): Promise<void> => {
+    await pool.query('SELECT identity.set_fingerprint_key_policy($1::varchar[])', [versions]);
+  };
+
   const start = async (service: PhaseOneEnrollmentService, suffix: string): Promise<string> => {
     const result = await service.startAccountCreation({
       callerBinding: `caller-${suffix}`,
@@ -165,6 +169,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     migrator = new SqlMigrator(database.url);
     await migrator.up();
     pool = new Pool({ connectionString: database.url, max: 60, statement_timeout: 30_000 });
+    await setFingerprintKeyPolicy(['fingerprint-v1']);
   });
 
   afterAll(async () => {
@@ -175,7 +180,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all eight migrations and rejects invalid direct initial states', async () => {
+  it('applies all nine migrations and rejects invalid direct initial states', async () => {
     expect((await migrator.status()).map((migration) => migration.version)).toEqual([
       '0001',
       '0002',
@@ -185,6 +190,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0006',
       '0007',
       '0008',
+      '0009',
     ]);
 
     await expect(
@@ -207,12 +213,21 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   });
 
   it('maps every Phase 1 PostgreSQL column to a complete privacy inventory entry', async () => {
-    const inventory = JSON.parse(
-      await readFile(
-        resolve('docs/phases/phase-01-accounts-identity/evidence/data-inventory.json'),
-        'utf8',
-      ),
-    ) as DataInventory;
+    const readInventory = async (path: string): Promise<DataInventory> =>
+      JSON.parse(await readFile(resolve(path), 'utf8')) as DataInventory;
+    const original = await readInventory(
+      'docs/phases/phase-01-accounts-identity/evidence/data-inventory.json',
+    );
+    // The original inventory is hash-pinned evidence; remediation tables live in an addendum.
+    const addendum = await readInventory(
+      'docs/phases/phase-01-accounts-identity/evidence/remediation/data-inventory-addendum.json',
+    );
+    expect(addendum.status).toBe(original.status);
+    expect(addendum.productionEnablement).toBe(original.productionEnablement);
+    const inventory: DataInventory = {
+      ...original,
+      tables: [...original.tables, ...addendum.tables],
+    };
     const catalog = await pool.query<{
       table_schema: string;
       table_name: string;
@@ -644,6 +659,68 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
+  it('fails closed for writers missing a policy-required HMAC key version', async () => {
+    const v1Service = createService(protectorFor(['v1']));
+    const v2Service = createService(protectorFor(['v2']));
+    const writers = Array.from({ length: 60 }, (_, index) =>
+      index % 2 === 0 ? v1Service : v2Service,
+    );
+    const operations = await Promise.all(
+      writers.map((service, index) => start(service, `disjoint-${index}`)),
+    );
+    const outcomes = await Promise.allSettled(
+      operations.map((operationId, index) =>
+        (writers[index] ?? v1Service).submitIdentityInformation({
+          operationId,
+          documentValue: '41000000001',
+          correlationId: createOpaqueId(),
+        }),
+      ),
+    );
+    const v1Outcomes = outcomes.filter((_, index) => index % 2 === 0);
+    const v2Outcomes = outcomes.filter((_, index) => index % 2 === 1);
+    expect(v1Outcomes.every((outcome) => outcome.status === 'fulfilled')).toBe(true);
+    for (const outcome of v2Outcomes) {
+      expect(outcome.status).toBe('rejected');
+      if (outcome.status === 'rejected') {
+        expect(outcome.reason).toMatchObject({
+          constraint: 'document_fingerprint_key_policy_unsatisfied',
+        });
+      }
+    }
+    const states = await pool.query<{ state: string; count: string }>(
+      `SELECT state, count(*)::text AS count
+       FROM accounts.account_creation_operations
+       WHERE id = ANY($1::uuid[]) GROUP BY state ORDER BY state`,
+      [operations],
+    );
+    expect(states.rows).toEqual([
+      { state: 'COMPLETED', count: '1' },
+      { state: 'CONFLICT', count: '29' },
+      { state: 'STARTED', count: '30' },
+    ]);
+
+    // Requiring both versions makes a stale single-version writer fail closed too.
+    await setFingerprintKeyPolicy(['fingerprint-v1', 'fingerprint-v2']);
+    try {
+      const staleOperation = await start(v1Service, 'disjoint-stale');
+      await expect(
+        v1Service.submitIdentityInformation({
+          operationId: staleOperation,
+          documentValue: '42000000001',
+          correlationId: createOpaqueId(),
+        }),
+      ).rejects.toMatchObject({ constraint: 'document_fingerprint_key_policy_unsatisfied' });
+      // Retiring v1 before every blocking document holds a v2 fingerprint is refused.
+      await expect(setFingerprintKeyPolicy(['fingerprint-v2'])).rejects.toMatchObject({
+        constraint: 'fingerprint_key_policy_coverage',
+      });
+      await expect(setFingerprintKeyPolicy([])).rejects.toThrow('FINGERPRINT_KEY_POLICY_INVALID');
+    } finally {
+      await setFingerprintKeyPolicy(['fingerprint-v1']);
+    }
+  });
+
   it('backfills a dual-active HMAC alias before retiring the old lookup key', async () => {
     const oldProtector = protectorFor(['v1']);
     const oldService = createService(oldProtector);
@@ -840,6 +917,35 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       /kekKeyVersion|wrappedDek|ciphertext|nonce|authenticationTag/iu,
     );
 
+    // Cutover protocol: require both versions, backfill every blocking document, then retire v1.
+    await setFingerprintKeyPolicy(['fingerprint-v1', 'fingerprint-v2']);
+    await expect(setFingerprintKeyPolicy(['fingerprint-v2'])).rejects.toMatchObject({
+      constraint: 'fingerprint_key_policy_coverage',
+    });
+    const uncovered = await pool.query<{ document_id: string }>(
+      `SELECT DISTINCT claim.document_id
+       FROM identity.document_fingerprint_claims claim
+       WHERE claim.state IN ('RESERVED', 'BOUND', 'TOMBSTONED')
+         AND NOT EXISTS (
+           SELECT 1 FROM identity.document_fingerprint_claims covering
+           WHERE covering.document_id = claim.document_id
+             AND covering.hmac_key_version = 'fingerprint-v2'
+             AND covering.state IN ('RESERVED', 'BOUND', 'TOMBSTONED')
+         )`,
+    );
+    expect(uncovered.rows.length).toBeGreaterThan(0);
+    for (const { document_id: documentId } of uncovered.rows) {
+      await rotation.backfill({
+        documentId,
+        targetKeyring,
+        aliasIdFactory: createOpaqueId,
+        eventId: createOpaqueId(),
+        correlationId: createOpaqueId(),
+        occurredAt: new Date(),
+      });
+    }
+    await setFingerprintKeyPolicy(['fingerprint-v2']);
+
     const postCutoverService = createService(protectorFor(['v2']));
     const duplicateOperation = await start(postCutoverService, 'rotation-duplicate');
     await expect(
@@ -914,7 +1020,8 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     const serviceOn = (target: Pool): PhaseOneEnrollmentService =>
       new PhaseOneEnrollmentService(
         new PostgresPhaseOneStore(target),
-        protectorFor(['v1']),
+        // The rotation test leaves the shared policy at {fingerprint-v2}.
+        protectorFor(['v2']),
         createOpaqueId,
         () => new Date(),
       );
@@ -1125,7 +1232,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
 
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
     await expect(migrator.down()).rejects.toThrow('rolled back');
-    expect((await migrator.status()).at(-1)?.version).toBe('0008');
+    expect((await migrator.status()).at(-1)?.version).toBe('0009');
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -1135,8 +1242,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(8);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(8);
+      expect((await cleanMigrator.up()).applied).toHaveLength(9);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(9);
+      expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
@@ -1147,7 +1255,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         '0003',
         '0004',
       ]);
-      expect((await cleanMigrator.up()).applied).toEqual(['0005', '0006', '0007', '0008']);
+      expect((await cleanMigrator.up()).applied).toEqual(['0005', '0006', '0007', '0008', '0009']);
     } finally {
       await cleanMigrator.close();
       await delay(25);
