@@ -175,7 +175,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all seven migrations and rejects invalid direct initial states', async () => {
+  it('applies all eight migrations and rejects invalid direct initial states', async () => {
     expect((await migrator.status()).map((migration) => migration.version)).toEqual([
       '0001',
       '0002',
@@ -184,6 +184,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0005',
       '0006',
       '0007',
+      '0008',
     ]);
 
     await expect(
@@ -901,9 +902,230 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
+  it('confines material transitions to the trusted verification command', async () => {
+    const runtime = await createRestrictedRuntimeLogin(adminConfig.databaseUrl, database.url);
+    const verifier = await createRestrictedRuntimeLogin(
+      adminConfig.databaseUrl,
+      database.url,
+      'trayvi_verification',
+    );
+    const runtimePool = new Pool({ connectionString: runtime.url, max: 4 });
+    const verifierPool = new Pool({ connectionString: verifier.url, max: 2 });
+    const serviceOn = (target: Pool): PhaseOneEnrollmentService =>
+      new PhaseOneEnrollmentService(
+        new PostgresPhaseOneStore(target),
+        protectorFor(['v1']),
+        createOpaqueId,
+        () => new Date(),
+      );
+    try {
+      // The general runtime still enrolls, appending only initial history.
+      const runtimeService = serviceOn(runtimePool);
+      const operationId = await start(runtimeService, 'command-boundary');
+      await runtimeService.submitIdentityInformation({
+        operationId,
+        documentValue: '60000000001',
+        correlationId: createOpaqueId(),
+      });
+      const aggregate = await pool.query<{ account_id: string; identity_id: string }>(
+        `SELECT operation.account_id, person_identity.id AS identity_id
+         FROM accounts.account_creation_operations operation
+         JOIN identity.person_identities person_identity
+           ON person_identity.account_id = operation.account_id
+         WHERE operation.id = $1`,
+        [operationId],
+      );
+      const accountId = aggregate.rows[0]?.account_id ?? '';
+      const identityId = aggregate.rows[0]?.identity_id ?? '';
+      expect([accountId, identityId].every(isUuidV7)).toBe(true);
+
+      const verification = {
+        outcome: 'VERIFIED' as const,
+        decisionId: createOpaqueId(),
+        identityId,
+        methodClass: 'SYNTHETIC_ATTESTATION',
+        resultCode: 'VERIFIED_SYNTHETIC',
+        policyVersion: 'phase-one-test-v1',
+        providerAlias: 'SYNTHETIC',
+        evidenceType: 'SYNTHETIC_ATTESTATION',
+        evidenceDigest: createHash('sha256').update('command-boundary-evidence').digest(),
+        restrictedEvidenceReference: 'command-boundary-reference',
+        retentionClass: 'SYNTHETIC_TEST_ONLY',
+        actorReference: 'trusted-test-adapter',
+        correlationId: createOpaqueId(),
+      };
+      await expect(runtimeService.recordTrustedVerification(verification)).rejects.toMatchObject({
+        code: '42501',
+      });
+
+      // P1-AUD-001: the runtime cannot manufacture any link of the establishment chain.
+      const caseId = createOpaqueId();
+      const evidenceId = createOpaqueId();
+      const forgeries: readonly (readonly [string, readonly unknown[]])[] = [
+        [
+          `INSERT INTO identity.verification_cases (
+             id, identity_id, method_class, status, policy_version, opened_at, expires_at
+           ) VALUES ($1, $2, 'SYNTHETIC_AUDIT', 'PENDING', 'phase-one-audit-v1',
+             clock_timestamp(), clock_timestamp() + interval '15 minutes')`,
+          [caseId, identityId],
+        ],
+        [
+          `INSERT INTO identity.verification_evidence (
+             id, case_id, evidence_type, provider_alias, collected_at, digest_algorithm,
+             evidence_digest, restricted_reference, retention_class, created_at
+           ) VALUES ($1, $2, 'SYNTHETIC_ATTESTATION', 'SYNTHETIC', clock_timestamp(), 'sha-256',
+             $3, 'forged-reference', 'SYNTHETIC_TEST_ONLY', clock_timestamp())`,
+          [evidenceId, caseId, createHash('sha256').update('forged').digest()],
+        ],
+        [
+          `INSERT INTO identity.identity_reviews (
+             id, case_id, state, actor_class, actor_reference, reason_code,
+             evidence_reference, policy_version, created_at, updated_at, resolved_at
+           ) VALUES ($1, $2, 'NOT_REQUIRED', 'POLICY_ENGINE', 'runtime-manufactured',
+             'TRUSTED_VERIFICATION_ACCEPTED', $3, 'phase-one-audit-v1',
+             clock_timestamp(), clock_timestamp(), clock_timestamp())`,
+          [createOpaqueId(), caseId, evidenceId],
+        ],
+        [
+          `UPDATE identity.document_fingerprint_claims claim
+           SET state = 'BOUND', bound_at = clock_timestamp()
+           FROM identity.identity_documents document
+           WHERE claim.document_id = document.id AND document.identity_id = $1`,
+          [identityId],
+        ],
+        [
+          `INSERT INTO identity.identity_status_transitions (
+             id, identity_id, from_status, to_status, aggregate_version,
+             actor_class, actor_reference, reason_code, evidence_reference, occurred_at
+           ) VALUES ($1, $2, 'PENDING', 'ESTABLISHED', 1, 'TRUSTED_VERIFICATION_HANDLER',
+             'runtime-manufactured', 'IDENTITY_ESTABLISHED', $3, clock_timestamp())`,
+          [createOpaqueId(), identityId, evidenceId],
+        ],
+        [
+          `UPDATE identity.person_identities
+           SET status = 'ESTABLISHED', status_reason_code = 'IDENTITY_ESTABLISHED',
+               version = 1, updated_at = clock_timestamp(), established_at = clock_timestamp()
+           WHERE id = $1`,
+          [identityId],
+        ],
+        [
+          `INSERT INTO accounts.account_status_transitions (
+             id, account_id, from_status, to_status, aggregate_version,
+             actor_class, actor_reference, reason_code, evidence_reference, occurred_at
+           ) VALUES ($1, $2, 'PENDING_IDENTITY', 'ACTIVE', 1, 'TRUSTED_VERIFICATION_HANDLER',
+             'runtime-manufactured', 'IDENTITY_ESTABLISHED', $3, clock_timestamp())`,
+          [createOpaqueId(), accountId, evidenceId],
+        ],
+        [
+          `UPDATE accounts.accounts
+           SET status = 'ACTIVE', status_reason_code = 'IDENTITY_ESTABLISHED',
+               version = 1, updated_at = clock_timestamp()
+           WHERE id = $1`,
+          [accountId],
+        ],
+      ];
+      const client = await runtimePool.connect();
+      try {
+        for (const [statement, parameters] of forgeries) {
+          await client.query('BEGIN');
+          try {
+            await expect(client.query(statement, [...parameters])).rejects.toMatchObject({
+              code: '42501',
+            });
+          } finally {
+            await client.query('ROLLBACK');
+          }
+        }
+      } finally {
+        client.release();
+      }
+
+      // P1-AUD-003: even the table owner cannot cite another case's evidence in a review.
+      const owner = await pool.connect();
+      try {
+        await owner.query('BEGIN');
+        const sourceCaseId = createOpaqueId();
+        const targetCaseId = createOpaqueId();
+        const sourceEvidenceId = createOpaqueId();
+        for (const id of [sourceCaseId, targetCaseId]) {
+          await owner.query(
+            `INSERT INTO identity.verification_cases (
+               id, identity_id, method_class, status, policy_version, opened_at, expires_at
+             ) VALUES ($1, $2, 'SYNTHETIC_AUDIT', 'PENDING', 'phase-one-audit-v1',
+               clock_timestamp(), clock_timestamp() + interval '15 minutes')`,
+            [id, identityId],
+          );
+        }
+        await owner.query(
+          `INSERT INTO identity.verification_evidence (
+             id, case_id, evidence_type, provider_alias, collected_at, digest_algorithm,
+             evidence_digest, restricted_reference, retention_class, created_at
+           ) VALUES ($1, $2, 'SYNTHETIC_ATTESTATION', 'SYNTHETIC', clock_timestamp(), 'sha-256',
+             $3, 'source-reference', 'SYNTHETIC_TEST_ONLY', clock_timestamp())`,
+          [sourceEvidenceId, sourceCaseId, createHash('sha256').update('source').digest()],
+        );
+        await expect(
+          owner.query(
+            `INSERT INTO identity.identity_reviews (
+               id, case_id, state, actor_class, actor_reference, reason_code,
+               evidence_reference, policy_version, created_at, updated_at, resolved_at
+             ) VALUES ($1, $2, 'NOT_REQUIRED', 'POLICY_ENGINE', 'cross-case',
+               'TRUSTED_VERIFICATION_ACCEPTED', $3, 'phase-one-audit-v1',
+               clock_timestamp(), clock_timestamp(), clock_timestamp())`,
+            [createOpaqueId(), targetCaseId, sourceEvidenceId],
+          ),
+        ).rejects.toMatchObject({ constraint: 'identity_review_evidence_same_case' });
+      } finally {
+        await owner.query('ROLLBACK');
+        owner.release();
+      }
+
+      // The verification workload establishes and activates with its outbox in one command.
+      const verifierService = serviceOn(verifierPool);
+      await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe(
+        'RECORDED',
+      );
+      await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe('REPLAY');
+      await expect(
+        verifierService.recordTrustedVerification({
+          ...verification,
+          identityId: createOpaqueId(),
+        }),
+      ).rejects.toThrow('VERIFICATION_DECISION_REUSE');
+      const activation = await pool.query<{ event_type: string }>(
+        `SELECT event_type FROM platform.outbox_events
+         WHERE aggregate_id IN ($1, $2)
+           AND event_type IN ('identity.established', 'account.activated')
+         ORDER BY event_type`,
+        [accountId, identityId],
+      );
+      expect(activation.rows.map((row) => row.event_type)).toEqual([
+        'account.activated',
+        'identity.established',
+      ]);
+      const state = await pool.query<{ status: string }>(
+        'SELECT status FROM accounts.accounts WHERE id = $1',
+        [accountId],
+      );
+      expect(state.rows[0]?.status).toBe('ACTIVE');
+      await expect(
+        verifierPool.query('SELECT id FROM accounts.accounts LIMIT 1'),
+      ).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await runtimePool.end();
+      await verifierPool.end();
+      await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, runtime.name);
+      await dropRestrictedRuntimeLogin(
+        adminConfig.databaseUrl,
+        verifier.name,
+        'trayvi_verification',
+      );
+    }
+  });
+
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
     await expect(migrator.down()).rejects.toThrow('rolled back');
-    expect((await migrator.status()).at(-1)?.version).toBe('0007');
+    expect((await migrator.status()).at(-1)?.version).toBe('0008');
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -913,8 +1135,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(7);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(7);
+      expect((await cleanMigrator.up()).applied).toHaveLength(8);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(8);
+      expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
@@ -924,7 +1147,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         '0003',
         '0004',
       ]);
-      expect((await cleanMigrator.up()).applied).toEqual(['0005', '0006', '0007']);
+      expect((await cleanMigrator.up()).applied).toEqual(['0005', '0006', '0007', '0008']);
     } finally {
       await cleanMigrator.close();
       await delay(25);

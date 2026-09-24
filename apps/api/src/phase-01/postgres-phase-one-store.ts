@@ -2,9 +2,6 @@ import { timingSafeEqual } from 'node:crypto';
 
 import type { Pool, PoolClient, QueryResult } from 'pg';
 
-import { transitionAccount } from '@trayvi/accounts';
-import { transitionIdentity } from '@trayvi/identity';
-
 import type {
   EnrollmentMutationProbe,
   PhaseOneEnrollmentStore,
@@ -196,215 +193,44 @@ export class PostgresPhaseOneStore implements PhaseOneEnrollmentStore {
     if (input.evidenceDigest.byteLength !== 32) {
       throw new Error('INVALID_VERIFICATION_EVIDENCE');
     }
-    const client = await this.#pool.connect();
-    try {
-      await client.query('BEGIN');
-      const existing = await client.query<{ identity_id: string }>(
-        `SELECT identity_id FROM identity.verification_cases
-         WHERE decision_id = $1 FOR UPDATE`,
-        [input.decisionId],
-      );
-      if (existing.rows[0]) {
-        if (existing.rows[0].identity_id !== input.identityId) {
-          throw new Error('VERIFICATION_DECISION_REUSE');
-        }
-        await client.query('COMMIT');
-        return 'REPLAY';
-      }
-
-      const aggregate = await client.query<{
-        identity_id: string;
-        identity_status: 'PENDING' | 'ESTABLISHED' | 'RESTRICTED' | 'RETIRED';
-        identity_version: number;
-        account_id: string;
-        account_status: 'PENDING_IDENTITY' | 'ACTIVE' | 'RESTRICTED' | 'SUSPENDED' | 'CLOSED';
-        account_version: number;
-      }>(
-        `SELECT person_identity.id AS identity_id,
-                person_identity.status AS identity_status,
-                person_identity.version AS identity_version,
-                account.id AS account_id,
-                account.status AS account_status,
-                account.version AS account_version
-         FROM identity.person_identities person_identity
-         JOIN accounts.accounts account ON account.id = person_identity.account_id
-         WHERE person_identity.id = $1
-         FOR UPDATE OF person_identity, account`,
-        [input.identityId],
-      );
-      const row = aggregate.rows[0];
-      if (!row || row.identity_status !== 'PENDING' || row.account_status !== 'PENDING_IDENTITY') {
-        throw new Error('VERIFICATION_TARGET_UNAVAILABLE');
-      }
-
-      await client.query(
-        `INSERT INTO identity.verification_cases (
-           id, identity_id, method_class, status, policy_version, opened_at, expires_at
-         ) VALUES ($1, $2, $3, 'PENDING', $4, $5, $6)`,
-        [
-          input.caseId,
-          input.identityId,
-          input.methodClass,
-          input.policyVersion,
-          input.occurredAt,
-          new Date(input.occurredAt.getTime() + 15 * 60 * 1_000),
-        ],
-      );
-      await client.query(
-        `INSERT INTO identity.verification_evidence (
-           id, case_id, evidence_type, provider_alias, collected_at,
-           digest_algorithm, evidence_digest, restricted_reference,
-           retention_class, created_at
-         ) VALUES ($1, $2, $3, $4, $5, 'sha-256', $6, $7, $8, $5)`,
-        [
-          input.evidenceId,
-          input.caseId,
-          input.evidenceType,
-          input.providerAlias,
-          input.occurredAt,
-          input.evidenceDigest,
-          input.restrictedEvidenceReference,
-          input.retentionClass,
-        ],
-      );
-      await client.query(
-        `INSERT INTO identity.identity_reviews (
-           id, case_id, state, actor_class, actor_reference, reason_code,
-           evidence_reference, policy_version, created_at, updated_at, resolved_at
-         ) VALUES ($1, $2, 'NOT_REQUIRED', 'POLICY_ENGINE', $3,
-           'TRUSTED_VERIFICATION_ACCEPTED', $4, $5, $6, $6, $6)`,
-        [
-          input.reviewId,
-          input.caseId,
-          input.actorReference,
-          input.evidenceId,
-          input.policyVersion,
-          input.occurredAt,
-        ],
-      );
-      await client.query(
-        `UPDATE identity.verification_cases
-         SET decision_id = $2, status = 'VERIFIED', result_code = $3, resolved_at = $4
-         WHERE id = $1 AND status = 'PENDING'`,
-        [input.caseId, input.decisionId, input.resultCode, input.occurredAt],
-      );
-      const bound = await client.query(
-        `UPDATE identity.document_fingerprint_claims claim
-         SET state = 'BOUND', bound_at = $2
-         FROM identity.identity_documents document
-         WHERE claim.document_id = document.id
-           AND document.identity_id = $1
-           AND document.state = 'CURRENT'
-           AND claim.state = 'RESERVED'`,
-        [input.identityId, input.occurredAt],
-      );
-      if ((bound.rowCount ?? 0) === 0) throw new Error('VERIFICATION_CLAIM_MISSING');
-
-      const identity = transitionIdentity(
-        { id: row.identity_id, status: row.identity_status, version: row.identity_version },
-        {
-          to: 'ESTABLISHED',
-          expectedVersion: row.identity_version,
-          actorClass: 'TRUSTED_VERIFICATION_HANDLER',
-          actorReference: input.actorReference,
-          reasonCode: 'IDENTITY_ESTABLISHED',
-          evidenceReference: input.evidenceId,
-          occurredAt: input.occurredAt,
-        },
-        {
-          verificationCaseStatus: 'VERIFIED',
-          reviewStatus: 'NOT_REQUIRED',
-          documentClaimStatus: 'BOUND',
-        },
-      );
-      await client.query(
-        `UPDATE identity.person_identities
-         SET status = 'ESTABLISHED', status_reason_code = 'IDENTITY_ESTABLISHED',
-             version = $2, updated_at = $3, established_at = $3
-         WHERE id = $1 AND version = $4`,
-        [input.identityId, identity.version, input.occurredAt, row.identity_version],
-      );
-      await client.query(
-        `INSERT INTO identity.identity_status_transitions (
-           id, identity_id, from_status, to_status, aggregate_version,
-           actor_class, actor_reference, reason_code, evidence_reference, occurred_at
-         ) VALUES ($1, $2, 'PENDING', 'ESTABLISHED', $3,
-           'TRUSTED_VERIFICATION_HANDLER', $4, 'IDENTITY_ESTABLISHED', $5, $6)`,
-        [
-          input.identityTransitionId,
-          input.identityId,
-          identity.version,
-          input.actorReference,
-          input.evidenceId,
-          input.occurredAt,
-        ],
-      );
-
-      const account = transitionAccount(
-        { id: row.account_id, status: row.account_status, version: row.account_version },
-        {
-          to: 'ACTIVE',
-          expectedVersion: row.account_version,
-          actorClass: 'TRUSTED_VERIFICATION_HANDLER',
-          actorReference: input.actorReference,
-          reasonCode: 'IDENTITY_ESTABLISHED',
-          evidenceReference: input.evidenceId,
-          occurredAt: input.occurredAt,
-        },
-        { identityEstablished: true, documentClaimBound: true },
-      );
-      await client.query(
-        `UPDATE accounts.accounts
-         SET status = 'ACTIVE', status_reason_code = 'IDENTITY_ESTABLISHED',
-             version = $2, updated_at = $3
-         WHERE id = $1 AND version = $4`,
-        [row.account_id, account.version, input.occurredAt, row.account_version],
-      );
-      await client.query(
-        `INSERT INTO accounts.account_status_transitions (
-           id, account_id, from_status, to_status, aggregate_version,
-           actor_class, actor_reference, reason_code, evidence_reference, occurred_at
-         ) VALUES ($1, $2, 'PENDING_IDENTITY', 'ACTIVE', $3,
-           'TRUSTED_VERIFICATION_HANDLER', $4, 'IDENTITY_ESTABLISHED', $5, $6)`,
-        [
-          input.accountTransitionId,
-          row.account_id,
-          account.version,
-          input.actorReference,
-          input.evidenceId,
-          input.occurredAt,
-        ],
-      );
-      await this.#insertOutbox(
-        client,
-        input.outboxEventIds[0],
-        'identity.established',
-        'identity',
-        input.identityId,
-        input.occurredAt,
-        input.correlationId,
-        input.decisionId,
-        { identityId: input.identityId, accountId: row.account_id, state: 'ESTABLISHED' },
-      );
-      await this.#insertOutbox(
-        client,
-        input.outboxEventIds[1],
-        'account.activated',
-        'account',
-        row.account_id,
-        input.occurredAt,
-        input.correlationId,
-        input.decisionId,
-        { accountId: row.account_id, state: 'ACTIVE' },
-      );
-      await client.query('COMMIT');
-      return 'RECORDED';
-    } catch (error: unknown) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      throw error;
-    } finally {
-      client.release();
+    const [identityEventId, accountEventId] = input.outboxEventIds;
+    if (!identityEventId || !accountEventId || input.outboxEventIds.length !== 2) {
+      throw new Error('OUTBOX_EVENT_SET_INVALID');
     }
+    // One guarded command binds case, evidence, review, transitions, and the activation outbox
+    // atomically; the caller's login must hold trayvi_verification, not the general runtime role.
+    const result = await this.#pool.query<{ outcome: 'RECORDED' | 'REPLAY' }>(
+      `SELECT identity.record_trusted_verification(
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+       ) AS outcome`,
+      [
+        input.decisionId,
+        input.identityId,
+        input.caseId,
+        input.evidenceId,
+        input.reviewId,
+        input.identityTransitionId,
+        input.accountTransitionId,
+        identityEventId,
+        accountEventId,
+        input.methodClass,
+        input.resultCode,
+        input.policyVersion,
+        input.providerAlias,
+        input.evidenceType,
+        input.evidenceDigest,
+        input.restrictedEvidenceReference,
+        input.retentionClass,
+        input.actorReference,
+        input.occurredAt,
+        input.correlationId,
+      ],
+    );
+    const outcome = result.rows[0]?.outcome;
+    if (outcome !== 'RECORDED' && outcome !== 'REPLAY') {
+      throw new Error('VERIFICATION_OUTCOME_INVALID');
+    }
+    return outcome;
   }
 
   async #lockOperation(client: PoolClient, operationId: string): Promise<OperationRow | undefined> {

@@ -9,3 +9,4 @@ export {
   ensureDatabaseBootstrap,
   executeSqlFile,
 } from './database';
+export type { RestrictedWorkloadRole } from './database';

@@ -141,11 +141,14 @@ export async function closeInitializedDatabaseClients(resources: {
   if (errors.length > 1) throw new AggregateError(errors, 'Database client cleanup failed.');
 }
 
+export type RestrictedWorkloadRole = 'trayvi_runtime' | 'trayvi_verification';
+
 export async function createRestrictedRuntimeLogin(
   adminUrl: string,
   targetDatabaseUrl = adminUrl,
+  role: RestrictedWorkloadRole = 'trayvi_runtime',
 ): Promise<{ readonly name: string; readonly url: string }> {
-  const name = safeDatabaseName('trayvi_runtime_test');
+  const name = safeDatabaseName(`${role}_test`);
   const password = randomUUID().replaceAll('-', '') + randomUUID().replaceAll('-', '');
   const client = new Client({ connectionString: adminUrl, connectionTimeoutMillis: 5_000 });
   await client.connect();
@@ -161,7 +164,7 @@ export async function createRestrictedRuntimeLogin(
     const createRoleSql = createRole.rows[0]?.sql;
     if (!createRoleSql) throw new Error('Could not construct restricted runtime role SQL.');
     await client.query(createRoleSql);
-    await client.query(`GRANT trayvi_runtime TO ${quoteIdentifier(name)}`);
+    await client.query(`GRANT ${quoteIdentifier(role)} TO ${quoteIdentifier(name)}`);
   } finally {
     await client.end();
   }
@@ -171,11 +174,15 @@ export async function createRestrictedRuntimeLogin(
   return { name, url: url.toString() };
 }
 
-export async function dropRestrictedRuntimeLogin(adminUrl: string, name: string): Promise<void> {
+export async function dropRestrictedRuntimeLogin(
+  adminUrl: string,
+  name: string,
+  role: RestrictedWorkloadRole = 'trayvi_runtime',
+): Promise<void> {
   const client = new Client({ connectionString: adminUrl, connectionTimeoutMillis: 5_000 });
   await client.connect();
   try {
-    await client.query(`REVOKE trayvi_runtime FROM ${quoteIdentifier(name)}`);
+    await client.query(`REVOKE ${quoteIdentifier(role)} FROM ${quoteIdentifier(name)}`);
     await client.query(`DROP ROLE ${quoteIdentifier(name)}`);
   } finally {
     await client.end();
