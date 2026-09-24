@@ -1,6 +1,7 @@
 import {
   createCipheriv,
   createDecipheriv,
+  createHash,
   createHmac,
   randomBytes,
   timingSafeEqual,
@@ -29,6 +30,7 @@ const FINGERPRINT_DOMAIN = 'trayvi.identity-document-fingerprint';
 const ENVELOPE_DOMAIN = 'trayvi.identity-document-envelope';
 const WRAP_DOMAIN = 'trayvi.identity-document-dek-wrap';
 const IDEMPOTENCY_DOMAIN_PREFIX = 'trayvi.identity-enrollment-idempotency';
+const KEY_MATERIAL_IDENTITY_DOMAIN = 'trayvi.key-material-identity';
 
 export class DocumentProtectionError extends Error {
   readonly code:
@@ -51,6 +53,31 @@ function assertKey(key: Buffer): void {
 function assertVersion(version: string): void {
   if (!/^[a-z0-9][a-z0-9._-]{0,63}$/u.test(version)) {
     throw new DocumentProtectionError('INVALID_KEY_CONFIGURATION');
+  }
+}
+
+function keyMaterialIdentity(key: Buffer): Buffer {
+  return createHash('sha256')
+    .update(`${KEY_MATERIAL_IDENTITY_DOMAIN}\0`, 'utf8')
+    .update(key)
+    .digest();
+}
+
+/** Rejects any key material shared between two purposes (P1-AUD-004). */
+function assertDisjointKeyPurposes(purposes: readonly (readonly Buffer[])[]): void {
+  for (const [index, identities] of purposes.entries()) {
+    for (const other of purposes.slice(index + 1)) {
+      if (
+        identities.some((identity) =>
+          other.some(
+            (candidate) =>
+              candidate.byteLength === identity.byteLength && timingSafeEqual(candidate, identity),
+          ),
+        )
+      ) {
+        throw new DocumentProtectionError('INVALID_KEY_CONFIGURATION');
+      }
+    }
   }
 }
 
@@ -82,6 +109,10 @@ export class ConfiguredFingerprintKeyring implements FingerprintKeyring {
 
   lookupActive(): readonly FingerprintKey[] {
     return this.#keys.filter((key) => key.state !== 'RETIRED').map(cloneKey);
+  }
+
+  keyMaterialIdentities(): readonly Buffer[] {
+    return this.#keys.map((key) => keyMaterialIdentity(key.key));
   }
 }
 
@@ -149,6 +180,10 @@ export class NodeKeyedRequestCommitter implements RequestCommitter {
       value: createHmac('sha256', this.#key).update(commitmentInput(domain, fields)).digest(),
     };
   }
+
+  keyMaterialIdentities(): readonly Buffer[] {
+    return [keyMaterialIdentity(this.#key)];
+  }
 }
 
 export class SyntheticAesGcmKeyEncryptionProvider implements KeyEncryptionProvider {
@@ -169,9 +204,15 @@ export class SyntheticAesGcmKeyEncryptionProvider implements KeyEncryptionProvid
       assertKey(key);
       copies.set(version, Buffer.from(key));
     }
+    // Distinct KEK versions must not share material, mirroring the fingerprint keyring rule.
+    assertDisjointKeyPurposes([...copies.values()].map((key) => [keyMaterialIdentity(key)]));
     this.#keys = copies;
     this.#primaryVersion = primaryVersion;
     this.#randomBytes = randomBytesSource;
+  }
+
+  keyMaterialIdentities(): readonly Buffer[] {
+    return [...this.#keys.values()].map(keyMaterialIdentity);
   }
 
   async wrap(dek: Buffer): Promise<WrappedDataEncryptionKey> {
@@ -229,6 +270,11 @@ export class NodeIdentityDocumentProtector {
     requestCommitter: RequestCommitter,
     randomBytesSource: RandomBytesSource = randomBytes,
   ) {
+    assertDisjointKeyPurposes([
+      keyring.keyMaterialIdentities(),
+      keyEncryptionProvider.keyMaterialIdentities(),
+      requestCommitter.keyMaterialIdentities(),
+    ]);
     this.#keyring = keyring;
     this.#keyEncryptionProvider = keyEncryptionProvider;
     this.#requestCommitter = requestCommitter;
@@ -314,6 +360,11 @@ export class NodeIdentityDocumentProtector {
     document: ProtectedIdentityDocument,
     targetKeyring: FingerprintKeyring,
   ): Promise<readonly FingerprintAlias[]> {
+    assertDisjointKeyPurposes([
+      targetKeyring.keyMaterialIdentities(),
+      this.#keyEncryptionProvider.keyMaterialIdentities(),
+      this.#requestCommitter.keyMaterialIdentities(),
+    ]);
     const plaintext = await this.#recoverCanonicalDocument(document);
     try {
       const canonicalValue = plaintext.toString('utf8');
