@@ -1,0 +1,27 @@
+{
+  "spec": "SPEC-NNN-slug",
+  "title": "Title",
+  "phase": "phase-NN-name",
+  "status": "draft",
+  "base": "main",
+  "streams": [
+    {
+      "id": "ws-a",
+      "title": "Domain model and pure rules",
+      "owns": ["modules/example/src/domain/"],
+      "dependsOn": [],
+      "migrations": [],
+      "acceptance": ["PN-AC-NNN"],
+      "verify": ["corepack pnpm verify"]
+    },
+    {
+      "id": "ws-b",
+      "title": "Persistence and repository adapter",
+      "owns": ["modules/example/src/infrastructure/"],
+      "dependsOn": ["ws-a"],
+      "migrations": ["NNNN"],
+      "acceptance": ["PN-AC-NNN"],
+      "verify": ["corepack pnpm verify:full"]
+    }
+  ]
+}
