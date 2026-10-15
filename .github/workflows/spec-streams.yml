@@ -1,0 +1,41 @@
+name: Spec streams
+
+on:
+  pull_request:
+    branches: ['spec/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-streams-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22.14.0
+
+jobs:
+  ownership:
+    name: Stream ownership and spec manifests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up pinned Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Enable Corepack and frozen install
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+      - name: Validate spec manifests
+        run: corepack pnpm spec:validate
+      - name: Enforce stream path ownership
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+          BASE_BRANCH: ${{ github.base_ref }}
+        run: corepack pnpm spec:check-branch --branch "$HEAD_BRANCH" --base "origin/$BASE_BRANCH"
