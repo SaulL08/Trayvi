@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-24T18:20:37Z",
+  "probe": "probes/phase-one-remediation.probe.ts",
+  "targetCommit": "4e05d5479b6a7cae6d6241da22d73a4abff171ba",
+  "syntheticDataOnly": true,
+  "result": {
+    "schemaVersion": 1,
+    "syntheticDataOnly": true,
+    "runtimeManufacturedLifecycle": {
+      "committed": false,
+      "resultingState": {
+        "account_status": "PENDING_IDENTITY",
+        "identity_status": "PENDING",
+        "claim_state": "RESERVED"
+      },
+      "activationOutboxEventsBefore": 0,
+      "activationOutboxEventsAfter": 0
+    },
+    "crossCaseEvidence": {
+      "committed": false,
+      "reviewCaseDiffersFromEvidenceCase": false,
+      "resultingAccountStatus": null
+    },
+    "privileges": {
+      "restrictedCiphertextReadDenied": true,
+      "restrictedFingerprintReadDenied": true,
+      "documentRewrapUpdateDenied": true,
+      "ddlDenied": true,
+      "roleEscalationDenied": true,
+      "roles": [
+        "trayvi_lifecycle_owner",
+        "trayvi_migrator",
+        "trayvi_rotation",
+        "trayvi_runtime",
+        "trayvi_runtime_login",
+        "trayvi_verification"
+      ],
+      "runtimeSearchPath": "\"$user\", public",
+      "dedicatedRotationRolePresent": true
+    },
+    "concurrency": {
+      "alignedKeySet": {
+        "attempts": 120,
+        "states": {
+          "CONFLICT": 119,
+          "COMPLETED": 1
+        }
+      },
+      "sameOperationReplay": {
+        "attempts": 120,
+        "completedAggregateCount": 1
+      },
+      "disjointRotationKeySets": {
+        "attempts": 120,
+        "states": {
+          "CONFLICT": 59,
+          "STARTED": 60,
+          "COMPLETED": 1
+        },
+        "winnerCount": 1,
+        "winnerKeyVersions": ["fingerprint-audit-v1"],
+        "rejectedFailClosed": 60
+      }
+    },
+    "keyPurposeSeparation": {
+      "sameRawKeyAcceptedAcrossFingerprintKekAndIdempotency": false
+    }
+  }
+}

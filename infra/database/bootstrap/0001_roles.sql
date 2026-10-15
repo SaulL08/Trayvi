@@ -11,9 +11,23 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_runtime') THEN
     CREATE ROLE trayvi_runtime NOLOGIN NOINHERIT;
   END IF;
+  -- Trusted verification outcome handler: may only execute the guarded establishment command.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_verification') THEN
+    CREATE ROLE trayvi_verification NOLOGIN NOINHERIT;
+  END IF;
+  -- HMAC backfill and KEK rewrap workload, including the shared fingerprint key policy.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_rotation') THEN
+    CREATE ROLE trayvi_rotation NOLOGIN NOINHERIT;
+  END IF;
+  -- Owner of SECURITY DEFINER lifecycle commands; never granted to a login.
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'trayvi_lifecycle_owner') THEN
+    CREATE ROLE trayvi_lifecycle_owner NOLOGIN NOINHERIT;
+  END IF;
 END
 $roles$;
 
 REVOKE ALL ON SCHEMA public FROM trayvi_runtime;
 GRANT USAGE ON SCHEMA public TO trayvi_runtime;
 GRANT USAGE, CREATE ON SCHEMA public TO trayvi_migrator;
+-- Lets a non-superuser migration principal assign ownership of lifecycle commands.
+GRANT trayvi_lifecycle_owner TO trayvi_migrator;

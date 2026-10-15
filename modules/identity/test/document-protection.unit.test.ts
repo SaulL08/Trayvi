@@ -161,6 +161,78 @@ describe('national document protection', () => {
     ).toThrowError(expect.objectContaining({ code: 'INVALID_KEY_CONFIGURATION' }));
   });
 
+  it('rejects the same key material serving two purposes', async () => {
+    const shared = Buffer.alloc(32, 77);
+    const keyring = (key: Buffer, state: 'PRIMARY' | 'RETIRED' = 'PRIMARY') =>
+      new ConfiguredFingerprintKeyring(
+        state === 'PRIMARY'
+          ? [{ version: 'fingerprint-v1', key, state }]
+          : [
+              { version: 'fingerprint-v0', key, state },
+              { version: 'fingerprint-v1', key: fingerprintKey, state: 'PRIMARY' },
+            ],
+      );
+    const provider = (key: Buffer) =>
+      new SyntheticAesGcmKeyEncryptionProvider('kek-v1', new Map([['kek-v1', key]]));
+    const committer = (key: Buffer) => new NodeKeyedRequestCommitter('idempotency-v1', key);
+    const invalid = expect.objectContaining({ code: 'INVALID_KEY_CONFIGURATION' });
+
+    for (const build of [
+      () =>
+        new NodeIdentityDocumentProtector(
+          keyring(shared),
+          provider(shared),
+          committer(idempotencyKey),
+        ),
+      () => new NodeIdentityDocumentProtector(keyring(shared), provider(kek), committer(shared)),
+      () =>
+        new NodeIdentityDocumentProtector(
+          keyring(fingerprintKey),
+          provider(shared),
+          committer(shared),
+        ),
+      () =>
+        new NodeIdentityDocumentProtector(
+          keyring(shared, 'RETIRED'),
+          provider(shared),
+          committer(idempotencyKey),
+        ),
+    ]) {
+      expect(build).toThrowError(invalid);
+    }
+    expect(
+      () =>
+        new SyntheticAesGcmKeyEncryptionProvider(
+          'kek-v2',
+          new Map([
+            ['kek-v1', kek],
+            ['kek-v2', kek],
+          ]),
+        ),
+    ).toThrowError(invalid);
+
+    const protector = new NodeIdentityDocumentProtector(
+      keyring(fingerprintKey),
+      provider(kek),
+      committer(idempotencyKey),
+    );
+    const protectedDocument = await protector.protect({ ...context, documentValue: '00112345678' });
+    await expect(
+      protector.computeRotationAliases(protectedDocument, keyring(kek)),
+    ).rejects.toMatchObject({ code: 'INVALID_KEY_CONFIGURATION' });
+    expect(
+      [
+        ...keyring(fingerprintKey).keyMaterialIdentities(),
+        ...provider(kek).keyMaterialIdentities(),
+        ...committer(idempotencyKey).keyMaterialIdentities(),
+      ].every(
+        (identity) =>
+          identity.byteLength === 32 &&
+          ![fingerprintKey, kek, idempotencyKey].some((key) => key.equals(identity)),
+      ),
+    ).toBe(true);
+  });
+
   it('reproduces the AES-256-GCM envelope vector without exposing plaintext', async () => {
     const protectedDocument = await buildProtector().protect({
       ...context,

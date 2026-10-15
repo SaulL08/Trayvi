@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-24T18:20:37Z",
+  "commit": "4e05d5479b6a7cae6d6241da22d73a4abff171ba",
+  "platform": "macOS arm64 local; PostgreSQL 17.11 / PostGIS 3.5.7 hardened image under linux/amd64 emulation",
+  "toolchain": {
+    "node": "v22.14.0",
+    "pnpm": "11.25.0"
+  },
+  "rootVerify": {
+    "result": "PASS",
+    "unitTestsPassed": 129,
+    "workspaceTasksPassed": 12,
+    "architectureGate": "PASS",
+    "secretGate": "PASS",
+    "licenseGate": "PASS"
+  },
+  "integration": {
+    "result": "PASS",
+    "testFilesPassed": 9,
+    "testsPassed": 34,
+    "testsSkipped": 0
+  },
+  "databaseVerification": {
+    "result": "PASS",
+    "invariantsPassed": 14,
+    "invariantsTotal": 14
+  },
+  "migrations": {
+    "applied": ["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009", "0010"],
+    "priorMigrationsModified": false,
+    "cleanUpDownUpCycle": "PASS",
+    "populatedDownRefused": "PASS"
+  },
+  "notRun": {
+    "hostedCi": "Runs on the pull request; the hosted PostGIS image build also requires the libexpat pin update in PR #1.",
+    "cleanCheckout": "Not performed in this remediation pass."
+  },
+  "dependencyAudit": {
+    "result": "PASS",
+    "advisories": 0,
+    "policyViolations": 0
+  }
+}

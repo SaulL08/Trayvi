@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "recordedAtUtc": "2026-09-24T18:20:37Z",
+  "originalAuditCommit": "665ff85",
+  "originalTargetCommit": "d2ec8f2b2e79a413bec2b953da81c259984bb141",
+  "remediationCodeHead": "4e05d5479b6a7cae6d6241da22d73a4abff171ba",
+  "findings": [
+    {
+      "id": "P1-AUD-001",
+      "severity": "High",
+      "fixCommits": ["647ceba"],
+      "originalProbe": "A physical runtime login manufactured case, evidence, review, and transitions and committed ACTIVE/ESTABLISHED/BOUND with zero activation outbox events.",
+      "postFixProbe": "runtimeManufacturedLifecycle.committed=false; account stays PENDING_IDENTITY, identity PENDING, claim RESERVED; activation outbox 0 before and after. Direct lifecycle DML by runtime fails with 42501; only trayvi_verification may execute identity.record_trusted_verification, which writes both activation events atomically.",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-AUD-002",
+      "severity": "High",
+      "fixCommits": ["128c6d7"],
+      "originalProbe": "120 submissions alternating old-only and new-only HMAC writers produced 2 COMPLETED aggregates (fingerprint-audit-v1 and -v2).",
+      "postFixProbe": "With the shared key policy registered, 120 alternating submissions produce 1 COMPLETED, 59 CONFLICT, and 60 fail-closed rejections; winnerCount=1. Policy changes that leave a blocking document uncovered are refused.",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-AUD-003",
+      "severity": "Medium",
+      "fixCommits": ["647ceba"],
+      "originalProbe": "A review for the target case cited evidence collected for another case and the target account became ACTIVE.",
+      "postFixProbe": "crossCaseEvidence.committed=false. A composite foreign key rejects cross-case evidence even for the table owner, and the establishment guard requires the transition to cite evidence of the identity's own verified case.",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-AUD-004",
+      "severity": "Medium",
+      "fixCommits": ["4413317"],
+      "originalProbe": "One raw 256-bit buffer was accepted simultaneously as fingerprint key, KEK, and idempotency key.",
+      "postFixProbe": "sameRawKeyAcceptedAcrossFingerprintKekAndIdempotency=false. Construction fails with INVALID_KEY_CONFIGURATION for any cross-purpose reuse (including retired fingerprint keys), for rotation target keyrings, and for duplicate KEK versions.",
+      "result": "PASS"
+    },
+    {
+      "id": "P1-AUD-005",
+      "severity": "Medium",
+      "fixCommits": ["4e05d54"],
+      "originalProbe": "Only trayvi_migrator and trayvi_runtime existed; rotation tests ran with the administrative migration URL.",
+      "postFixProbe": "dedicatedRotationRolePresent=true. Backfill, rewrap, and key-policy changes run as a physical trayvi_rotation login; a pinned privilege matrix denies accounts/identity/verification reads, ciphertext/state/fingerprint updates, deletes, DDL, role escalation, and the verification command.",
+      "result": "PASS"
+    }
+  ]
+}
