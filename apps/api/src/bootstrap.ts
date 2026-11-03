@@ -13,7 +13,7 @@ import { FastifyAdapter } from '@nestjs/platform-fastify';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import type { FastifyInstance, FastifyRequest, RawRequestDefaultExpression } from 'fastify';
 
-import type { AppConfig } from '@trayvi/config';
+import { loadAuthConfig, type AppConfig, type AuthConfig } from '@trayvi/config';
 import {
   createRequestContext,
   FoundationMetrics,
@@ -50,6 +50,8 @@ export interface ApiApplication {
 
 export interface ApiApplicationOverrides {
   readonly logger?: Logger;
+  /** Auth settings; defaults to the process environment (SPEC-001). */
+  readonly auth?: AuthConfig;
   readonly configureServer?: (server: FastifyInstance) => void;
 }
 
@@ -109,11 +111,23 @@ export async function createApiApplication(
     logger: false,
     requestTimeout: config.http.requestTimeoutMs,
     return503OnClosing: true,
+    // request.ip honours X-Forwarded-For only across the configured number of trusted proxies.
+    trustProxy:
+      config.http.trustedProxyHops > 0
+        ? (_address: string, hop: number) => hop < config.http.trustedProxyHops
+        : false,
   });
   const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule.register({ config, logger, metrics, runtime }),
+    AppModule.register({
+      config,
+      logger,
+      metrics,
+      runtime,
+      auth: overrides.auth ?? loadAuthConfig(config.environment),
+    }),
     adapter,
-    { abortOnError: true, bufferLogs: false, logger: false },
+    // rawBody keeps request.rawBody for signed provider callbacks (PLAN §14).
+    { abortOnError: true, bufferLogs: false, logger: false, rawBody: true },
   );
   app.useLogger(new NestLoggerAdapter(logger));
   app.useGlobalFilters(new SafeExceptionFilter(logger));

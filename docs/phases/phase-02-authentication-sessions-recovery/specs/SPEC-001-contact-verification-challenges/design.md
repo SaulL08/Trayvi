@@ -419,8 +419,10 @@ routes.
 
 Required headers: `X-Trayvi-Installation` (UUID, required on challenge routes);
 `X-Trayvi-Timestamp` and `X-Trayvi-Signature` (`v1=<hex>`) on callbacks. The
-client network prefix comes from the trusted proxy configuration already used for
-request context.
+client network prefix comes from `request.ip` under the trusted-proxy setting
+`HTTP_TRUSTED_PROXY_HOPS` (default `0`: `X-Forwarded-For` is ignored). The original
+design assumed this setting already existed; the integration amendment in §4 item 9
+adds it.
 
 Problem Details codes this spec may emit: `INVALID_CONTACT_FORMAT` (400),
 `VERIFICATION_FAILED` (400), `CHALLENGE_NOT_ACTIVE` (409), `RATE_LIMITED` (429
@@ -475,6 +477,19 @@ start:
 7. `apps/api/src/app.module.ts` imports an empty `AuthHttpModule` from
    `apps/api/src/auth/auth-http.module.ts`, which ws-e then owns.
 8. Migration `0012`.
+
+Integration amendment (2026-11-03), made before ws-e started because ws-e may change only
+`apps/api/src/auth/` and `apps/api/test/auth/`:
+
+9. `HTTP_TRUSTED_PROXY_HOPS` (0–5) in `AppConfig.http.trustedProxyHops`, applied as Fastify
+   `trustProxy`, so `request.ip` is the client address behind that many trusted proxies.
+10. `loadAuthConfig(environment)` in `packages/config/src/environment.ts` (the only file that may
+    read `process.env`), loaded by `createApiApplication` unless a test passes `auth`.
+11. Nest `rawBody: true`, so callback routes read `request.rawBody` for signature checks.
+12. `AuthHttpModule.register({ config, auth, logger, metrics })`, imported by `AppModule`.
+
+Spec correction: T-D3 writes `auth.verification_challenges` (migration `0014`), so ws-d depends
+on ws-b; `streams.json` records that dependency.
 
 ## 5. Failure behavior and rollback
 
