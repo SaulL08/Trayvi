@@ -55,33 +55,10 @@ export type SubmitEnrollmentStoreResult =
   | { readonly kind: 'IDEMPOTENCY_CONFLICT' }
   | { readonly kind: 'UNAVAILABLE' };
 
-export interface TrustedVerificationRecord {
-  readonly outcome: 'VERIFIED';
-  readonly decisionId: string;
-  readonly identityId: string;
-  readonly caseId: string;
-  readonly evidenceId: string;
-  readonly reviewId: string;
-  readonly identityTransitionId: string;
-  readonly accountTransitionId: string;
-  readonly outboxEventIds: readonly string[];
-  readonly methodClass: string;
-  readonly resultCode: string;
-  readonly policyVersion: string;
-  readonly providerAlias: string;
-  readonly evidenceType: string;
-  readonly evidenceDigest: Buffer;
-  readonly restrictedEvidenceReference: string;
-  readonly retentionClass: string;
-  readonly actorReference: string;
-  readonly occurredAt: Date;
-  readonly correlationId: string;
-}
-
+/** Enrollment persistence port; its adapter runs as trayvi_runtime only. */
 export interface PhaseOneEnrollmentStore {
   start(input: StartEnrollmentRecord): Promise<StartEnrollmentStoreResult>;
   submit(input: SubmitEnrollmentRecord): Promise<SubmitEnrollmentStoreResult>;
-  recordTrustedVerification(input: TrustedVerificationRecord): Promise<'RECORDED' | 'REPLAY'>;
 }
 
 export interface StartAccountCreationInput {
@@ -97,17 +74,6 @@ export interface SubmitIdentityInformationInput {
   readonly correlationId: string;
   readonly causationId?: string;
 }
-
-export type TrustedVerificationInput = Omit<
-  TrustedVerificationRecord,
-  | 'caseId'
-  | 'evidenceId'
-  | 'reviewId'
-  | 'identityTransitionId'
-  | 'accountTransitionId'
-  | 'outboxEventIds'
-  | 'occurredAt'
->;
 
 export interface PhaseOneEnrollmentOptions {
   readonly operationTtlMs?: number;
@@ -223,19 +189,5 @@ export class PhaseOneEnrollmentService {
       code: 'IDENTITY_SUBMISSION_ACCEPTED',
       nextStep: 'CONTINUE_SECURELY',
     };
-  }
-
-  async recordTrustedVerification(input: TrustedVerificationInput): Promise<'RECORDED' | 'REPLAY'> {
-    const occurredAt = this.#clock();
-    return this.#store.recordTrustedVerification({
-      ...input,
-      caseId: this.#idFactory(),
-      evidenceId: this.#idFactory(),
-      reviewId: this.#idFactory(),
-      identityTransitionId: this.#idFactory(),
-      accountTransitionId: this.#idFactory(),
-      outboxEventIds: [this.#idFactory(), this.#idFactory()],
-      occurredAt,
-    });
   }
 }
