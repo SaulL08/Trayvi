@@ -1,0 +1,89 @@
+{
+  "spec": "SPEC-002-sign-in-and-sessions",
+  "title": "Sign-in, credentials, and sessions",
+  "phase": "phase-02-authentication-sessions-recovery",
+  "status": "draft",
+  "base": "main",
+  "streams": [
+    {
+      "id": "ws-a",
+      "title": "Session families, tokens, rotation, revocation",
+      "owns": [
+        "modules/auth/src/domain/session/",
+        "modules/auth/src/application/session/",
+        "modules/auth/src/infrastructure/session/",
+        "modules/auth/test/session/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0016"],
+      "acceptance": [
+        "P2-AC-017",
+        "P2-AC-018",
+        "P2-AC-019",
+        "P2-AC-020",
+        "P2-AC-021",
+        "P2-AC-022",
+        "P2-AC-031",
+        "P2-AC-032",
+        "P2-AC-034"
+      ],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-b",
+      "title": "Password credential",
+      "owns": [
+        "modules/auth/src/domain/password/",
+        "modules/auth/src/application/password/",
+        "modules/auth/src/infrastructure/password/",
+        "modules/auth/test/password/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0017"],
+      "acceptance": ["P2-AC-016", "P2-AC-032", "P2-AC-034"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-c",
+      "title": "Accounts seam and registration binding",
+      "owns": [
+        "modules/auth/src/application/registration/",
+        "modules/auth/src/infrastructure/registration/",
+        "apps/api/src/phase-01/",
+        "apps/api/test/registration/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0018"],
+      "acceptance": ["P2-AC-002", "P2-AC-025", "P2-AC-031", "P2-AC-034"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-d",
+      "title": "Guard, principal, step-up, route inventory",
+      "owns": [
+        "modules/auth/src/domain/principal/",
+        "modules/auth/src/application/principal/",
+        "apps/api/src/auth/guard/",
+        "apps/api/test/auth/guard/"
+      ],
+      "dependsOn": ["ws-a", "ws-c"],
+      "migrations": [],
+      "acceptance": ["P2-AC-022", "P2-AC-023", "P2-AC-024"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-e",
+      "title": "Sign-in service and session, password, account routes",
+      "owns": [
+        "modules/auth/src/application/sign-in/",
+        "modules/auth/test/sign-in/",
+        "apps/api/src/auth/sessions/",
+        "apps/api/test/auth/sessions/"
+      ],
+      "dependsOn": ["ws-a", "ws-b", "ws-d"],
+      "migrations": [],
+      "acceptance": ["P2-AC-015", "P2-AC-021", "P2-AC-033", "P2-AC-035"],
+      "verify": ["corepack pnpm verify:full"]
+    }
+  ]
+}
