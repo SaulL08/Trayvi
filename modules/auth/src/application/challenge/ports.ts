@@ -54,6 +54,16 @@ export type DeliveryOutcomeCode =
 
 /** Persistence port for challenges and proofs; every method runs on the caller's executor. */
 export interface ChallengeStore {
+  /**
+   * Serializes challenge starts for one destination and purpose until the transaction ends, so
+   * cancel-then-insert never races another start for the same destination.
+   */
+  lockDestination(
+    sql: SqlExecutor,
+    purpose: ChallengePurpose,
+    destinationKeyVersion: string,
+    destinationFingerprint: Buffer,
+  ): Promise<void>;
   /** Cancels every PENDING challenge for the destination and purpose. */
   cancelPending(
     sql: SqlExecutor,

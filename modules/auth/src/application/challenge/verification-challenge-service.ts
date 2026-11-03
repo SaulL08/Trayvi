@@ -118,6 +118,12 @@ export class DefaultVerificationChallengeService implements VerificationChalleng
     const code = this.#deps.codes.generate();
     const committed = this.#deps.codes.commit(challengeId, command.purpose, code);
     await this.#deps.transactions.inTransaction(async (sql) => {
+      await this.#deps.store.lockDestination(
+        sql,
+        command.purpose,
+        destination.keyVersion,
+        destination.bytes,
+      );
       for (let attempt = 0; attempt < INSERT_ATTEMPTS; attempt += 1) {
         // R-16: a newer challenge supersedes the PENDING one for the same destination and purpose.
         await this.#deps.store.cancelPending(

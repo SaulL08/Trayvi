@@ -40,6 +40,21 @@ interface ProofRow {
 
 /** PostgreSQL ChallengeStore over migration 0014; runs as trayvi_runtime on the caller's executor. */
 export class PostgresChallengeStore implements ChallengeStore {
+  async lockDestination(
+    sql: SqlExecutor,
+    purpose: ChallengePurpose,
+    destinationKeyVersion: string,
+    destinationFingerprint: Buffer,
+  ): Promise<void> {
+    // The key is a hash of a keyed fingerprint, so the lock reveals nothing about the number.
+    await sql.query(
+      `SELECT pg_advisory_xact_lock(
+         hashtextextended('auth.challenge-start:' || $1 || ':' || $2 || ':' || encode($3, 'hex'), 0)
+       )`,
+      [purpose, destinationKeyVersion, destinationFingerprint],
+    );
+  }
+
   async cancelPending(
     sql: SqlExecutor,
     purpose: ChallengePurpose,

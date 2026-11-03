@@ -458,10 +458,10 @@ describe('auth verification challenges on real PostgreSQL', () => {
     });
   });
 
-  it('keeps exactly one PENDING challenge when 20 starts for one number race', async () => {
+  it('keeps exactly one PENDING challenge when 50 starts for one number race', async () => {
     const harness = build();
     const phone = nextPhone();
-    const ids = await Promise.all(Array.from({ length: 20 }, () => startChallenge(harness, phone)));
+    const ids = await Promise.all(Array.from({ length: 50 }, () => startChallenge(harness, phone)));
     const pending = await admin.query<{ id: string }>(
       `SELECT id FROM auth.verification_challenges WHERE id = ANY($1::uuid[]) AND state = 'PENDING'`,
       [ids],
