@@ -29,8 +29,14 @@ import {
   PostgresDocumentKekRewrapStore,
   PostgresFingerprintRotationStore,
 } from '../src/phase-01/postgres-fingerprint-rotation';
+import {
+  assertDatabaseWorkload,
+  DatabaseWorkloadBoundaryError,
+} from '../src/phase-01/database-workload';
 import { PostgresPhaseOneStore } from '../src/phase-01/postgres-phase-one-store';
+import { PostgresTrustedVerificationStore } from '../src/phase-01/postgres-trusted-verification-store';
 import { PhaseOneEnrollmentService } from '../src/phase-01/phase-one-enrollment';
+import { TrustedVerificationService } from '../src/phase-01/trusted-verification';
 import type {
   EnrollmentCheckpoint,
   EnrollmentMutationProbe,
@@ -103,10 +109,27 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   const adminConfig = loadMigrationConfig();
   let database: Awaited<ReturnType<typeof createDisposableDatabase>>;
   let migrator: SqlMigrator;
+  // Superuser pool for fixtures and assertions only; no service under test runs on it.
   let pool: Pool;
+  type WorkloadLogin = Awaited<ReturnType<typeof createRestrictedRuntimeLogin>>;
+  // Enrollment, trusted verification, and rotation each run as their own least-privilege login.
+  let runtimePool: Pool | undefined;
+  let runtimeLogin: WorkloadLogin | undefined;
+  let verifierPool: Pool | undefined;
+  let verifierLogin: WorkloadLogin | undefined;
   // HMAC backfill, KEK rewrap, and key-policy changes run as the least-privilege rotation workload.
   let rotationPool: Pool | undefined;
-  let rotationLogin: Awaited<ReturnType<typeof createRestrictedRuntimeLogin>> | undefined;
+  let rotationLogin: WorkloadLogin | undefined;
+
+  const enrollmentPool = (): Pool => {
+    if (!runtimePool) throw new Error('runtime pool is not initialized');
+    return runtimePool;
+  };
+
+  const verificationPool = (): Pool => {
+    if (!verifierPool) throw new Error('verifier pool is not initialized');
+    return verifierPool;
+  };
 
   const createService = (
     protector = protectorFor(['v1']),
@@ -115,11 +138,18 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     operationTtlMs?: number,
   ): PhaseOneEnrollmentService =>
     new PhaseOneEnrollmentService(
-      new PostgresPhaseOneStore(pool, probe),
+      new PostgresPhaseOneStore(enrollmentPool(), probe),
       protector,
       createOpaqueId,
       clock,
       operationTtlMs === undefined ? {} : { operationTtlMs },
+    );
+
+  const createVerifier = (): TrustedVerificationService =>
+    new TrustedVerificationService(
+      new PostgresTrustedVerificationStore(verificationPool()),
+      createOpaqueId,
+      () => new Date(),
     );
 
   const rotation = (): Pool => {
@@ -176,7 +206,19 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     database = await createDisposableDatabase(adminConfig.databaseUrl, 'trayvi_phase_one');
     migrator = new SqlMigrator(database.url);
     await migrator.up();
-    pool = new Pool({ connectionString: database.url, max: 60, statement_timeout: 30_000 });
+    pool = new Pool({ connectionString: database.url, max: 10, statement_timeout: 30_000 });
+    runtimeLogin = await createRestrictedRuntimeLogin(adminConfig.databaseUrl, database.url);
+    runtimePool = new Pool({
+      connectionString: runtimeLogin.url,
+      max: 60,
+      statement_timeout: 30_000,
+    });
+    verifierLogin = await createRestrictedRuntimeLogin(
+      adminConfig.databaseUrl,
+      database.url,
+      'trayvi_verification',
+    );
+    verifierPool = new Pool({ connectionString: verifierLogin.url, max: 4 });
     rotationLogin = await createRestrictedRuntimeLogin(
       adminConfig.databaseUrl,
       database.url,
@@ -187,7 +229,19 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   });
 
   afterAll(async () => {
+    await runtimePool?.end();
+    await verifierPool?.end();
     await rotationPool?.end();
+    if (runtimeLogin) {
+      await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, runtimeLogin.name);
+    }
+    if (verifierLogin) {
+      await dropRestrictedRuntimeLogin(
+        adminConfig.databaseUrl,
+        verifierLogin.name,
+        'trayvi_verification',
+      );
+    }
     if (rotationLogin) {
       await dropRestrictedRuntimeLogin(
         adminConfig.databaseUrl,
@@ -202,7 +256,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all ten migrations and rejects invalid direct initial states', async () => {
+  it('applies all eleven migrations and rejects invalid direct initial states', async () => {
     expect((await migrator.status()).map((migration) => migration.version)).toEqual([
       '0001',
       '0002',
@@ -214,6 +268,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0008',
       '0009',
       '0010',
+      '0011',
     ]);
 
     await expect(
@@ -398,8 +453,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       actorReference: 'trusted-test-adapter',
       correlationId: createOpaqueId(),
     };
-    await expect(service.recordTrustedVerification(verification)).resolves.toBe('RECORDED');
-    await expect(service.recordTrustedVerification(verification)).resolves.toBe('REPLAY');
+    const verifierService = createVerifier();
+    await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe('RECORDED');
+    await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe('REPLAY');
 
     const activated = await pool.query<{
       account_status: string;
@@ -595,7 +651,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
            WHERE operation.id = ANY($1::uuid[]) AND operation.state = 'COMPLETED'`,
         [operations],
       );
-      await service.recordTrustedVerification({
+      await createVerifier().recordTrustedVerification({
         outcome: 'VERIFIED',
         decisionId: createOpaqueId(),
         identityId: winner.rows[0]?.identity_id ?? '',
@@ -1044,6 +1100,12 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const runtimePool = new Pool({ connectionString: runtime.url, max: 4 });
     const verifierPool = new Pool({ connectionString: verifier.url, max: 2 });
+    const verifierOn = (target: Pool): TrustedVerificationService =>
+      new TrustedVerificationService(
+        new PostgresTrustedVerificationStore(target),
+        createOpaqueId,
+        () => new Date(),
+      );
     const serviceOn = (target: Pool): PhaseOneEnrollmentService =>
       new PhaseOneEnrollmentService(
         new PostgresPhaseOneStore(target),
@@ -1088,7 +1150,13 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         actorReference: 'trusted-test-adapter',
         correlationId: createOpaqueId(),
       };
-      await expect(runtimeService.recordTrustedVerification(verification)).rejects.toMatchObject({
+      await expect(PostgresTrustedVerificationStore.create(runtimePool)).rejects.toThrow(
+        'DATABASE_WORKLOAD_ROLE_MISSING',
+      );
+      // Even if wired to the wrong pool, the database denies the command to the runtime.
+      await expect(
+        verifierOn(runtimePool).recordTrustedVerification(verification),
+      ).rejects.toMatchObject({
         code: '42501',
       });
 
@@ -1215,7 +1283,13 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       }
 
       // The verification workload establishes and activates with its outbox in one command.
-      const verifierService = serviceOn(verifierPool);
+      await expect(PostgresPhaseOneStore.create(verifierPool)).rejects.toThrow(
+        'DATABASE_WORKLOAD_ROLE_MISSING',
+      );
+      await expect(PostgresTrustedVerificationStore.create(verifierPool)).resolves.toBeInstanceOf(
+        PostgresTrustedVerificationStore,
+      );
+      const verifierService = verifierOn(verifierPool);
       await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe(
         'RECORDED',
       );
@@ -1257,6 +1331,45 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
+  it('fails closed when a workload login is privileged, missing, or overlapping', async () => {
+    await expect(
+      assertDatabaseWorkload(enrollmentPool(), 'trayvi_runtime'),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertDatabaseWorkload(verificationPool(), 'trayvi_verification'),
+    ).resolves.toBeUndefined();
+    await expect(assertDatabaseWorkload(rotation(), 'trayvi_rotation')).resolves.toBeUndefined();
+    await expect(assertDatabaseWorkload(pool, 'trayvi_runtime')).rejects.toThrow(
+      'DATABASE_WORKLOAD_PRIVILEGED_LOGIN',
+    );
+    await expect(assertDatabaseWorkload(enrollmentPool(), 'trayvi_verification')).rejects.toThrow(
+      DatabaseWorkloadBoundaryError,
+    );
+    await expect(PostgresPhaseOneStore.create(enrollmentPool())).resolves.toBeInstanceOf(
+      PostgresPhaseOneStore,
+    );
+
+    // A single login holding both enrollment and verification collapses P1-AUD-001.
+    const overlapping = await createRestrictedRuntimeLogin(adminConfig.databaseUrl, database.url);
+    const admin = new Client({ connectionString: adminConfig.databaseUrl });
+    await admin.connect();
+    const overlappingPool = new Pool({ connectionString: overlapping.url, max: 1 });
+    try {
+      await admin.query(`GRANT trayvi_verification TO "${overlapping.name}"`);
+      await expect(PostgresPhaseOneStore.create(overlappingPool)).rejects.toThrow(
+        'DATABASE_WORKLOAD_ROLE_OVERLAP',
+      );
+      await expect(PostgresTrustedVerificationStore.create(overlappingPool)).rejects.toThrow(
+        'DATABASE_WORKLOAD_ROLE_OVERLAP',
+      );
+    } finally {
+      await overlappingPool.end();
+      await admin.query(`REVOKE trayvi_verification FROM "${overlapping.name}"`);
+      await admin.end();
+      await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, overlapping.name);
+    }
+  });
+
   it('grants the rotation workload only its narrow privileges', async () => {
     const client = await rotation().connect();
     const denied = async (statement: string): Promise<boolean> => {
@@ -1294,6 +1407,71 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       const results: boolean[] = [];
       for (const statement of statements) results.push(await denied(statement));
       expect(results).toEqual(statements.map(() => true));
+
+      // Issue #6: rotation has no direct claim writes; aliases go through the guarded command.
+      const reserved = await pool.query<{ id: string; document_id: string }>(
+        `SELECT id, document_id FROM identity.document_fingerprint_claims
+         WHERE state = 'RESERVED' ORDER BY created_at LIMIT 1`,
+      );
+      const reservedClaim = reserved.rows[0];
+      expect(reservedClaim).toBeDefined();
+      const directWrites: readonly (readonly [string, readonly unknown[]])[] = [
+        [
+          `INSERT INTO identity.document_fingerprint_claims (
+             id, document_id, country_code, issuer_code, document_type,
+             normalization_profile, hmac_algorithm, hmac_key_version,
+             fingerprint, state, created_at
+           ) VALUES ($1, $2, 'DO', 'JCE', 'NATIONAL_ID', 'do-jce-national-id.v1',
+             'hmac-sha-256', 'fingerprint-forged', $3, 'RESERVED', clock_timestamp())`,
+          [createOpaqueId(), reservedClaim?.document_id, Buffer.alloc(32, 7)],
+        ],
+        [
+          `UPDATE identity.document_fingerprint_claims
+           SET state = 'BOUND', bound_at = clock_timestamp() WHERE id = $1`,
+          [reservedClaim?.id],
+        ],
+        [
+          `UPDATE identity.document_fingerprint_claims
+           SET state = 'TOMBSTONED', tombstoned_at = clock_timestamp() WHERE id = $1`,
+          [reservedClaim?.id],
+        ],
+      ];
+      for (const [statement, values] of directWrites) {
+        await expect(client.query(statement, [...values])).rejects.toMatchObject({
+          code: '42501',
+        });
+      }
+
+      const backfillAlias = (documentId: string, keyVersion: string): Promise<unknown> =>
+        client.query('SELECT identity.backfill_fingerprint_alias($1, $2, $3, $4, $5, $6)', [
+          createOpaqueId(),
+          documentId,
+          'hmac-sha-256',
+          keyVersion,
+          Buffer.alloc(32, 8),
+          new Date(),
+        ]);
+      await expect(backfillAlias(createOpaqueId(), 'fingerprint-v9')).rejects.toThrow(
+        'ROTATION_DOCUMENT_UNAVAILABLE',
+      );
+      // An alias needs a blocking claim of the same document; an ABANDONED claim is never a source.
+      const pending = await pool.query<{ document_id: string }>(
+        `SELECT claim.document_id
+         FROM identity.document_fingerprint_claims claim
+         GROUP BY claim.document_id
+         HAVING bool_and(claim.state = 'RESERVED')
+         LIMIT 1`,
+      );
+      const pendingDocument = pending.rows[0];
+      expect(pendingDocument).toBeDefined();
+      await pool.query(
+        `UPDATE identity.document_fingerprint_claims
+         SET state = 'ABANDONED', abandoned_at = clock_timestamp() WHERE document_id = $1`,
+        [pendingDocument?.document_id],
+      );
+      await expect(
+        backfillAlias(pendingDocument?.document_id ?? '', 'fingerprint-v9'),
+      ).rejects.toThrow('ROTATION_SOURCE_CLAIM_MISSING');
     } finally {
       client.release();
     }
@@ -1307,6 +1485,12 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
           `SELECT identity.set_fingerprint_key_policy(ARRAY['fingerprint-v2']::varchar[])`,
         ),
       ).rejects.toMatchObject({ code: '42501' });
+      await expect(
+        runtimeClient.query(
+          `SELECT identity.backfill_fingerprint_alias(
+             NULL::uuid, NULL::uuid, NULL, NULL, NULL::bytea, NULL::timestamptz)`,
+        ),
+      ).rejects.toMatchObject({ code: '42501' });
     } finally {
       await runtimeClient.end();
       await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, runtime.name);
@@ -1315,7 +1499,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
 
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
     await expect(migrator.down()).rejects.toThrow('rolled back');
-    expect((await migrator.status()).at(-1)?.version).toBe('0010');
+    expect((await migrator.status()).at(-1)?.version).toBe('0011');
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -1325,8 +1509,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(10);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(10);
+      expect((await cleanMigrator.up()).applied).toHaveLength(11);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(11);
+      expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
@@ -1346,6 +1531,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         '0008',
         '0009',
         '0010',
+        '0011',
       ]);
     } finally {
       await cleanMigrator.close();

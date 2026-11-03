@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 
 import type { Pool, PoolClient, QueryResult } from 'pg';
 
+import { assertDatabaseWorkload } from './database-workload';
 import type {
   EnrollmentMutationProbe,
   PhaseOneEnrollmentStore,
@@ -9,7 +10,6 @@ import type {
   StartEnrollmentStoreResult,
   SubmitEnrollmentRecord,
   SubmitEnrollmentStoreResult,
-  TrustedVerificationRecord,
 } from './phase-one-enrollment';
 
 const noOpProbe: EnrollmentMutationProbe = {
@@ -45,6 +45,15 @@ export class PostgresPhaseOneStore implements PhaseOneEnrollmentStore {
   constructor(pool: Pool, probe: EnrollmentMutationProbe = noOpProbe) {
     this.#pool = pool;
     this.#probe = probe;
+  }
+
+  /** Builds the store after proving the pool's login acts only as trayvi_runtime. */
+  static async create(
+    pool: Pool,
+    probe: EnrollmentMutationProbe = noOpProbe,
+  ): Promise<PostgresPhaseOneStore> {
+    await assertDatabaseWorkload(pool, 'trayvi_runtime');
+    return new PostgresPhaseOneStore(pool, probe);
   }
 
   async start(input: StartEnrollmentRecord): Promise<StartEnrollmentStoreResult> {
@@ -185,52 +194,6 @@ export class PostgresPhaseOneStore implements PhaseOneEnrollmentStore {
     } finally {
       client.release();
     }
-  }
-
-  async recordTrustedVerification(
-    input: TrustedVerificationRecord,
-  ): Promise<'RECORDED' | 'REPLAY'> {
-    if (input.evidenceDigest.byteLength !== 32) {
-      throw new Error('INVALID_VERIFICATION_EVIDENCE');
-    }
-    const [identityEventId, accountEventId] = input.outboxEventIds;
-    if (!identityEventId || !accountEventId || input.outboxEventIds.length !== 2) {
-      throw new Error('OUTBOX_EVENT_SET_INVALID');
-    }
-    // One guarded command binds case, evidence, review, transitions, and the activation outbox
-    // atomically; the caller's login must hold trayvi_verification, not the general runtime role.
-    const result = await this.#pool.query<{ outcome: 'RECORDED' | 'REPLAY' }>(
-      `SELECT identity.record_trusted_verification(
-         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
-       ) AS outcome`,
-      [
-        input.decisionId,
-        input.identityId,
-        input.caseId,
-        input.evidenceId,
-        input.reviewId,
-        input.identityTransitionId,
-        input.accountTransitionId,
-        identityEventId,
-        accountEventId,
-        input.methodClass,
-        input.resultCode,
-        input.policyVersion,
-        input.providerAlias,
-        input.evidenceType,
-        input.evidenceDigest,
-        input.restrictedEvidenceReference,
-        input.retentionClass,
-        input.actorReference,
-        input.occurredAt,
-        input.correlationId,
-      ],
-    );
-    const outcome = result.rows[0]?.outcome;
-    if (outcome !== 'RECORDED' && outcome !== 'REPLAY') {
-      throw new Error('VERIFICATION_OUTCOME_INVALID');
-    }
-    return outcome;
   }
 
   async #lockOperation(client: PoolClient, operationId: string): Promise<OperationRow | undefined> {

@@ -10,6 +10,8 @@ import type {
   ProtectedIdentityDocument,
 } from '@trayvi/identity';
 
+import { assertDatabaseWorkload } from './database-workload';
+
 interface ProtectedDocumentRow {
   readonly id: string;
   readonly identity_id: string;
@@ -43,6 +45,15 @@ export class PostgresFingerprintRotationStore {
   constructor(pool: Pool, protector: NodeIdentityDocumentProtector) {
     this.#pool = pool;
     this.#protector = protector;
+  }
+
+  /** Builds the store after proving the pool's login acts only as trayvi_rotation. */
+  static async create(
+    pool: Pool,
+    protector: NodeIdentityDocumentProtector,
+  ): Promise<PostgresFingerprintRotationStore> {
+    await assertDatabaseWorkload(pool, 'trayvi_rotation');
+    return new PostgresFingerprintRotationStore(pool, protector);
   }
 
   async backfill(input: FingerprintBackfillInput): Promise<number> {
@@ -102,42 +113,17 @@ export class PostgresFingerprintRotationStore {
         protectedDocument,
         input.targetKeyring,
       );
+      // The guarded command derives scope and lifecycle state from this document's own claim;
+      // rotation has no direct claim writes (migration 0011).
       for (const alias of aliases) {
-        const inserted = await client.query<{ id: string }>(
-          `INSERT INTO identity.document_fingerprint_claims (
-             id, document_id, country_code, issuer_code, document_type,
-             normalization_profile, hmac_algorithm, hmac_key_version,
-             fingerprint, state, created_at
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'RESERVED', $10)
-           ON CONFLICT (document_id, hmac_key_version) DO NOTHING
-           RETURNING id`,
-          [
-            input.aliasIdFactory(),
-            row.id,
-            row.country_code,
-            row.issuer_code,
-            row.document_type,
-            row.normalization_profile,
-            alias.algorithm,
-            alias.keyVersion,
-            alias.fingerprint,
-            input.occurredAt,
-          ],
-        );
-        const claimId = inserted.rows[0]?.id;
-        if (claimId && row.claim_state === 'BOUND') {
-          await client.query(
-            `UPDATE identity.document_fingerprint_claims
-             SET state = 'BOUND', bound_at = $2 WHERE id = $1`,
-            [claimId, input.occurredAt],
-          );
-        } else if (claimId && row.claim_state === 'TOMBSTONED') {
-          await client.query(
-            `UPDATE identity.document_fingerprint_claims
-             SET state = 'TOMBSTONED', tombstoned_at = $2 WHERE id = $1`,
-            [claimId, input.occurredAt],
-          );
-        }
+        await client.query(`SELECT identity.backfill_fingerprint_alias($1, $2, $3, $4, $5, $6)`, [
+          input.aliasIdFactory(),
+          row.id,
+          alias.algorithm,
+          alias.keyVersion,
+          alias.fingerprint,
+          input.occurredAt,
+        ]);
       }
 
       const targetVersions = aliases.map((alias) => alias.keyVersion);
@@ -216,6 +202,16 @@ export class PostgresDocumentKekRewrapStore {
     this.#pool = pool;
     this.#keyEncryptionProvider = keyEncryptionProvider;
     this.#targetProtector = targetProtector;
+  }
+
+  /** Builds the store after proving the pool's login acts only as trayvi_rotation. */
+  static async create(
+    pool: Pool,
+    keyEncryptionProvider: KeyEncryptionProvider,
+    targetProtector: NodeIdentityDocumentProtector,
+  ): Promise<PostgresDocumentKekRewrapStore> {
+    await assertDatabaseWorkload(pool, 'trayvi_rotation');
+    return new PostgresDocumentKekRewrapStore(pool, keyEncryptionProvider, targetProtector);
   }
 
   async rewrap(input: DocumentKekRewrapInput): Promise<'REWRAPPED' | 'REPLAY'> {
