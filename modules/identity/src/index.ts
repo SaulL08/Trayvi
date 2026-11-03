@@ -33,6 +33,7 @@ export type {
   FingerprintKey,
   FingerprintKeyring,
   KeyEncryptionProvider,
+  KeyMaterialIdentified,
   KeyedCommitment,
   ProtectIdentityDocumentInput,
   ProtectedIdentityDocument,

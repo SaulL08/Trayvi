@@ -40,7 +40,16 @@ export interface FingerprintKey {
   readonly state: 'PRIMARY' | 'LOOKUP_ACTIVE' | 'RETIRED';
 }
 
-export interface FingerprintKeyring {
+/**
+ * Opaque, one-way identities of the key material an adapter holds. Composition compares them to
+ * reject the same material serving two purposes (fingerprint HMAC, KEK, idempotency) without ever
+ * handling the keys themselves.
+ */
+export interface KeyMaterialIdentified {
+  keyMaterialIdentities(): readonly Buffer[];
+}
+
+export interface FingerprintKeyring extends KeyMaterialIdentified {
   lookupActive(): readonly FingerprintKey[];
 }
 
@@ -49,7 +58,7 @@ export interface WrappedDataEncryptionKey {
   readonly wrappedDek: Buffer;
 }
 
-export interface KeyEncryptionProvider {
+export interface KeyEncryptionProvider extends KeyMaterialIdentified {
   wrap(dek: Buffer): Promise<WrappedDataEncryptionKey>;
   unwrap(wrappedDek: Buffer, kekKeyVersion: string): Promise<Buffer>;
   rewrap(wrappedDek: Buffer, kekKeyVersion: string): Promise<WrappedDataEncryptionKey>;
@@ -60,7 +69,7 @@ export interface KeyedCommitment {
   readonly value: Buffer;
 }
 
-export interface RequestCommitter {
+export interface RequestCommitter extends KeyMaterialIdentified {
   commit(domain: string, fields: readonly string[]): KeyedCommitment;
 }
 

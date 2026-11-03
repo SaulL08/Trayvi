@@ -104,6 +104,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   let database: Awaited<ReturnType<typeof createDisposableDatabase>>;
   let migrator: SqlMigrator;
   let pool: Pool;
+  // HMAC backfill, KEK rewrap, and key-policy changes run as the least-privilege rotation workload.
+  let rotationPool: Pool | undefined;
+  let rotationLogin: Awaited<ReturnType<typeof createRestrictedRuntimeLogin>> | undefined;
 
   const createService = (
     protector = protectorFor(['v1']),
@@ -118,6 +121,15 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       clock,
       operationTtlMs === undefined ? {} : { operationTtlMs },
     );
+
+  const rotation = (): Pool => {
+    if (!rotationPool) throw new Error('rotation pool is not initialized');
+    return rotationPool;
+  };
+
+  const setFingerprintKeyPolicy = async (versions: readonly string[]): Promise<void> => {
+    await rotation().query('SELECT identity.set_fingerprint_key_policy($1::varchar[])', [versions]);
+  };
 
   const start = async (service: PhaseOneEnrollmentService, suffix: string): Promise<string> => {
     const result = await service.startAccountCreation({
@@ -165,9 +177,24 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     migrator = new SqlMigrator(database.url);
     await migrator.up();
     pool = new Pool({ connectionString: database.url, max: 60, statement_timeout: 30_000 });
+    rotationLogin = await createRestrictedRuntimeLogin(
+      adminConfig.databaseUrl,
+      database.url,
+      'trayvi_rotation',
+    );
+    rotationPool = new Pool({ connectionString: rotationLogin.url, max: 4 });
+    await setFingerprintKeyPolicy(['fingerprint-v1']);
   });
 
   afterAll(async () => {
+    await rotationPool?.end();
+    if (rotationLogin) {
+      await dropRestrictedRuntimeLogin(
+        adminConfig.databaseUrl,
+        rotationLogin.name,
+        'trayvi_rotation',
+      );
+    }
     await closeInitializedDatabaseClients({ pool, migrator });
     if (database) {
       await delay(100);
@@ -175,7 +202,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all seven migrations and rejects invalid direct initial states', async () => {
+  it('applies all ten migrations and rejects invalid direct initial states', async () => {
     expect((await migrator.status()).map((migration) => migration.version)).toEqual([
       '0001',
       '0002',
@@ -184,6 +211,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0005',
       '0006',
       '0007',
+      '0008',
+      '0009',
+      '0010',
     ]);
 
     await expect(
@@ -206,12 +236,21 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   });
 
   it('maps every Phase 1 PostgreSQL column to a complete privacy inventory entry', async () => {
-    const inventory = JSON.parse(
-      await readFile(
-        resolve('docs/phases/phase-01-accounts-identity/evidence/data-inventory.json'),
-        'utf8',
-      ),
-    ) as DataInventory;
+    const readInventory = async (path: string): Promise<DataInventory> =>
+      JSON.parse(await readFile(resolve(path), 'utf8')) as DataInventory;
+    const original = await readInventory(
+      'docs/phases/phase-01-accounts-identity/evidence/data-inventory.json',
+    );
+    // The original inventory is hash-pinned evidence; remediation tables live in an addendum.
+    const addendum = await readInventory(
+      'docs/phases/phase-01-accounts-identity/evidence/remediation/data-inventory-addendum.json',
+    );
+    expect(addendum.status).toBe(original.status);
+    expect(addendum.productionEnablement).toBe(original.productionEnablement);
+    const inventory: DataInventory = {
+      ...original,
+      tables: [...original.tables, ...addendum.tables],
+    };
     const catalog = await pool.query<{
       table_schema: string;
       table_name: string;
@@ -643,6 +682,68 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
+  it('fails closed for writers missing a policy-required HMAC key version', async () => {
+    const v1Service = createService(protectorFor(['v1']));
+    const v2Service = createService(protectorFor(['v2']));
+    const writers = Array.from({ length: 60 }, (_, index) =>
+      index % 2 === 0 ? v1Service : v2Service,
+    );
+    const operations = await Promise.all(
+      writers.map((service, index) => start(service, `disjoint-${index}`)),
+    );
+    const outcomes = await Promise.allSettled(
+      operations.map((operationId, index) =>
+        (writers[index] ?? v1Service).submitIdentityInformation({
+          operationId,
+          documentValue: '41000000001',
+          correlationId: createOpaqueId(),
+        }),
+      ),
+    );
+    const v1Outcomes = outcomes.filter((_, index) => index % 2 === 0);
+    const v2Outcomes = outcomes.filter((_, index) => index % 2 === 1);
+    expect(v1Outcomes.every((outcome) => outcome.status === 'fulfilled')).toBe(true);
+    for (const outcome of v2Outcomes) {
+      expect(outcome.status).toBe('rejected');
+      if (outcome.status === 'rejected') {
+        expect(outcome.reason).toMatchObject({
+          constraint: 'document_fingerprint_key_policy_unsatisfied',
+        });
+      }
+    }
+    const states = await pool.query<{ state: string; count: string }>(
+      `SELECT state, count(*)::text AS count
+       FROM accounts.account_creation_operations
+       WHERE id = ANY($1::uuid[]) GROUP BY state ORDER BY state`,
+      [operations],
+    );
+    expect(states.rows).toEqual([
+      { state: 'COMPLETED', count: '1' },
+      { state: 'CONFLICT', count: '29' },
+      { state: 'STARTED', count: '30' },
+    ]);
+
+    // Requiring both versions makes a stale single-version writer fail closed too.
+    await setFingerprintKeyPolicy(['fingerprint-v1', 'fingerprint-v2']);
+    try {
+      const staleOperation = await start(v1Service, 'disjoint-stale');
+      await expect(
+        v1Service.submitIdentityInformation({
+          operationId: staleOperation,
+          documentValue: '42000000001',
+          correlationId: createOpaqueId(),
+        }),
+      ).rejects.toMatchObject({ constraint: 'document_fingerprint_key_policy_unsatisfied' });
+      // Retiring v1 before every blocking document holds a v2 fingerprint is refused.
+      await expect(setFingerprintKeyPolicy(['fingerprint-v2'])).rejects.toMatchObject({
+        constraint: 'fingerprint_key_policy_coverage',
+      });
+      await expect(setFingerprintKeyPolicy([])).rejects.toThrow('FINGERPRINT_KEY_POLICY_INVALID');
+    } finally {
+      await setFingerprintKeyPolicy(['fingerprint-v1']);
+    }
+  });
+
   it('backfills a dual-active HMAC alias before retiring the old lookup key', async () => {
     const oldProtector = protectorFor(['v1']);
     const oldService = createService(oldProtector);
@@ -664,7 +765,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       { version: 'fingerprint-v1', key: fingerprintV1, state: 'LOOKUP_ACTIVE' },
       { version: 'fingerprint-v2', key: fingerprintV2, state: 'PRIMARY' },
     ]);
-    const rotation = new PostgresFingerprintRotationStore(pool, oldProtector);
+    const rotationStore = new PostgresFingerprintRotationStore(rotation(), oldProtector);
     const conflictingAliasId = createOpaqueId();
     await pool.query(
       `INSERT INTO identity.document_fingerprint_claims (
@@ -679,7 +780,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       [conflictingAliasId, Buffer.alloc(32, 9), document.rows[0]?.document_id],
     );
     await expect(
-      rotation.backfill({
+      rotationStore.backfill({
         documentId: document.rows[0]?.document_id ?? '',
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -698,7 +799,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const rotationEventId = createOpaqueId();
     const [backfillCount, rotationOutcomes] = await Promise.all([
-      rotation.backfill({
+      rotationStore.backfill({
         documentId: document.rows[0]?.document_id ?? '',
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -728,7 +829,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     expect(rotationStates.rows).toEqual([{ state: 'CONFLICT', count: '20' }]);
     await expect(
-      rotation.backfill({
+      rotationStore.backfill({
         documentId: document.rows[0]?.document_id ?? '',
         targetKeyring,
         aliasIdFactory: createOpaqueId,
@@ -773,7 +874,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       new NodeKeyedRequestCommitter('idempotency-test-v1', idempotencyKey),
     );
     await expect(
-      new PostgresDocumentKekRewrapStore(pool, wrongProvider, wrongProtector).rewrap({
+      new PostgresDocumentKekRewrapStore(rotation(), wrongProvider, wrongProtector).rewrap({
         documentId: document.rows[0]?.document_id ?? '',
         targetKekKeyVersion: 'kek-test-v2',
         eventId: createOpaqueId(),
@@ -794,7 +895,11 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       rewrapProvider,
       new NodeKeyedRequestCommitter('idempotency-test-v1', idempotencyKey),
     );
-    const rewrapStore = new PostgresDocumentKekRewrapStore(pool, rewrapProvider, rewrapProtector);
+    const rewrapStore = new PostgresDocumentKekRewrapStore(
+      rotation(),
+      rewrapProvider,
+      rewrapProtector,
+    );
     const rewrapEventId = createOpaqueId();
     const rewrapInput = {
       documentId: document.rows[0]?.document_id ?? '',
@@ -838,6 +943,35 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     expect(JSON.stringify(rewrapEvents.rows)).not.toMatch(
       /kekKeyVersion|wrappedDek|ciphertext|nonce|authenticationTag/iu,
     );
+
+    // Cutover protocol: require both versions, backfill every blocking document, then retire v1.
+    await setFingerprintKeyPolicy(['fingerprint-v1', 'fingerprint-v2']);
+    await expect(setFingerprintKeyPolicy(['fingerprint-v2'])).rejects.toMatchObject({
+      constraint: 'fingerprint_key_policy_coverage',
+    });
+    const uncovered = await pool.query<{ document_id: string }>(
+      `SELECT DISTINCT claim.document_id
+       FROM identity.document_fingerprint_claims claim
+       WHERE claim.state IN ('RESERVED', 'BOUND', 'TOMBSTONED')
+         AND NOT EXISTS (
+           SELECT 1 FROM identity.document_fingerprint_claims covering
+           WHERE covering.document_id = claim.document_id
+             AND covering.hmac_key_version = 'fingerprint-v2'
+             AND covering.state IN ('RESERVED', 'BOUND', 'TOMBSTONED')
+         )`,
+    );
+    expect(uncovered.rows.length).toBeGreaterThan(0);
+    for (const { document_id: documentId } of uncovered.rows) {
+      await rotationStore.backfill({
+        documentId,
+        targetKeyring,
+        aliasIdFactory: createOpaqueId,
+        eventId: createOpaqueId(),
+        correlationId: createOpaqueId(),
+        occurredAt: new Date(),
+      });
+    }
+    await setFingerprintKeyPolicy(['fingerprint-v2']);
 
     const postCutoverService = createService(protectorFor(['v2']));
     const duplicateOperation = await start(postCutoverService, 'rotation-duplicate');
@@ -901,9 +1035,287 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
+  it('confines material transitions to the trusted verification command', async () => {
+    const runtime = await createRestrictedRuntimeLogin(adminConfig.databaseUrl, database.url);
+    const verifier = await createRestrictedRuntimeLogin(
+      adminConfig.databaseUrl,
+      database.url,
+      'trayvi_verification',
+    );
+    const runtimePool = new Pool({ connectionString: runtime.url, max: 4 });
+    const verifierPool = new Pool({ connectionString: verifier.url, max: 2 });
+    const serviceOn = (target: Pool): PhaseOneEnrollmentService =>
+      new PhaseOneEnrollmentService(
+        new PostgresPhaseOneStore(target),
+        // The rotation test leaves the shared policy at {fingerprint-v2}.
+        protectorFor(['v2']),
+        createOpaqueId,
+        () => new Date(),
+      );
+    try {
+      // The general runtime still enrolls, appending only initial history.
+      const runtimeService = serviceOn(runtimePool);
+      const operationId = await start(runtimeService, 'command-boundary');
+      await runtimeService.submitIdentityInformation({
+        operationId,
+        documentValue: '60000000001',
+        correlationId: createOpaqueId(),
+      });
+      const aggregate = await pool.query<{ account_id: string; identity_id: string }>(
+        `SELECT operation.account_id, person_identity.id AS identity_id
+         FROM accounts.account_creation_operations operation
+         JOIN identity.person_identities person_identity
+           ON person_identity.account_id = operation.account_id
+         WHERE operation.id = $1`,
+        [operationId],
+      );
+      const accountId = aggregate.rows[0]?.account_id ?? '';
+      const identityId = aggregate.rows[0]?.identity_id ?? '';
+      expect([accountId, identityId].every(isUuidV7)).toBe(true);
+
+      const verification = {
+        outcome: 'VERIFIED' as const,
+        decisionId: createOpaqueId(),
+        identityId,
+        methodClass: 'SYNTHETIC_ATTESTATION',
+        resultCode: 'VERIFIED_SYNTHETIC',
+        policyVersion: 'phase-one-test-v1',
+        providerAlias: 'SYNTHETIC',
+        evidenceType: 'SYNTHETIC_ATTESTATION',
+        evidenceDigest: createHash('sha256').update('command-boundary-evidence').digest(),
+        restrictedEvidenceReference: 'command-boundary-reference',
+        retentionClass: 'SYNTHETIC_TEST_ONLY',
+        actorReference: 'trusted-test-adapter',
+        correlationId: createOpaqueId(),
+      };
+      await expect(runtimeService.recordTrustedVerification(verification)).rejects.toMatchObject({
+        code: '42501',
+      });
+
+      // P1-AUD-001: the runtime cannot manufacture any link of the establishment chain.
+      const caseId = createOpaqueId();
+      const evidenceId = createOpaqueId();
+      const forgeries: readonly (readonly [string, readonly unknown[]])[] = [
+        [
+          `INSERT INTO identity.verification_cases (
+             id, identity_id, method_class, status, policy_version, opened_at, expires_at
+           ) VALUES ($1, $2, 'SYNTHETIC_AUDIT', 'PENDING', 'phase-one-audit-v1',
+             clock_timestamp(), clock_timestamp() + interval '15 minutes')`,
+          [caseId, identityId],
+        ],
+        [
+          `INSERT INTO identity.verification_evidence (
+             id, case_id, evidence_type, provider_alias, collected_at, digest_algorithm,
+             evidence_digest, restricted_reference, retention_class, created_at
+           ) VALUES ($1, $2, 'SYNTHETIC_ATTESTATION', 'SYNTHETIC', clock_timestamp(), 'sha-256',
+             $3, 'forged-reference', 'SYNTHETIC_TEST_ONLY', clock_timestamp())`,
+          [evidenceId, caseId, createHash('sha256').update('forged').digest()],
+        ],
+        [
+          `INSERT INTO identity.identity_reviews (
+             id, case_id, state, actor_class, actor_reference, reason_code,
+             evidence_reference, policy_version, created_at, updated_at, resolved_at
+           ) VALUES ($1, $2, 'NOT_REQUIRED', 'POLICY_ENGINE', 'runtime-manufactured',
+             'TRUSTED_VERIFICATION_ACCEPTED', $3, 'phase-one-audit-v1',
+             clock_timestamp(), clock_timestamp(), clock_timestamp())`,
+          [createOpaqueId(), caseId, evidenceId],
+        ],
+        [
+          `UPDATE identity.document_fingerprint_claims claim
+           SET state = 'BOUND', bound_at = clock_timestamp()
+           FROM identity.identity_documents document
+           WHERE claim.document_id = document.id AND document.identity_id = $1`,
+          [identityId],
+        ],
+        [
+          `INSERT INTO identity.identity_status_transitions (
+             id, identity_id, from_status, to_status, aggregate_version,
+             actor_class, actor_reference, reason_code, evidence_reference, occurred_at
+           ) VALUES ($1, $2, 'PENDING', 'ESTABLISHED', 1, 'TRUSTED_VERIFICATION_HANDLER',
+             'runtime-manufactured', 'IDENTITY_ESTABLISHED', $3, clock_timestamp())`,
+          [createOpaqueId(), identityId, evidenceId],
+        ],
+        [
+          `UPDATE identity.person_identities
+           SET status = 'ESTABLISHED', status_reason_code = 'IDENTITY_ESTABLISHED',
+               version = 1, updated_at = clock_timestamp(), established_at = clock_timestamp()
+           WHERE id = $1`,
+          [identityId],
+        ],
+        [
+          `INSERT INTO accounts.account_status_transitions (
+             id, account_id, from_status, to_status, aggregate_version,
+             actor_class, actor_reference, reason_code, evidence_reference, occurred_at
+           ) VALUES ($1, $2, 'PENDING_IDENTITY', 'ACTIVE', 1, 'TRUSTED_VERIFICATION_HANDLER',
+             'runtime-manufactured', 'IDENTITY_ESTABLISHED', $3, clock_timestamp())`,
+          [createOpaqueId(), accountId, evidenceId],
+        ],
+        [
+          `UPDATE accounts.accounts
+           SET status = 'ACTIVE', status_reason_code = 'IDENTITY_ESTABLISHED',
+               version = 1, updated_at = clock_timestamp()
+           WHERE id = $1`,
+          [accountId],
+        ],
+      ];
+      const client = await runtimePool.connect();
+      try {
+        for (const [statement, parameters] of forgeries) {
+          await client.query('BEGIN');
+          try {
+            await expect(client.query(statement, [...parameters])).rejects.toMatchObject({
+              code: '42501',
+            });
+          } finally {
+            await client.query('ROLLBACK');
+          }
+        }
+      } finally {
+        client.release();
+      }
+
+      // P1-AUD-003: even the table owner cannot cite another case's evidence in a review.
+      const owner = await pool.connect();
+      try {
+        await owner.query('BEGIN');
+        const sourceCaseId = createOpaqueId();
+        const targetCaseId = createOpaqueId();
+        const sourceEvidenceId = createOpaqueId();
+        for (const id of [sourceCaseId, targetCaseId]) {
+          await owner.query(
+            `INSERT INTO identity.verification_cases (
+               id, identity_id, method_class, status, policy_version, opened_at, expires_at
+             ) VALUES ($1, $2, 'SYNTHETIC_AUDIT', 'PENDING', 'phase-one-audit-v1',
+               clock_timestamp(), clock_timestamp() + interval '15 minutes')`,
+            [id, identityId],
+          );
+        }
+        await owner.query(
+          `INSERT INTO identity.verification_evidence (
+             id, case_id, evidence_type, provider_alias, collected_at, digest_algorithm,
+             evidence_digest, restricted_reference, retention_class, created_at
+           ) VALUES ($1, $2, 'SYNTHETIC_ATTESTATION', 'SYNTHETIC', clock_timestamp(), 'sha-256',
+             $3, 'source-reference', 'SYNTHETIC_TEST_ONLY', clock_timestamp())`,
+          [sourceEvidenceId, sourceCaseId, createHash('sha256').update('source').digest()],
+        );
+        await expect(
+          owner.query(
+            `INSERT INTO identity.identity_reviews (
+               id, case_id, state, actor_class, actor_reference, reason_code,
+               evidence_reference, policy_version, created_at, updated_at, resolved_at
+             ) VALUES ($1, $2, 'NOT_REQUIRED', 'POLICY_ENGINE', 'cross-case',
+               'TRUSTED_VERIFICATION_ACCEPTED', $3, 'phase-one-audit-v1',
+               clock_timestamp(), clock_timestamp(), clock_timestamp())`,
+            [createOpaqueId(), targetCaseId, sourceEvidenceId],
+          ),
+        ).rejects.toMatchObject({ constraint: 'identity_review_evidence_same_case' });
+      } finally {
+        await owner.query('ROLLBACK');
+        owner.release();
+      }
+
+      // The verification workload establishes and activates with its outbox in one command.
+      const verifierService = serviceOn(verifierPool);
+      await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe(
+        'RECORDED',
+      );
+      await expect(verifierService.recordTrustedVerification(verification)).resolves.toBe('REPLAY');
+      await expect(
+        verifierService.recordTrustedVerification({
+          ...verification,
+          identityId: createOpaqueId(),
+        }),
+      ).rejects.toThrow('VERIFICATION_DECISION_REUSE');
+      const activation = await pool.query<{ event_type: string }>(
+        `SELECT event_type FROM platform.outbox_events
+         WHERE aggregate_id IN ($1, $2)
+           AND event_type IN ('identity.established', 'account.activated')
+         ORDER BY event_type`,
+        [accountId, identityId],
+      );
+      expect(activation.rows.map((row) => row.event_type)).toEqual([
+        'account.activated',
+        'identity.established',
+      ]);
+      const state = await pool.query<{ status: string }>(
+        'SELECT status FROM accounts.accounts WHERE id = $1',
+        [accountId],
+      );
+      expect(state.rows[0]?.status).toBe('ACTIVE');
+      await expect(
+        verifierPool.query('SELECT id FROM accounts.accounts LIMIT 1'),
+      ).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await runtimePool.end();
+      await verifierPool.end();
+      await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, runtime.name);
+      await dropRestrictedRuntimeLogin(
+        adminConfig.databaseUrl,
+        verifier.name,
+        'trayvi_verification',
+      );
+    }
+  });
+
+  it('grants the rotation workload only its narrow privileges', async () => {
+    const client = await rotation().connect();
+    const denied = async (statement: string): Promise<boolean> => {
+      await client.query('BEGIN');
+      try {
+        await client.query(statement);
+        await client.query('SET CONSTRAINTS ALL IMMEDIATE');
+        return false;
+      } catch {
+        return true;
+      } finally {
+        await client.query('ROLLBACK');
+      }
+    };
+    try {
+      await expect(
+        client.query(
+          'SELECT fingerprint, hmac_key_version FROM identity.document_fingerprint_claims LIMIT 1',
+        ),
+      ).resolves.toBeDefined();
+      const statements = [
+        'SELECT id FROM accounts.accounts LIMIT 1',
+        'SELECT id FROM identity.person_identities LIMIT 1',
+        `UPDATE identity.identity_documents SET ciphertext = decode('00', 'hex')`,
+        `UPDATE identity.identity_documents SET state = 'REVOKED'`,
+        `UPDATE identity.document_fingerprint_claims SET fingerprint = decode('00', 'hex')`,
+        'DELETE FROM identity.document_fingerprint_claims',
+        'SELECT id FROM identity.verification_evidence LIMIT 1',
+        'CREATE TABLE identity.rotation_bypass (id integer)',
+        'SET ROLE trayvi_migrator',
+        `SELECT identity.record_trusted_verification(
+           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+           NULL, NULL, NULL, NULL, NULL, NULL, NULL)`,
+      ];
+      const results: boolean[] = [];
+      for (const statement of statements) results.push(await denied(statement));
+      expect(results).toEqual(statements.map(() => true));
+    } finally {
+      client.release();
+    }
+
+    const runtime = await createRestrictedRuntimeLogin(adminConfig.databaseUrl, database.url);
+    const runtimeClient = new Client({ connectionString: runtime.url });
+    await runtimeClient.connect();
+    try {
+      await expect(
+        runtimeClient.query(
+          `SELECT identity.set_fingerprint_key_policy(ARRAY['fingerprint-v2']::varchar[])`,
+        ),
+      ).rejects.toMatchObject({ code: '42501' });
+    } finally {
+      await runtimeClient.end();
+      await dropRestrictedRuntimeLogin(adminConfig.databaseUrl, runtime.name);
+    }
+  });
+
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
     await expect(migrator.down()).rejects.toThrow('rolled back');
-    expect((await migrator.status()).at(-1)?.version).toBe('0007');
+    expect((await migrator.status()).at(-1)?.version).toBe('0010');
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -913,8 +1325,11 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(7);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(7);
+      expect((await cleanMigrator.up()).applied).toHaveLength(10);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(10);
+      expect(await cleanMigrator.down()).toHaveLength(1);
+      expect(await cleanMigrator.down()).toHaveLength(1);
+      expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
@@ -924,7 +1339,14 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         '0003',
         '0004',
       ]);
-      expect((await cleanMigrator.up()).applied).toEqual(['0005', '0006', '0007']);
+      expect((await cleanMigrator.up()).applied).toEqual([
+        '0005',
+        '0006',
+        '0007',
+        '0008',
+        '0009',
+        '0010',
+      ]);
     } finally {
       await cleanMigrator.close();
       await delay(25);
