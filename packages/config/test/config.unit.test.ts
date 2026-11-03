@@ -20,6 +20,20 @@ describe('configuration composition', () => {
     expect(Object.isFrozen(config.database)).toBe(true);
   });
 
+  it('trusts no proxy by default and bounds the trusted proxy hop count', () => {
+    expect(parseAppConfig(validEnvironment, 'api').http.trustedProxyHops).toBe(0);
+    expect(
+      parseAppConfig({ ...validEnvironment, HTTP_TRUSTED_PROXY_HOPS: '2' }, 'api').http
+        .trustedProxyHops,
+    ).toBe(2);
+    expect(() =>
+      parseAppConfig({ ...validEnvironment, HTTP_TRUSTED_PROXY_HOPS: '6' }, 'api'),
+    ).toThrow(ConfigValidationError);
+    expect(() =>
+      parseAppConfig({ ...validEnvironment, HTTP_TRUSTED_PROXY_HOPS: '-1' }, 'api'),
+    ).toThrow(ConfigValidationError);
+  });
+
   it('maps explicit request, readiness, body, and shutdown bounds', () => {
     const config = parseAppConfig(
       {

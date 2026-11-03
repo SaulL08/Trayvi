@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
 
-import type { AppConfig } from '@trayvi/config';
+import type { AppConfig, AuthConfig } from '@trayvi/config';
 import type { FoundationMetrics, Logger } from '@trayvi/observability';
 
 import { AuthHttpModule } from './auth/auth-http.module';
@@ -21,6 +21,7 @@ export interface AppModuleDependencies {
   readonly logger: Logger;
   readonly metrics: FoundationMetrics;
   readonly runtime: RuntimeState;
+  readonly auth: AuthConfig;
 }
 
 @Module({})
@@ -28,7 +29,14 @@ export class AppModule {
   static register(dependencies: AppModuleDependencies): DynamicModule {
     return {
       module: AppModule,
-      imports: [AuthHttpModule],
+      imports: [
+        AuthHttpModule.register({
+          config: dependencies.config,
+          auth: dependencies.auth,
+          logger: dependencies.logger,
+          metrics: dependencies.metrics,
+        }),
+      ],
       controllers: [HealthController],
       providers: [
         { provide: APP_CONFIG, useValue: dependencies.config },

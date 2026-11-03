@@ -59,6 +59,7 @@ const rawSchema = z
     HTTP_CONNECTION_TIMEOUT_MS: numberField(10_000, 100, 120_000),
     HTTP_KEEP_ALIVE_TIMEOUT_MS: numberField(5_000, 100, 120_000),
     SHUTDOWN_TIMEOUT_MS: numberField(10_000, 500, 60_000),
+    HTTP_TRUSTED_PROXY_HOPS: numberField(0, 0, 5),
   })
   .superRefine((value, context) => {
     let databaseUrl: URL | undefined;
@@ -276,6 +277,7 @@ export function parseAppConfig(
       connectionTimeoutMs: result.data.HTTP_CONNECTION_TIMEOUT_MS,
       keepAliveTimeoutMs: result.data.HTTP_KEEP_ALIVE_TIMEOUT_MS,
       shutdownTimeoutMs: result.data.SHUTDOWN_TIMEOUT_MS,
+      trustedProxyHops: result.data.HTTP_TRUSTED_PROXY_HOPS,
     },
     database: {
       url: result.data.DATABASE_URL,

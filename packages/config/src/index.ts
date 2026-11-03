@@ -1,5 +1,5 @@
 export { ConfigValidationError, type ConfigIssue } from './config-error';
-export { loadAppConfig, loadMigrationConfig } from './environment';
+export { loadAppConfig, loadAuthConfig, loadMigrationConfig } from './environment';
 export { parseAppConfig, parseMigrationConfig } from './parse-config';
 export type {
   AppConfig,

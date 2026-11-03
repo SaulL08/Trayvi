@@ -69,7 +69,7 @@
         "modules/auth/test/delivery/",
         "modules/auth/test/callbacks/"
       ],
-      "dependsOn": [],
+      "dependsOn": ["ws-b"],
       "migrations": ["0016"],
       "acceptance": ["P2-AC-013", "P2-AC-014", "P2-AC-033", "P2-AC-034"],
       "verify": ["corepack pnpm verify:full"]

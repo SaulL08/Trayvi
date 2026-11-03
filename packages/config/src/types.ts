@@ -22,6 +22,8 @@ export interface AppConfig {
     readonly connectionTimeoutMs: number;
     readonly keepAliveTimeoutMs: number;
     readonly shutdownTimeoutMs: number;
+    /** Reverse proxies in front of the API whose X-Forwarded-For entries are trusted (0 = none). */
+    readonly trustedProxyHops: number;
   };
   readonly database: {
     readonly url: string;
