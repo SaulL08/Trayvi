@@ -23,7 +23,7 @@ import {
 } from '@trayvi/test-support';
 
 import { loadMigrationConfig } from '../../../packages/config/src/index';
-import { SqlMigrator } from '../../../scripts/db/migrate';
+import { migrationVersions, SqlMigrator } from '../../../scripts/db/migrate';
 import { SafePublicError } from '../src/http/safe-public-error';
 import {
   PostgresDocumentKekRewrapStore,
@@ -256,8 +256,10 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all twelve migrations and rejects invalid direct initial states', async () => {
-    expect((await migrator.status()).map((migration) => migration.version)).toEqual([
+  it('applies every migration on disk, Phase 1 included, and rejects invalid direct initial states', async () => {
+    const applied = (await migrator.status()).map((migration) => migration.version);
+    expect(applied).toEqual(await migrationVersions());
+    expect(applied.slice(0, 11)).toEqual([
       '0001',
       '0002',
       '0003',
@@ -269,7 +271,6 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0009',
       '0010',
       '0011',
-      '0012',
     ]);
 
     await expect(
@@ -1499,11 +1500,14 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   });
 
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
-    // 0012 only drops the still-empty auth schema; 0011 refuses while Phase 1 holds data.
-    expect(await migrator.down()).toHaveLength(1);
+    // Later (Phase 2) migrations hold no rows here and roll back; 0011 refuses while Phase 1 holds data.
+    const later = (await migrationVersions()).filter((version) => version > '0011');
+    for (let index = 0; index < later.length; index += 1) {
+      expect(await migrator.down()).toHaveLength(1);
+    }
     await expect(migrator.down()).rejects.toThrow('rolled back');
     expect((await migrator.status()).at(-1)?.version).toBe('0011');
-    expect((await migrator.up()).applied).toEqual(['0012']);
+    expect((await migrator.up()).applied).toEqual(later);
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -1513,32 +1517,20 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(12);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(12);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
-      expect(await cleanMigrator.down()).toHaveLength(1);
+      const versions = await migrationVersions();
+      expect((await cleanMigrator.up()).applied).toEqual(versions);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(versions.length);
+      const afterFoundation = versions.filter((version) => version > '0004');
+      for (let index = 0; index < afterFoundation.length; index += 1) {
+        expect(await cleanMigrator.down()).toHaveLength(1);
+      }
       expect((await cleanMigrator.status()).map((entry) => entry.version)).toEqual([
         '0001',
         '0002',
         '0003',
         '0004',
       ]);
-      expect((await cleanMigrator.up()).applied).toEqual([
-        '0005',
-        '0006',
-        '0007',
-        '0008',
-        '0009',
-        '0010',
-        '0011',
-        '0012',
-      ]);
+      expect((await cleanMigrator.up()).applied).toEqual(afterFoundation);
     } finally {
       await cleanMigrator.close();
       await delay(25);

@@ -10,7 +10,7 @@ import {
   dropRestrictedRuntimeLogin,
   ensureDatabaseBootstrap,
 } from '../../packages/test-support/src/index.js';
-import { MigrationExecutionError, SqlMigrator } from './migrate.js';
+import { MigrationExecutionError, migrationVersions, SqlMigrator } from './migrate.js';
 
 export interface DatabaseVerificationEvidence {
   readonly postgis: boolean;
@@ -307,12 +307,16 @@ async function verifyMainScenario(
     const down = await migrator.down();
     const statusAfterDown = await migrator.status();
     const rollForward = await migrator.up();
+    const total = (await migrationVersions()).length;
     return {
       postgis: extension.rows[0]?.installed === true,
-      cleanApply: first.applied.length === 12 && table.rows[0]?.name === 'platform.outbox_events',
-      repeatNoOp: second.applied.length === 0 && second.skipped.length === 12,
+      cleanApply:
+        first.applied.length === total && table.rows[0]?.name === 'platform.outbox_events',
+      repeatNoOp: second.applied.length === 0 && second.skipped.length === total,
       rollbackRollForward:
-        down.length === 1 && statusAfterDown.length === 11 && rollForward.applied.length === 1,
+        down.length === 1 &&
+        statusAfterDown.length === total - 1 &&
+        rollForward.applied.length === 1,
       runtimeDdlDenied,
       runtimeIdentityRestricted,
       outboxAtomicity: afterRollback.rows[0]?.count === '0' && afterCommit.rows[0]?.count === '1',
@@ -371,7 +375,8 @@ async function verifyConcurrency(adminUrl: string): Promise<boolean> {
     const results = await Promise.all([first.up(), second.up()]);
     const appliedCount = results.reduce((sum, result) => sum + result.applied.length, 0);
     const status = await first.status();
-    return appliedCount === 12 && status.length === 12;
+    const total = (await migrationVersions()).length;
+    return appliedCount === total && status.length === total;
   } finally {
     await Promise.all([first.close(), second.close()]);
     await dropDisposableDatabase(adminUrl, database.name);

@@ -236,6 +236,13 @@ async function readApplied(client: PoolClient): Promise<readonly AppliedMigratio
   }));
 }
 
+/** Versions of every migration pair on disk, in apply order. */
+export async function migrationVersions(
+  migrationsDirectory = DEFAULT_MIGRATIONS_DIRECTORY,
+): Promise<readonly string[]> {
+  return (await loadMigrations(migrationsDirectory)).map((migration) => migration.version);
+}
+
 export class SqlMigrator {
   readonly #pool: Pool;
   readonly #directory: string;
