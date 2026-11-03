@@ -38,12 +38,13 @@ Accepted ADRs are not rewritten to conceal changed assumptions. A new ADR supers
 |              [010](ADR-010-vitest-and-real-database-testing.md) | Test strategy and real-database integration harness |            0 |
 |                 [011](ADR-011-account-person-identity-model.md) | Account/person identity model                       |            1 |
 | [012](ADR-012-national-identity-protection-and-key-rotation.md) | National identity protection and key rotation       |            1 |
-|                                                             013 | Authentication/session/recovery strategy            |            2 |
+|  [013](ADR-013-authentication-session-and-recovery-strategy.md) | Authentication/session/recovery strategy            |            2 |
 |                                                             014 | RBAC, scope, and emergency access                   |            3 |
 |                                                             015 | Geospatial representation and provider abstraction  |            4 |
 |                                                             016 | Trip state machine                                  |            7 |
 |                                                             017 | Dispatch policy and single-winner concurrency       |            8 |
 |     [018](ADR-018-financial-ledger-and-trayvi-balance-model.md) | Financial ledger and Trayvi balance model           |          12A |
 |          [019](ADR-019-phase-0-audit-remediation-invariants.md) | Phase 0 audit remediation invariants                |            0 |
+|  [020](ADR-020-spec-driven-development-and-parallel-streams.md) | Spec-driven development and parallel work streams   |          All |
 
 Numbers are reserved for discoverability; if a decision is removed before creation, the register records it as unused rather than renumbering accepted documents.

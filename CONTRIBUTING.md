@@ -4,6 +4,9 @@ Phase work follows the gate in [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMA
 business capability before its owning phase is planned, implemented, independently audited, and
 passed.
 
+Phase capabilities are built from an approved spec. Follow [docs/specs/README.md](docs/specs/README.md)
+for requirements, frozen contracts, and parallel work-stream branches.
+
 ## Local checks
 
 Use the pinned Node and pnpm versions. Before requesting review, run:
@@ -22,6 +25,7 @@ The default branch is `main`. `.gitattributes` normalizes text to LF; Windows ba
 
 - Use Conventional Commit style (`type(scope): summary`) once a remote workflow is established.
 - Keep domain ownership and dependency direction explicit.
+- On a `spec/NNN-slug/ws-x` branch, change only the paths that stream owns (`corepack pnpm spec:check-branch`).
 - Add reviewed SQL migrations; do not mutate an already shared migration.
 - Never commit credentials, `.env` files, private keys, logs, or production data.
 - Describe security, privacy, migration, rollback, observability, and failure behavior in the review.

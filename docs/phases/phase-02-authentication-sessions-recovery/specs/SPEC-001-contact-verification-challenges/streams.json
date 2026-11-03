@@ -1,0 +1,87 @@
+{
+  "spec": "SPEC-001-contact-verification-challenges",
+  "title": "Contact verification and OTP challenges",
+  "phase": "phase-02-authentication-sessions-recovery",
+  "status": "draft",
+  "base": "main",
+  "streams": [
+    {
+      "id": "ws-a",
+      "title": "Phone normalization, contact crypto, contact points",
+      "owns": [
+        "modules/auth/src/domain/contact/",
+        "modules/auth/src/application/contact/",
+        "modules/auth/src/infrastructure/contact/",
+        "modules/auth/test/contact/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0012"],
+      "acceptance": [
+        "P2-AC-002",
+        "P2-AC-004",
+        "P2-AC-005",
+        "P2-AC-006",
+        "P2-AC-007",
+        "P2-AC-031",
+        "P2-AC-032",
+        "P2-AC-034"
+      ],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-b",
+      "title": "OTP challenges and contact proofs",
+      "owns": [
+        "modules/auth/src/domain/challenge/",
+        "modules/auth/src/application/challenge/",
+        "modules/auth/src/infrastructure/challenge/",
+        "modules/auth/test/challenge/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0013"],
+      "acceptance": ["P2-AC-008", "P2-AC-009", "P2-AC-010", "P2-AC-013", "P2-AC-031", "P2-AC-034"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-c",
+      "title": "Rate limiting and subject commitments",
+      "owns": [
+        "modules/auth/src/domain/rate-limit/",
+        "modules/auth/src/application/rate-limit/",
+        "modules/auth/src/infrastructure/rate-limit/",
+        "modules/auth/test/rate-limit/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0014"],
+      "acceptance": ["P2-AC-011", "P2-AC-034"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-d",
+      "title": "Delivery port and provider callbacks",
+      "owns": [
+        "modules/auth/src/domain/delivery/",
+        "modules/auth/src/application/delivery/",
+        "modules/auth/src/infrastructure/delivery/",
+        "modules/auth/src/domain/callbacks/",
+        "modules/auth/src/application/callbacks/",
+        "modules/auth/src/infrastructure/callbacks/",
+        "modules/auth/test/delivery/",
+        "modules/auth/test/callbacks/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0015"],
+      "acceptance": ["P2-AC-013", "P2-AC-014", "P2-AC-033", "P2-AC-034"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-e",
+      "title": "HTTP transport, composition, oracle and leak tests",
+      "owns": ["apps/api/src/auth/", "apps/api/test/auth/"],
+      "dependsOn": ["ws-a", "ws-b", "ws-c", "ws-d"],
+      "migrations": [],
+      "acceptance": ["P2-AC-001", "P2-AC-012", "P2-AC-033", "P2-AC-035"],
+      "verify": ["corepack pnpm verify:full"]
+    }
+  ]
+}

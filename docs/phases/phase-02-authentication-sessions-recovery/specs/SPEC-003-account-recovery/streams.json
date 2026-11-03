@@ -1,0 +1,67 @@
+{
+  "spec": "SPEC-003-account-recovery",
+  "title": "Account recovery and contact change",
+  "phase": "phase-02-authentication-sessions-recovery",
+  "status": "draft",
+  "base": "main",
+  "streams": [
+    {
+      "id": "ws-a",
+      "title": "Case model, tier policy, services, restrictions",
+      "owns": [
+        "modules/auth/src/domain/recovery/",
+        "modules/auth/src/application/recovery/",
+        "modules/auth/src/infrastructure/recovery/",
+        "modules/auth/test/recovery/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0019"],
+      "acceptance": [
+        "P2-AC-026",
+        "P2-AC-027",
+        "P2-AC-028",
+        "P2-AC-029",
+        "P2-AC-030",
+        "P2-AC-031",
+        "P2-AC-032",
+        "P2-AC-034"
+      ],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-b",
+      "title": "Identity re-verification seam and synthetic provider",
+      "owns": [
+        "modules/identity/src/application/reverification/",
+        "modules/identity/src/infrastructure/reverification/",
+        "modules/identity/test/reverification/"
+      ],
+      "dependsOn": [],
+      "migrations": ["0020"],
+      "acceptance": ["P2-AC-002", "P2-AC-027", "P2-AC-033", "P2-AC-034"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-c",
+      "title": "HTTP routes, callback handler, restriction wiring",
+      "owns": [
+        "apps/api/src/auth/recovery/",
+        "apps/api/test/auth/recovery/",
+        "apps/api/src/auth/guard/restriction-wiring.ts"
+      ],
+      "dependsOn": ["ws-a", "ws-b"],
+      "migrations": [],
+      "acceptance": ["P2-AC-014", "P2-AC-028", "P2-AC-029", "P2-AC-030", "P2-AC-035"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-d",
+      "title": "Worker completion and expiry jobs",
+      "owns": ["apps/worker/src/recovery/", "apps/worker/test/recovery/"],
+      "dependsOn": ["ws-a"],
+      "migrations": [],
+      "acceptance": ["P2-AC-028", "P2-AC-029", "P2-AC-031", "P2-AC-033"],
+      "verify": ["corepack pnpm verify:full"]
+    }
+  ]
+}
