@@ -1502,8 +1502,8 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
     // Later (Phase 2) migrations hold no rows here and roll back; 0011 refuses while Phase 1 holds data.
     const later = (await migrationVersions()).filter((version) => version > '0011');
-    for (let index = 0; index < later.length; index += 1) {
-      expect(await migrator.down()).toHaveLength(1);
+    for (const version of [...later].reverse()) {
+      expect(await migrator.down()).toEqual([version]);
     }
     await expect(migrator.down()).rejects.toThrow('rolled back');
     expect((await migrator.status()).at(-1)?.version).toBe('0011');
@@ -1521,8 +1521,8 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       expect((await cleanMigrator.up()).applied).toEqual(versions);
       expect((await cleanMigrator.up()).skipped).toHaveLength(versions.length);
       const afterFoundation = versions.filter((version) => version > '0004');
-      for (let index = 0; index < afterFoundation.length; index += 1) {
-        expect(await cleanMigrator.down()).toHaveLength(1);
+      for (const version of [...afterFoundation].reverse()) {
+        expect(await cleanMigrator.down()).toEqual([version]);
       }
       expect((await cleanMigrator.status()).map((entry) => entry.version)).toEqual([
         '0001',
