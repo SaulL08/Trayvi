@@ -6,7 +6,16 @@ RUN --mount=type=secret,id=local_ca,required=false \
       cp /run/secrets/local_ca /usr/local/share/ca-certificates/local-development-ca.crt; \
       update-ca-certificates; \
     fi \
-    && apk add --no-cache --upgrade 'libexpat=2.8.4-r0' 'libuuid=2.42.3-r1' 'su-exec=0.3-r0' \
+    && apk add --no-cache --upgrade \
+      'brotli-libs=1.2.1-r0' \
+      'libcurl=8.23.0-r0' \
+      'libexpat=2.10.0-r0' \
+      'libuuid=2.42.3-r1' \
+      'libx11=1.8.14-r0' \
+      'libxrender=0.9.13-r0' \
+      'pcre2=10.49-r0' \
+      'su-exec=0.3-r0' \
+      'tiff=4.7.2-r0' \
     && rm -f /usr/local/bin/gosu /usr/local/share/ca-certificates/local-development-ca.crt \
     && ln -s /sbin/su-exec /usr/local/bin/gosu \
     && update-ca-certificates

@@ -14,3 +14,8 @@ allowBuilds:
   '@nestjs/core': true
   esbuild: true
   protobufjs: false
+
+# GHSA-g3hv-75wg-m249: ESLint 10.x still requests minimatch ^10; the fix ships only in 11.
+# Remove when eslint, @eslint/config-array, and @typescript-eslint depend on minimatch >= 11.0.1.
+overrides:
+  minimatch: 11.0.3
