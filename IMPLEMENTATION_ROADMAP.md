@@ -20,12 +20,14 @@ The realtime phase remains after dispatch because it projects authoritative doma
 Every phase contains:
 
 1. `PLAN.md` approved for internal coherence and dependencies.
-2. Implementation and reproducible migrations where applicable.
-3. Unit/integration/contract/security/concurrency tests proportional to risk.
-4. `IMPLEMENTATION.md` mapping delivered artifacts to acceptance criteria.
-5. Independent adversarial `AUDIT.md` with evidence and severity.
-6. Remediation and retest of every Critical/High finding.
-7. Decision `PASS` only when no open Critical/High finding remains.
+2. For phases planned after ADR-020, one or more approved specs under `specs/` that refine the plan into traced requirements, frozen
+   contracts, and parallel work streams ([ADR-020](docs/adr/ADR-020-spec-driven-development-and-parallel-streams.md)).
+3. Implementation and reproducible migrations where applicable.
+4. Unit/integration/contract/security/concurrency tests proportional to risk.
+5. `IMPLEMENTATION.md` mapping delivered artifacts to acceptance criteria.
+6. Independent adversarial `AUDIT.md` with evidence and severity.
+7. Remediation and retest of every Critical/High finding.
+8. Decision `PASS` only when no open Critical/High finding remains.
 
 A later phase may begin exploratory planning, but cannot rely on an unpassed prerequisite.
 
@@ -138,6 +140,7 @@ These are acceptance criteria inside every applicable phase, not end-of-project 
 ## 6. Change control
 
 - Scope changes update the owning `PLAN.md` before significant implementation.
+- Changes to an approved spec contract go back through review before affected streams continue.
 - Cross-cutting decisions use ADRs.
 - Accepted ADRs are superseded, never silently rewritten.
 - New phase dependencies and deferrals are recorded here with rationale.
