@@ -49,6 +49,9 @@ export default defineConfig({
           hookTimeout: 30_000,
           testTimeout: 30_000,
           sequence: { concurrent: false },
+          // Suites open large pools for race tests; running files one at a time keeps the total
+          // below PostgreSQL's connection limit.
+          fileParallelism: false,
         },
       },
     ],
