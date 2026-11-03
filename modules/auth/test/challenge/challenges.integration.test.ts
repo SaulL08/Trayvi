@@ -416,7 +416,13 @@ describe('auth verification challenges on real PostgreSQL', () => {
       consume(harness, verified.proofToken, phone, {
         consumedAt: new Date(now.getTime() + 600_000),
       }),
-      consume(harness, `${verified.proofToken.slice(0, -1)}A`, phone),
+      // A different, still-canonical final character (the last base64url character of 32 bytes
+      // is one of 16 values, so a fixed replacement would sometimes equal the original).
+      consume(
+        harness,
+        `${verified.proofToken.slice(0, -1)}${verified.proofToken.endsWith('A') ? 'E' : 'A'}`,
+        phone,
+      ),
       consume(harness, verified.proofToken.replace('tvp_', 'tva_'), phone),
       consume(harness, verified.proofToken, 'not-a-phone'),
     ];
