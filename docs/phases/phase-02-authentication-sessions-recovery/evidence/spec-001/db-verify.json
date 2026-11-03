@@ -1,0 +1,37 @@
+{
+  "spec": "SPEC-001-contact-verification-challenges",
+  "task": "T-91",
+  "recordedAt": "2026-11-03",
+  "environment": "local macOS arm64, Node 22.14.0, PostgreSQL 17 / PostGIS 3.5 (Docker)",
+  "command": "corepack pnpm db:verify:local",
+  "transcript": [
+    "up: 0001-0016 applied on a clean database",
+    "verify: authCatalogVerified",
+    "down: 0016, 0015, 0014, 0013, 0012 rolled back in order; auth schema dropped; status ends at 0011",
+    "up: 0012-0016 applied again",
+    "verify: authCatalogReverified"
+  ],
+  "result": {
+    "event": "database.verification",
+    "passed": true,
+    "evidence": {
+      "postgis": true,
+      "cleanApply": true,
+      "repeatNoOp": true,
+      "rollbackRollForward": true,
+      "runtimeDdlDenied": true,
+      "runtimeIdentityRestricted": true,
+      "outboxAtomicity": true,
+      "outboxStateIntegrity": true,
+      "outboxStateTransitions": true,
+      "outboxImmutableDataDenied": true,
+      "outboxMetadataMutationDenied": true,
+      "outboxDeleteDenied": true,
+      "authCatalogVerified": true,
+      "authRollbackCycle": true,
+      "authCatalogReverified": true,
+      "invalidMigrationRolledBack": true,
+      "concurrentSerialized": true
+    }
+  }
+}

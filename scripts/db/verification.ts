@@ -27,6 +27,12 @@ export interface DatabaseVerificationEvidence {
   readonly outboxImmutableDataDenied: boolean;
   readonly outboxMetadataMutationDenied: boolean;
   readonly outboxDeleteDenied: boolean;
+  /** SPEC-001 (0012-0016): catalog after a clean apply. */
+  readonly authCatalogVerified: boolean;
+  /** SPEC-001: 0016..0012 roll back in order on an empty domain and drop the auth schema. */
+  readonly authRollbackCycle: boolean;
+  /** SPEC-001: the catalog is identical after rolling forward again. */
+  readonly authCatalogReverified: boolean;
 }
 
 function quoteRuntimeIdentifier(identifier: string): string {
@@ -38,7 +44,14 @@ function quoteRuntimeIdentifier(identifier: string): string {
 async function verifyMainScenario(
   adminUrl: string,
 ): Promise<
-  Omit<DatabaseVerificationEvidence, 'invalidMigrationRolledBack' | 'concurrentSerialized'>
+  Omit<
+    DatabaseVerificationEvidence,
+    | 'invalidMigrationRolledBack'
+    | 'concurrentSerialized'
+    | 'authCatalogVerified'
+    | 'authRollbackCycle'
+    | 'authCatalogReverified'
+  >
 > {
   const database = await createDisposableDatabase(adminUrl, 'trayvi_migration');
   const migrator = new SqlMigrator(database.url);
@@ -340,6 +353,194 @@ async function verifyMainScenario(
   }
 }
 
+const AUTH_TABLES = [
+  'auth.contact_points',
+  'auth.contact_point_fingerprints',
+  'auth.contact_point_transitions',
+  'auth.verification_challenges',
+  'auth.contact_proofs',
+  'auth.rate_limit_buckets',
+  'auth.provider_callback_receipts',
+] as const;
+
+const AUTH_UNIQUE_INDEXES = [
+  'contact_fingerprint_active_unique',
+  'contact_point_active_primary_unique',
+  'verification_challenge_pending_unique',
+] as const;
+
+const AUTH_COMMANDS = [
+  'bind_primary_contact',
+  'replace_primary_contact',
+  'active_primary_contact_envelope',
+  'insert_active_contact',
+  'record_challenge_delivery_status',
+] as const;
+
+/** [object, privilege, expected] checked with has_*_privilege('trayvi_runtime', ...). */
+const AUTH_RUNTIME_PRIVILEGES: readonly (readonly [string, string, boolean])[] = [
+  ['auth.contact_points', 'INSERT', false],
+  ['auth.contact_points', 'UPDATE', false],
+  ['auth.contact_points', 'DELETE', false],
+  ['auth.contact_point_fingerprints', 'INSERT', false],
+  ['auth.contact_point_fingerprints', 'UPDATE', false],
+  ['auth.contact_point_transitions', 'SELECT', false],
+  ['auth.contact_point_transitions', 'INSERT', false],
+  ['auth.verification_challenges', 'SELECT', true],
+  ['auth.verification_challenges', 'INSERT', true],
+  ['auth.verification_challenges', 'DELETE', false],
+  ['auth.contact_proofs', 'SELECT', true],
+  ['auth.contact_proofs', 'INSERT', true],
+  ['auth.contact_proofs', 'DELETE', false],
+  ['auth.rate_limit_buckets', 'SELECT', true],
+  ['auth.rate_limit_buckets', 'INSERT', true],
+  ['auth.rate_limit_buckets', 'DELETE', true],
+  ['auth.provider_callback_receipts', 'SELECT', true],
+  ['auth.provider_callback_receipts', 'INSERT', true],
+  ['auth.provider_callback_receipts', 'DELETE', false],
+];
+
+/** [table, column, privilege, expected] for column-scoped runtime grants. */
+const AUTH_RUNTIME_COLUMN_PRIVILEGES: readonly (readonly [string, string, string, boolean])[] = [
+  ['auth.contact_points', 'account_id', 'SELECT', true],
+  ['auth.contact_points', 'ciphertext', 'SELECT', false],
+  ['auth.contact_points', 'wrapped_dek', 'SELECT', false],
+  ['auth.contact_points', 'fingerprint', 'SELECT', false],
+  ['auth.contact_points', 'state', 'UPDATE', false],
+  ['auth.contact_point_fingerprints', 'fingerprint', 'SELECT', true],
+  ['auth.verification_challenges', 'state', 'UPDATE', true],
+  ['auth.verification_challenges', 'failed_attempts', 'UPDATE', true],
+  ['auth.verification_challenges', 'purpose', 'UPDATE', false],
+  ['auth.verification_challenges', 'expires_at', 'UPDATE', false],
+  ['auth.verification_challenges', 'destination_fingerprint', 'UPDATE', false],
+  ['auth.contact_proofs', 'consumed_at', 'UPDATE', true],
+  ['auth.contact_proofs', 'expires_at', 'UPDATE', false],
+  ['auth.rate_limit_buckets', 'count', 'UPDATE', true],
+  ['auth.rate_limit_buckets', 'subject', 'UPDATE', false],
+  ['auth.provider_callback_receipts', 'outcome_code', 'UPDATE', true],
+  ['auth.provider_callback_receipts', 'provider_event_id', 'UPDATE', false],
+];
+
+const AUTH_RUNTIME_EXECUTE: readonly (readonly [string, boolean])[] = [
+  ['auth.bind_primary_contact', true],
+  ['auth.replace_primary_contact', true],
+  ['auth.active_primary_contact_envelope', true],
+  ['auth.record_challenge_delivery_status', true],
+  ['auth.insert_active_contact', false],
+];
+
+async function authCatalogValid(client: Client): Promise<boolean> {
+  const tables = await client.query<{ name: string | null }>(
+    'SELECT to_regclass(name)::text AS name FROM unnest($1::text[]) AS name',
+    [AUTH_TABLES],
+  );
+  const indexes = await client.query<{ count: string }>(
+    `SELECT count(*) FROM pg_indexes
+     WHERE schemaname = 'auth' AND indexname = ANY($1::text[]) AND indexdef LIKE 'CREATE UNIQUE INDEX%WHERE%'`,
+    [AUTH_UNIQUE_INDEXES],
+  );
+  const commands = await client.query<{
+    proname: string;
+    definer: boolean;
+    owner: string;
+    config: string[] | null;
+  }>(
+    `SELECT proc.proname, proc.prosecdef AS definer, proc.proowner::regrole::text AS owner,
+            proc.proconfig AS config
+     FROM pg_proc proc
+     WHERE proc.pronamespace = 'auth'::regnamespace AND proc.proname = ANY($1::text[])`,
+    [AUTH_COMMANDS],
+  );
+  const privileges = await client.query<{ ok: boolean }>(
+    `SELECT bool_and(has_table_privilege('trayvi_runtime', object, privilege) = expected) AS ok
+     FROM unnest($1::text[], $2::text[], $3::boolean[]) AS check_row (object, privilege, expected)`,
+    [
+      AUTH_RUNTIME_PRIVILEGES.map(([object]) => object),
+      AUTH_RUNTIME_PRIVILEGES.map(([, privilege]) => privilege),
+      AUTH_RUNTIME_PRIVILEGES.map(([, , expected]) => expected),
+    ],
+  );
+  const columns = await client.query<{ ok: boolean }>(
+    `SELECT bool_and(has_column_privilege('trayvi_runtime', object, column_name, privilege) = expected) AS ok
+     FROM unnest($1::text[], $2::text[], $3::text[], $4::boolean[])
+       AS check_row (object, column_name, privilege, expected)`,
+    [
+      AUTH_RUNTIME_COLUMN_PRIVILEGES.map(([object]) => object),
+      AUTH_RUNTIME_COLUMN_PRIVILEGES.map(([, column]) => column),
+      AUTH_RUNTIME_COLUMN_PRIVILEGES.map(([, , privilege]) => privilege),
+      AUTH_RUNTIME_COLUMN_PRIVILEGES.map(([, , , expected]) => expected),
+    ],
+  );
+  const execute = await client.query<{ ok: boolean }>(
+    `SELECT bool_and(
+       has_function_privilege('trayvi_runtime', proc.oid, 'EXECUTE') = check_row.expected
+     ) AS ok
+     FROM unnest($1::text[], $2::boolean[]) AS check_row (name, expected)
+     JOIN pg_proc proc
+       ON proc.pronamespace = 'auth'::regnamespace AND 'auth.' || proc.proname = check_row.name`,
+    [
+      AUTH_RUNTIME_EXECUTE.map(([name]) => name),
+      AUTH_RUNTIME_EXECUTE.map(([, expected]) => expected),
+    ],
+  );
+  return (
+    tables.rows.every((row) => row.name !== null) &&
+    Number(indexes.rows[0]?.count) === AUTH_UNIQUE_INDEXES.length &&
+    commands.rows.length === AUTH_COMMANDS.length &&
+    commands.rows.every(
+      (row) =>
+        row.definer &&
+        row.owner === 'trayvi_lifecycle_owner' &&
+        (row.config ?? []).includes('search_path=pg_catalog, pg_temp'),
+    ) &&
+    privileges.rows[0]?.ok === true &&
+    columns.rows[0]?.ok === true &&
+    execute.rows[0]?.ok === true
+  );
+}
+
+/** SPEC-001 T-91: up -> verify -> down (0016..0012) -> up -> verify on a clean database. */
+async function verifyAuthMigrations(
+  adminUrl: string,
+): Promise<
+  Pick<
+    DatabaseVerificationEvidence,
+    'authCatalogVerified' | 'authRollbackCycle' | 'authCatalogReverified'
+  >
+> {
+  const database = await createDisposableDatabase(adminUrl, 'trayvi_auth_catalog');
+  const migrator = new SqlMigrator(database.url);
+  const client = new Client({ connectionString: database.url });
+  try {
+    await migrator.up();
+    await client.connect();
+    const authCatalogVerified = await authCatalogValid(client);
+    const authVersions = (await migrationVersions()).filter(
+      (version) => version >= '0012' && version <= '0016',
+    );
+    let rolledBackInOrder = authVersions.length === 5;
+    for (const version of [...authVersions].reverse()) {
+      const rolledBack = await migrator.down();
+      rolledBackInOrder &&= rolledBack.length === 1 && rolledBack[0] === version;
+    }
+    const schema = await client.query<{ name: string | null }>(
+      "SELECT to_regnamespace('auth')::text AS name",
+    );
+    const statusAfterDown = (await migrator.status()).map((entry) => entry.version);
+    const authRollbackCycle =
+      rolledBackInOrder && schema.rows[0]?.name === null && statusAfterDown.at(-1) === '0011';
+    const rolledForward = await migrator.up();
+    const authCatalogReverified =
+      rolledForward.applied.join(',') === authVersions.join(',') &&
+      (await authCatalogValid(client));
+    return { authCatalogVerified, authRollbackCycle, authCatalogReverified };
+  } finally {
+    await client.end().catch(() => undefined);
+    await migrator.close();
+    await dropDisposableDatabase(adminUrl, database.name);
+  }
+}
+
 async function verifyInvalidMigration(adminUrl: string): Promise<boolean> {
   const database = await createDisposableDatabase(adminUrl, 'trayvi_invalid');
   const migrator = new SqlMigrator(database.url, resolve('infra/database/fixtures/invalid'));
@@ -390,6 +591,7 @@ export async function runDatabaseVerification(
   const main = await verifyMainScenario(adminUrl);
   return {
     ...main,
+    ...(await verifyAuthMigrations(adminUrl)),
     invalidMigrationRolledBack: await verifyInvalidMigration(adminUrl),
     concurrentSerialized: await verifyConcurrency(adminUrl),
   };
