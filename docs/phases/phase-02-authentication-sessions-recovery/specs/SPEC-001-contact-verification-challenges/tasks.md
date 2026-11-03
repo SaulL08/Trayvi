@@ -8,11 +8,11 @@ and recorded here on the integration branch when the stream merges.
 
 ## Integration scaffold
 
-- [ ] T-00 — Create the scaffold in design §4: Auth package, contracts, shared
+- [x] T-00 — Create the scaffold in design §4: Auth package, contracts, shared
       outbox/token/keyring infrastructure with unit tests, workspace wiring,
       architecture allowlist, configuration, redaction and secret-scan patterns,
       empty `AuthHttpModule`, and migration `0012`.
-- [ ] T-01 — Confirm `verify` passes on the scaffold with every stream entry file
+- [x] T-01 — Confirm `verify` passes on the scaffold with every stream entry file
       still `export {};`.
 
 ## ws-a — Phone normalization, contact crypto, contact points

@@ -256,7 +256,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     }
   });
 
-  it('applies all eleven migrations and rejects invalid direct initial states', async () => {
+  it('applies all twelve migrations and rejects invalid direct initial states', async () => {
     expect((await migrator.status()).map((migration) => migration.version)).toEqual([
       '0001',
       '0002',
@@ -269,6 +269,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
       '0009',
       '0010',
       '0011',
+      '0012',
     ]);
 
     await expect(
@@ -1498,8 +1499,11 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
   });
 
   it('refuses destructive migration rollback while Phase 1 contains data', async () => {
+    // 0012 only drops the still-empty auth schema; 0011 refuses while Phase 1 holds data.
+    expect(await migrator.down()).toHaveLength(1);
     await expect(migrator.down()).rejects.toThrow('rolled back');
     expect((await migrator.status()).at(-1)?.version).toBe('0011');
+    expect((await migrator.up()).applied).toEqual(['0012']);
   });
 
   it('runs the Phase 1 clean up/down/up cycle without changing prior migrations', async () => {
@@ -1509,8 +1513,9 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
     );
     const cleanMigrator = new SqlMigrator(cleanDatabase.url);
     try {
-      expect((await cleanMigrator.up()).applied).toHaveLength(11);
-      expect((await cleanMigrator.up()).skipped).toHaveLength(11);
+      expect((await cleanMigrator.up()).applied).toHaveLength(12);
+      expect((await cleanMigrator.up()).skipped).toHaveLength(12);
+      expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
       expect(await cleanMigrator.down()).toHaveLength(1);
@@ -1532,6 +1537,7 @@ describe('Phase 1 accounts and identity on real PostgreSQL', () => {
         '0009',
         '0010',
         '0011',
+        '0012',
       ]);
     } finally {
       await cleanMigrator.close();

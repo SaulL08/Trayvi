@@ -4,6 +4,7 @@ import type { DynamicModule } from '@nestjs/common';
 import type { AppConfig } from '@trayvi/config';
 import type { FoundationMetrics, Logger } from '@trayvi/observability';
 
+import { AuthHttpModule } from './auth/auth-http.module';
 import { DatabaseProbe } from './database-probe';
 import { HealthController } from './health/health.controller';
 import type { RuntimeState } from './runtime-state';
@@ -27,6 +28,7 @@ export class AppModule {
   static register(dependencies: AppModuleDependencies): DynamicModule {
     return {
       module: AppModule,
+      imports: [AuthHttpModule],
       controllers: [HealthController],
       providers: [
         { provide: APP_CONFIG, useValue: dependencies.config },

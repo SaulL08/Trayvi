@@ -85,6 +85,19 @@ describe('secret scanner', () => {
     }
   });
 
+  it('detects Trayvi opaque tokens but allows only the synthetic PLAN vector', () => {
+    const leaked = ['tva_', 'Zk3pQ9vX2mL7sR4tN8bC1dF6', 'gH5jK0wY3eU7iO2aS9z'].join('');
+    const proof = ['tvp_', 'M1nB2vC3xZ4lK5jH6gF7dS8a', 'P9oI0uY1tR2eW3qA4sD'].join('');
+    const vector = 'tvr_oKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr8';
+    const findings = findPotentialSecrets([leaked, proof, vector].join('\n'), 'fixture');
+
+    expect(findings).toEqual([
+      { source: 'fixture', line: 1, pattern: 'trayvi-opaque-token' },
+      { source: 'fixture', line: 2, pattern: 'trayvi-opaque-token' },
+    ]);
+    expect(JSON.stringify(findings)).not.toContain(leaked);
+  });
+
   it('allows only explicit placeholders and obvious documentation examples', () => {
     const source = [
       'password=${DATABASE_PASSWORD}',

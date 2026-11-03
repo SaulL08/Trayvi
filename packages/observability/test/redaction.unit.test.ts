@@ -79,6 +79,30 @@ describe('recursive log redaction', () => {
     expect(output).toContain('[CIRCULAR]');
   });
 
+  it('redacts Auth phone numbers, codes, proofs, and opaque tokens', () => {
+    const accessToken = ['tva_', 'Zk3pQ9vX2mL7sR4tN8bC1dF6', 'gH5jK0wY3eU7iO2aS9zQ4xV'].join('');
+    const sanitized = JSON.stringify(
+      sanitizeForLogging({
+        phoneNumber: '+18095550100',
+        phone: '+18095550100',
+        code: '042817',
+        proof: 'tvp_proof-canary-value-0000',
+        refreshToken: 'refresh-canary',
+        accessToken: 'access-canary',
+        message: `client sent ${accessToken} and code=042817`,
+      }),
+    );
+    for (const canary of [
+      '+18095550100',
+      '042817',
+      'proof-canary',
+      accessToken,
+      'refresh-canary',
+    ]) {
+      expect(sanitized).not.toContain(canary);
+    }
+  });
+
   it('applies redaction on the final structured logger boundary', async () => {
     const stream = new PassThrough();
     let output = '';

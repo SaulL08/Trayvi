@@ -12,7 +12,7 @@ export interface ArchitectureViolation {
 
 const allowedApps = new Set(['api', 'worker']);
 const allowedPackages = new Set(['config', 'observability', 'test-support']);
-const allowedModules = new Set(['accounts', 'identity']);
+const allowedModules = new Set(['accounts', 'auth', 'identity']);
 
 interface WorkspaceUnit {
   readonly name: string;

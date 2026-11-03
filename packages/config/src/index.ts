@@ -11,3 +11,11 @@ export type {
   RuntimeEnvironment,
   ServiceName,
 } from './types';
+export { parseAuthConfig } from './auth-config';
+export type {
+  AuthCallbackProviderConfig,
+  AuthCallingCodeConfig,
+  AuthConfig,
+  AuthRateLimitDimension,
+  AuthRateLimitRuleConfig,
+} from './auth-config';

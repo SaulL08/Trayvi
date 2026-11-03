@@ -25,6 +25,14 @@ const patterns: readonly SecretPattern[] = [
   { name: 'npm-token', expression: /\bnpm_[A-Za-z0-9]{36,}\b/u },
   { name: 'stripe-live-key', expression: /\b(?:sk|rk)_live_[A-Za-z0-9]{20,}\b/u },
   {
+    // PLAN §9.1 opaque tokens: access (tva_), refresh (tvr_), contact proof (tvp_), recovery case (tvc_).
+    name: 'trayvi-opaque-token',
+    expression: /\b(tv[aprc]_[A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/gu,
+    candidateGroup: 1,
+    minimumLength: 47,
+    minimumEntropy: 3,
+  },
+  {
     name: 'hardcoded-bearer',
     expression: /\bBearer\s+[A-Za-z0-9_-]{24,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/u,
   },
@@ -88,9 +96,15 @@ function shannonEntropy(value: string): number {
   return entropy;
 }
 
+// Only the synthetic PLAN §9.1 vector (bytes a0..bf) may appear in the repository.
+const allowedSyntheticTokens: ReadonlySet<string> = new Set([
+  'tvr_oKGio6SlpqeoqaqrrK2ur7CxsrO0tba3uLm6u7y9vr8',
+]);
+
 function isExplicitlyAllowedExample(value: string): boolean {
   const candidate = value.trim();
   return (
+    allowedSyntheticTokens.has(candidate) ||
     candidate.startsWith('${') ||
     candidate.startsWith('{{') ||
     candidate.startsWith('<') ||

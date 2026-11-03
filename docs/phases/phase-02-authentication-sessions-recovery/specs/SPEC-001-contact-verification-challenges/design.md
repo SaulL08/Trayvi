@@ -353,7 +353,7 @@ export interface AuthOutboxEvent {
   readonly id: string;
   readonly type: AuthEventType;
   readonly schemaVersion: 1;
-  readonly aggregateType: 'auth.contact' | 'auth.challenge';
+  readonly aggregateType: 'auth_contact' | 'auth_challenge'; // outbox_aggregate_type_format forbids '.'
   readonly aggregateId: string;
   readonly occurredAt: Date;
   readonly correlationId: string;
@@ -392,7 +392,8 @@ Migration `0013` is the only one that references another schema
 
 ### 2.3 Events and API
 
-Outbox events (aggregate type `auth.contact`), payload allowlist:
+Outbox events (aggregate type `auth_contact`; Phase 0's `outbox_aggregate_type_format`
+check allows only `^[a-z][a-z0-9_]{0,99}$`), payload allowlist:
 
 | Type                    | Payload fields                                                    |
 | ----------------------- | ----------------------------------------------------------------- |

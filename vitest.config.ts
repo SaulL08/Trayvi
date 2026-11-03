@@ -10,6 +10,7 @@ export default defineConfig({
       '@trayvi/accounts': fileURLToPath(
         new URL('./modules/accounts/src/index.ts', import.meta.url),
       ),
+      '@trayvi/auth': fileURLToPath(new URL('./modules/auth/src/index.ts', import.meta.url)),
       '@trayvi/config': fileURLToPath(new URL('./packages/config/src/index.ts', import.meta.url)),
       '@trayvi/identity': fileURLToPath(
         new URL('./modules/identity/src/index.ts', import.meta.url),

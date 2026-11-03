@@ -52,6 +52,11 @@ const sensitiveKeyNames = [
   'kek_key_version',
   'hmac_key_version',
   'idempotency_key',
+  'phone',
+  'phone_number',
+  'code',
+  'otp_code',
+  'proof',
   'request_commitment',
   'caller_binding',
   'card',
@@ -141,6 +146,7 @@ function sanitizeString(input: string): string {
   }).join('');
   value = value.replace(privateKeyBlock, '[REDACTED_PRIVATE_KEY]');
   value = value.replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/giu, `Bearer ${REDACTED}`);
+  value = value.replace(/\btv[aprc]_[A-Za-z0-9_-]{16,}/gu, REDACTED);
   value = value.replace(/\b[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu, REDACTED);
   value = value.replace(/\b(?:postgres(?:ql)?):\/\/[^\s]+/giu, '[REDACTED_DATABASE_URL]');
   value = value.replace(/([?&][^=\s&#]{1,128}=)[^\s&#]*/gu, `$1${REDACTED}`);

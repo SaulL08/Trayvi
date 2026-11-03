@@ -5,6 +5,7 @@
     "noEmit": true,
     "paths": {
       "@trayvi/accounts": ["./modules/accounts/src/index.ts"],
+      "@trayvi/auth": ["./modules/auth/src/index.ts"],
       "@trayvi/config": ["./packages/config/src/index.ts"],
       "@trayvi/identity": ["./modules/identity/src/index.ts"],
       "@trayvi/observability": ["./packages/observability/src/index.ts"],
