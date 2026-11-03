@@ -17,6 +17,7 @@ import { SqlMigrator } from '../../../../scripts/db/migrate';
 import { SignedCallbackIngress } from '../../src/application/callbacks/signed-callback-ingress';
 import type { CallbackHandler, VerifiedCallback } from '../../src/contracts/callbacks';
 import type { IdGenerator, SqlExecutor, TransactionRunner } from '../../src/contracts/runtime';
+import { DeliveryStatusCallbackHandler } from '../../src/infrastructure/callbacks/delivery-status-handler';
 import { PostgresCallbackReceiptStore } from '../../src/infrastructure/callbacks/postgres-callback-receipts';
 
 const uuidV7: IdGenerator = {
@@ -333,6 +334,91 @@ describe('signed provider callbacks on real PostgreSQL', () => {
     expect(
       await failure(`UPDATE auth.provider_callback_receipts SET outcome_code = 'OVERWRITTEN'`),
     ).toBe('provider_callback_receipt_immutable');
+  });
+
+  it('records provider delivery status on the referenced challenge only through the narrow command', async () => {
+    if (!runtimePool) throw new Error('runtime pool is not initialized');
+    const ingress = new SignedCallbackIngress({
+      transactions: transactionsOver(runtimePool),
+      providers: [{ alias: 'synthetic', secret: syntheticSecret }],
+      handlers: [new DeliveryStatusCallbackHandler()],
+      receipts: new PostgresCallbackReceiptStore(),
+      ids: uuidV7,
+      maxBodyBytes: 16_384,
+      timestampToleranceSeconds: 300,
+    });
+    const challenge = async (deliveryOutcome: string): Promise<string> => {
+      const id = uuidV7.uuidV7();
+      await admin.query(
+        `INSERT INTO auth.verification_challenges (
+           id, purpose, destination_key_version, destination_fingerprint, otp_commitment,
+           otp_key_version, installation_commitment, failed_attempts, max_failed_attempts,
+           resend_count, max_resends, last_sent_at, expires_at, delivery_outcome_code, state,
+           created_at, updated_at
+         ) VALUES ($1, 'CONTACT_PROOF', 'contact-v1', $2, $3, 'otp-v1', $4, 0, 5, 0, 3,
+           $5, $5::timestamptz + interval '5 minutes', $6, 'PENDING', $5, $5)`,
+        [id, randomBytes(32), randomBytes(32), randomBytes(32), now, deliveryOutcome],
+      );
+      return id;
+    };
+    const status = async (id: string) =>
+      (
+        await admin.query<{ code: string }>(
+          'SELECT delivery_outcome_code AS code FROM auth.verification_challenges WHERE id = $1',
+          [id],
+        )
+      ).rows[0]?.code;
+    const outcome = async (eventId: string) =>
+      (
+        await admin.query<{ code: string }>(
+          `SELECT outcome_code AS code FROM auth.provider_callback_receipts WHERE provider_event_id = $1`,
+          [eventId],
+        )
+      ).rows[0]?.code;
+    const deliver = (eventId: string, fields: Record<string, unknown>) => {
+      const raw = Buffer.from(JSON.stringify({ providerEventId: eventId, ...fields }));
+      return receive(ingress, raw, {
+        kind: 'delivery-status',
+        signature: sign(syntheticSecret, nowSeconds, raw),
+      });
+    };
+
+    const sent = await challenge('SENT');
+    await expect(
+      deliver('dlr-1', { reference: sent, status: 'DELIVERED', phoneNumber: '+18095550177' }),
+    ).resolves.toEqual({
+      kind: 'ACCEPTED',
+    });
+    expect(await status(sent)).toBe('DELIVERED');
+    expect(await outcome('dlr-1')).toBe('RECORDED_DELIVERED');
+    // A later report for the same message cannot rewrite a recorded status.
+    await expect(deliver('dlr-2', { reference: sent, status: 'UNDELIVERED' })).resolves.toEqual({
+      kind: 'ACCEPTED',
+    });
+    expect(await status(sent)).toBe('DELIVERED');
+    expect(await outcome('dlr-2')).toBe('IGNORED_NOT_SENT');
+    await expect(deliver('dlr-1', { reference: sent, status: 'UNDELIVERED' })).resolves.toEqual({
+      kind: 'DUPLICATE',
+    });
+
+    const undelivered = await challenge('SENT');
+    await deliver('dlr-3', { reference: undelivered, status: 'UNDELIVERED' });
+    expect(await status(undelivered)).toBe('UNDELIVERED');
+
+    const budgetExhausted = await challenge('BUDGET_EXHAUSTED');
+    await deliver('dlr-4', { reference: budgetExhausted, status: 'DELIVERED' });
+    expect(await status(budgetExhausted)).toBe('BUDGET_EXHAUSTED');
+
+    await deliver('dlr-5', { reference: uuidV7.uuidV7(), status: 'DELIVERED' });
+    expect(await outcome('dlr-5')).toBe('UNKNOWN_REFERENCE');
+    await deliver('dlr-6', { reference: 'not-a-uuid', status: 'DELIVERED' });
+    expect(await outcome('dlr-6')).toBe('IGNORED_INVALID_REFERENCE');
+    const pending = await challenge('SENT');
+    await deliver('dlr-7', { reference: pending, status: 'READ' });
+    await deliver('dlr-8', { reference: pending, status: 7 });
+    expect(await outcome('dlr-7')).toBe('IGNORED_INVALID_STATUS');
+    expect(await outcome('dlr-8')).toBe('IGNORED_INVALID_STATUS');
+    expect(await status(pending)).toBe('SENT');
   });
 
   it('refuses to roll back migration 0016 while receipts exist', async () => {
