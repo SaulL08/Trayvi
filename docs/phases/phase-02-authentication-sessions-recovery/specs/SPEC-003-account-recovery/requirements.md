@@ -66,7 +66,7 @@ It refines PLAN §§5.5, 12, 13, and 14 and starts only after SPEC-002 is
 | R-25 | Security notices shall be requested after commit and shall never carry the case handle, codes, or numbers in logs or events.                                                                                                                     | P2-AC-033            | ws-a, ws-d              |
 | R-26 | Events from this spec shall carry only the fields in design §2.3.                                                                                                                                                                                | P2-AC-032            | ws-a                    |
 | R-27 | Recovery and contact-change routes shall emit only the PLAN §15 codes, and start, proof, and cancel responses shall not differ between real and decoy cases in status, schema, or size class.                                                    | P2-AC-029, P2-AC-035 | ws-c                    |
-| R-28 | Migrations `0019`–`0020` shall pass `up -> verify -> down -> up -> verify` and grant the runtime role only the privileges in design §2.2.                                                                                                        | P2-AC-034            | ws-a, ws-b, integration |
+| R-28 | Migrations `0020`–`0021` shall pass `up -> verify -> down -> up -> verify` and grant the runtime role only the privileges in design §2.2.                                                                                                        | P2-AC-034            | ws-a, ws-b, integration |
 
 ## 4. Security, privacy, and abuse requirements
 

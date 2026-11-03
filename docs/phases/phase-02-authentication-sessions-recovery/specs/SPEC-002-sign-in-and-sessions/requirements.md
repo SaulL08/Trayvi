@@ -72,7 +72,7 @@ after SPEC-001 is `integrated`.
 | R-29 | `GET /api/v1/accounts/me` shall return only the principal's own account status, assurance, and restrictions.                                                                                                         | P2-AC-023            | ws-e                    |
 | R-30 | Events from this spec shall carry only the fields in design §2.3.                                                                                                                                                    | P2-AC-032            | ws-a, ws-b              |
 | R-31 | Canary passwords, access tokens, refresh tokens, and contact proofs shall be absent from logs, traces, metrics, Problem Details, events, and URLs.                                                                   | P2-AC-017, P2-AC-033 | ws-e                    |
-| R-32 | Migrations `0016`–`0018` shall pass `up -> verify -> down -> up -> verify` and grant the runtime role only the privileges in design §2.2.                                                                            | P2-AC-034            | ws-a..ws-c, integration |
+| R-32 | Migrations `0017`–`0019` shall pass `up -> verify -> down -> up -> verify` and grant the runtime role only the privileges in design §2.2.                                                                            | P2-AC-034            | ws-a..ws-c, integration |
 
 ## 4. Security, privacy, and abuse requirements
 

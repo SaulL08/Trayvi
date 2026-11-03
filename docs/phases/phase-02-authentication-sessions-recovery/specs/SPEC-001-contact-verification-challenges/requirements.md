@@ -1,9 +1,9 @@
 # SPEC-001 — Contact verification and OTP challenges — Requirements
 
-Status: Draft  
+Status: Approved (early, see requirements §7)  
 Phase: `phase-02-authentication-sessions-recovery` ([PLAN.md](../../PLAN.md))  
 Owners: Auth  
-Last updated: 2026-11-02
+Last updated: 2026-11-03
 
 ## 1. Purpose
 
@@ -72,7 +72,7 @@ on the contact proof this spec produces. It refines PLAN §§3–8, §11, §14, 
 | R-30 | Outbox events from this spec shall contain only the allowlisted fields in design §2.3.                                                                                                                                        | P2-AC-032            | ws-a, ws-b              |
 | R-31 | Logs, traces, metrics, Problem Details, and events shall contain none of the canary phone number, OTP, contact proof, fingerprint, or envelope bytes.                                                                         | P2-AC-033            | ws-e                    |
 | R-32 | The public routes shall emit only the Problem Details codes listed in design §2.3.                                                                                                                                            | P2-AC-035            | ws-e                    |
-| R-33 | Migrations `0011`–`0015` shall pass `up -> verify -> down -> up -> verify`, refuse destructive down on populated tables, and grant the runtime role only the privileges listed in design §2.2.                                | P2-AC-034            | ws-a..ws-d, integration |
+| R-33 | Migrations `0012`–`0016` shall pass `up -> verify -> down -> up -> verify`, refuse destructive down on populated tables, and grant the runtime role only the privileges listed in design §2.2.                                | P2-AC-034            | ws-a..ws-d, integration |
 
 ## 4. Security, privacy, and abuse requirements
 
@@ -101,9 +101,19 @@ commitment, network-prefix commitment, provider event identifiers (PLAN §17).
 
 ## 6. Open questions
 
-| Question                                                                                                               | Owner          | Blocks approval |
-| ---------------------------------------------------------------------------------------------------------------------- | -------------- | --------------- |
-| Confirm migration numbers after Phase 1 remediation merges.                                                            | Auth           | Yes             |
-| Confirm in ADR-013 whether contact crypto stays private to Auth or moves to a shared package (changes ws-a ownership). | Architecture   | Yes             |
-| OTP and rate-limit production defaults.                                                                                | Trust & Safety | No (config)     |
-| SMS versus WhatsApp channel set.                                                                                       | Product        | No (port)       |
+| Question                                                                                                                    | Owner          | Blocks approval |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------- | --------------- |
+| ~~Confirm migration numbers after Phase 1 remediation merges.~~ Resolved: `0012`–`0016` (`0011` is taken by issue #6).      | Auth           | Resolved        |
+| ~~Confirm whether contact crypto stays private to Auth or moves to a shared package.~~ Resolved: private to Auth (ADR-013). | Architecture   | Resolved        |
+| OTP and rate-limit production defaults.                                                                                     | Trust & Safety | No (config)     |
+| SMS versus WhatsApp channel set.                                                                                            | Product        | No (port)       |
+
+## 7. Approval record
+
+- 2026-11-03: approved by the repository owner, who explicitly asked to start the
+  implementation on top of PR #4 (this spec) and PR #7 (issue #6).
+- This approval is **ahead of the PLAN §1 gate**: Phase 1 has not recorded a final
+  `PASS` and ADR-013 is still `Proposed`. The integration branch may be built and
+  reviewed, but it shall not merge to `main` until Phase 1 records `PASS` and
+  ADR-013 is accepted.
+- Both blocking open questions in §6 are resolved above.

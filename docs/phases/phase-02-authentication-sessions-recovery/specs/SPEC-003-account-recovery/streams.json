@@ -15,7 +15,7 @@
         "modules/auth/test/recovery/"
       ],
       "dependsOn": [],
-      "migrations": ["0019"],
+      "migrations": ["0020"],
       "acceptance": [
         "P2-AC-026",
         "P2-AC-027",
@@ -37,7 +37,7 @@
         "modules/identity/test/reverification/"
       ],
       "dependsOn": [],
-      "migrations": ["0020"],
+      "migrations": ["0021"],
       "acceptance": ["P2-AC-002", "P2-AC-027", "P2-AC-033", "P2-AC-034"],
       "verify": ["corepack pnpm verify:full"]
     },

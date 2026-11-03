@@ -2,7 +2,7 @@
   "spec": "SPEC-001-contact-verification-challenges",
   "title": "Contact verification and OTP challenges",
   "phase": "phase-02-authentication-sessions-recovery",
-  "status": "draft",
+  "status": "approved",
   "base": "main",
   "streams": [
     {
@@ -15,7 +15,7 @@
         "modules/auth/test/contact/"
       ],
       "dependsOn": [],
-      "migrations": ["0012"],
+      "migrations": ["0013"],
       "acceptance": [
         "P2-AC-002",
         "P2-AC-004",
@@ -38,7 +38,7 @@
         "modules/auth/test/challenge/"
       ],
       "dependsOn": [],
-      "migrations": ["0013"],
+      "migrations": ["0014"],
       "acceptance": ["P2-AC-008", "P2-AC-009", "P2-AC-010", "P2-AC-013", "P2-AC-031", "P2-AC-034"],
       "verify": ["corepack pnpm verify:full"]
     },
@@ -52,7 +52,7 @@
         "modules/auth/test/rate-limit/"
       ],
       "dependsOn": [],
-      "migrations": ["0014"],
+      "migrations": ["0015"],
       "acceptance": ["P2-AC-011", "P2-AC-034"],
       "verify": ["corepack pnpm verify:full"]
     },
@@ -70,7 +70,7 @@
         "modules/auth/test/callbacks/"
       ],
       "dependsOn": [],
-      "migrations": ["0015"],
+      "migrations": ["0016"],
       "acceptance": ["P2-AC-013", "P2-AC-014", "P2-AC-033", "P2-AC-034"],
       "verify": ["corepack pnpm verify:full"]
     },

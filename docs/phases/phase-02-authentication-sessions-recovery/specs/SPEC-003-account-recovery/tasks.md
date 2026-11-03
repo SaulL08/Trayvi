@@ -17,11 +17,11 @@ branch when each stream merges.
 
 ## ws-a — Case model, tier policy, services, restrictions
 
-Branch: `spec/003-account-recovery/ws-a` · Depends on: — · Migrations: `0019`
+Branch: `spec/003-account-recovery/ws-a` · Depends on: — · Migrations: `0020`
 
 - [ ] T-A1 — Implement the case state machine and tier policy. Satisfies R-01,
       R-06. Proven by `test/recovery/recovery-lifecycle.unit.test.ts`.
-- [ ] T-A2 — Write migration `0019` with cases, transitions, restrictions,
+- [ ] T-A2 — Write migration `0020` with cases, transitions, restrictions,
       indexes, trigger, guarded function, grants, and a guarded down. Satisfies
       R-01, R-02, R-28. Proven by `test/recovery/recovery-cases.integration.test.ts`.
 - [ ] T-A3 — Implement `RecoveryService.start` with decoys, supersede, and limits.
@@ -40,9 +40,9 @@ Branch: `spec/003-account-recovery/ws-a` · Depends on: — · Migrations: `0019
 
 ## ws-b — Identity re-verification seam
 
-Branch: `spec/003-account-recovery/ws-b` · Depends on: — · Migrations: `0020`
+Branch: `spec/003-account-recovery/ws-b` · Depends on: — · Migrations: `0021`
 
-- [ ] T-B1 — Write migration `0020` with the request table, guarded resolve
+- [ ] T-B1 — Write migration `0021` with the request table, guarded resolve
       function, grants, and a guarded down. Satisfies R-21, R-28. Proven by
       `modules/identity/test/reverification/reverification.integration.test.ts`.
 - [ ] T-B2 — Implement `IdentityReverificationPort` with in-memory document
@@ -78,7 +78,7 @@ Branch: `spec/003-account-recovery/ws-d` · Depends on: ws-a · Migrations: —
 
 - [ ] T-90 — Merge in waves (ws-a, ws-b → ws-c, ws-d) with merge commits; run
       `corepack pnpm verify:full` after each merge.
-- [ ] T-91 — Complete catalog checks for migrations `0019`–`0020` and record the
+- [ ] T-91 — Complete catalog checks for migrations `0020`–`0021` and record the
       migration transcript. Satisfies R-28.
 - [ ] T-92 — Run the end-to-end lost-device and lost-number scenarios across all
       three specs and record them as phase evidence (P2-AC-026–P2-AC-030).

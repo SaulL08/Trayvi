@@ -16,11 +16,11 @@ branch when each stream merges.
 
 ## ws-a — Session families, tokens, rotation, revocation
 
-Branch: `spec/002-sign-in-and-sessions/ws-a` · Depends on: — · Migrations: `0016`
+Branch: `spec/002-sign-in-and-sessions/ws-a` · Depends on: — · Migrations: `0017`
 
 - [ ] T-A1 — Implement token issuing and hashing on `OpaqueTokenCodec`. Satisfies
       R-01. Proven by `test/session/token-codec.unit.test.ts`.
-- [ ] T-A2 — Write migration `0016` with tables, indexes, terminal-state trigger,
+- [ ] T-A2 — Write migration `0017` with tables, indexes, terminal-state trigger,
       guarded functions, grants, and a guarded down. Satisfies R-02, R-04–R-07,
       R-32. Proven by `test/session/session-lifecycle.integration.test.ts`.
 - [ ] T-A3 — Implement `SessionCommands`, `AccessTokenResolver`, and
@@ -32,24 +32,24 @@ Branch: `spec/002-sign-in-and-sessions/ws-a` · Depends on: — · Migrations: `
 
 ## ws-b — Password credential
 
-Branch: `spec/002-sign-in-and-sessions/ws-b` · Depends on: — · Migrations: `0017`
+Branch: `spec/002-sign-in-and-sessions/ws-b` · Depends on: — · Migrations: `0018`
 
 - [ ] T-B1 — Implement `scrypt-v1` hashing, verification, and rehash through the
       asynchronous API with a concurrency semaphore. Satisfies R-11. Proven by
       `test/password/password-hashing.unit.test.ts`.
 - [ ] T-B2 — Implement the policy and the synthetic compromised-password checker.
       Satisfies R-12. Proven by `test/password/password-policy.unit.test.ts`.
-- [ ] T-B3 — Write migration `0017` and implement `PasswordCredentials` with
+- [ ] T-B3 — Write migration `0018` and implement `PasswordCredentials` with
       failure limits and events. Satisfies R-13, R-14, R-30, R-32. Proven by
       `test/password/password.integration.test.ts`.
 
 ## ws-c — Accounts seam and registration binding
 
-Branch: `spec/002-sign-in-and-sessions/ws-c` · Depends on: — · Migrations: `0018`
+Branch: `spec/002-sign-in-and-sessions/ws-c` · Depends on: — · Migrations: `0019`
 
 - [ ] T-C1 — Implement `AccountStateReader` over `accounts.accounts`. Satisfies
       R-16. Proven by `apps/api/test/registration/registration.integration.test.ts`.
-- [ ] T-C2 — Write migration `0018` and implement
+- [ ] T-C2 — Write migration `0019` and implement
       `RegistrationContactReservations`. Satisfies R-17, R-32. Proven by
       `apps/api/test/registration/registration.integration.test.ts`.
 - [ ] T-C3 — Extend the Phase 1 enrollment transaction to consume the proof,
@@ -93,7 +93,7 @@ Branch: `spec/002-sign-in-and-sessions/ws-e` · Depends on: ws-a, ws-b, ws-d · 
 
 - [ ] T-90 — Merge in waves (ws-a, ws-b, ws-c → ws-d → ws-e) with merge commits;
       run `corepack pnpm verify:full` after each merge.
-- [ ] T-91 — Complete catalog checks for migrations `0016`–`0018` and record the
+- [ ] T-91 — Complete catalog checks for migrations `0017`–`0019` and record the
       migration transcript. Satisfies R-32.
 - [ ] T-92 — Record delivered requirements and evidence in the phase
       `IMPLEMENTATION.md`.

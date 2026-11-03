@@ -776,22 +776,22 @@ implementation.
 
 ## 20. Migration plan
 
-No migration is created by this plan. Numbers are provisional because Phase 1
-remediation reserves `0008`–`0010`; each spec confirms its numbers when it
-becomes `approved`.
+No migration is created by this plan. Phase 1 remediation reserves `0008`–`0010`
+and its privilege-boundary follow-up (issue #6) reserves `0011`, so Phase 2
+starts at `0012`. Each spec confirms its numbers when it becomes `approved`.
 
 | Order  | Spec     | Contents                                                              |
 | ------ | -------- | --------------------------------------------------------------------- |
-| `0011` | SPEC-001 | `auth` schema, usage grants (integration scaffold)                    |
-| `0012` | SPEC-001 | contact points, transitions, guards                                   |
-| `0013` | SPEC-001 | verification challenges, contact proofs                               |
-| `0014` | SPEC-001 | rate-limit buckets                                                    |
-| `0015` | SPEC-001 | provider callback receipts                                            |
-| `0016` | SPEC-002 | session families, sessions, refresh tokens, guarded rotation function |
-| `0017` | SPEC-002 | password credentials                                                  |
-| `0018` | SPEC-002 | enrollment-operation contact binding (Accounts)                       |
-| `0019` | SPEC-003 | recovery cases, transitions, account restrictions                     |
-| `0020` | SPEC-003 | identity re-verification case method (Identity)                       |
+| `0012` | SPEC-001 | `auth` schema, usage grants (integration scaffold)                    |
+| `0013` | SPEC-001 | contact points, transitions, guards                                   |
+| `0014` | SPEC-001 | verification challenges, contact proofs                               |
+| `0015` | SPEC-001 | rate-limit buckets                                                    |
+| `0016` | SPEC-001 | provider callback receipts                                            |
+| `0017` | SPEC-002 | session families, sessions, refresh tokens, guarded rotation function |
+| `0018` | SPEC-002 | password credentials                                                  |
+| `0019` | SPEC-002 | enrollment-operation contact binding (Accounts)                       |
+| `0020` | SPEC-003 | recovery cases, transitions, account restrictions                     |
+| `0021` | SPEC-003 | identity re-verification case method (Identity)                       |
 
 Every migration has a paired down that refuses to drop populated tables, and the
 evidence shows `up -> verify -> down -> up -> verify`, catalog grants, and
