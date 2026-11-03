@@ -1,1 +1,16 @@
-export {};
+export {
+  canTransition,
+  CHALLENGE_POLICY_BOUNDS,
+  CHALLENGE_PURPOSES,
+  ChallengePolicyError,
+  decideResend,
+  decideVerify,
+  isExpired,
+  isProofExpired,
+  newChallengeTimes,
+  proofExpiry,
+  validateChallengePolicy,
+  type ChallengeSnapshot,
+  type ResendDecision,
+  type VerifyDecision,
+} from './challenge-lifecycle';
