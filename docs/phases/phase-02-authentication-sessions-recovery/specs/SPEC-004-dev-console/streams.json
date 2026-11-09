@@ -1,0 +1,46 @@
+{
+  "spec": "SPEC-004-dev-console",
+  "title": "Local development console",
+  "phase": "phase-02-authentication-sessions-recovery",
+  "status": "draft",
+  "base": "spec/002-sign-in-and-sessions/integration",
+  "streams": [
+    {
+      "id": "ws-a",
+      "title": "Development API routes",
+      "owns": ["apps/api/src/dev/", "apps/api/test/dev/"],
+      "dependsOn": [],
+      "migrations": [],
+      "acceptance": ["P2-AC-013", "P2-AC-033"],
+      "verify": ["corepack pnpm verify:full"]
+    },
+    {
+      "id": "ws-b",
+      "title": "Console core: API client, masking, log, status, verification",
+      "owns": [
+        "apps/dev-console/src/api/",
+        "apps/dev-console/src/panels/status/",
+        "apps/dev-console/src/panels/inbox/",
+        "apps/dev-console/src/panels/verification/",
+        "apps/dev-console/test/core/"
+      ],
+      "dependsOn": [],
+      "migrations": [],
+      "acceptance": ["P2-AC-009", "P2-AC-017", "P2-AC-033", "P2-AC-035"],
+      "verify": ["corepack pnpm verify"]
+    },
+    {
+      "id": "ws-c",
+      "title": "Registration and session panels",
+      "owns": [
+        "apps/dev-console/src/panels/registration/",
+        "apps/dev-console/src/panels/sessions/",
+        "apps/dev-console/test/sessions/"
+      ],
+      "dependsOn": [],
+      "migrations": [],
+      "acceptance": ["P2-AC-015", "P2-AC-021", "P2-AC-025", "P2-AC-035"],
+      "verify": ["corepack pnpm verify"]
+    }
+  ]
+}
