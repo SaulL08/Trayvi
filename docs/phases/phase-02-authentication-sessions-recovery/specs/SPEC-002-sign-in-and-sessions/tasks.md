@@ -8,10 +8,10 @@ branch when each stream merges.
 
 ## Integration scaffold
 
-- [ ] T-00 — Create the scaffold in design §4: contracts, outbox type extensions,
+- [x] T-00 — Create the scaffold in design §4: contracts, outbox type extensions,
       entry files, HTTP module placeholders, deny-by-default placeholder guard,
       public-route allowlist, configuration, and verification placeholders.
-- [ ] T-01 — Confirm `verify` passes and that every non-allowlisted route returns
+- [x] T-01 — Confirm `verify` passes and that every non-allowlisted route returns
       `AUTHENTICATION_REQUIRED` under the placeholder guard.
 
 ## ws-a — Session families, tokens, rotation, revocation

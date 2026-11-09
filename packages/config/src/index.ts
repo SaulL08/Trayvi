@@ -16,6 +16,8 @@ export type {
   AuthCallbackProviderConfig,
   AuthCallingCodeConfig,
   AuthConfig,
+  AuthPasswordConfig,
+  AuthSessionConfig,
   AuthRateLimitDimension,
   AuthRateLimitRuleConfig,
 } from './auth-config';

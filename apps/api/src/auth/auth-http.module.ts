@@ -6,10 +6,14 @@ import type { FastifyInstance } from 'fastify';
 import type { AppConfig, AuthConfig } from '@trayvi/config';
 import type { FoundationMetrics, Logger } from '@trayvi/observability';
 
+import { RegistrationHttpModule } from '../phase-01/registration-http.module';
+
 import { composeAuthServices, type AuthServices } from './auth-composition';
 import { AuthExceptionFilter } from './auth-problem';
 import { registerCallbackRoutes } from './callback-routes';
 import { ChallengeController } from './challenge.controller';
+import { GuardModule } from './guard';
+import { SessionsHttpModule } from './sessions';
 import { AUTH_LOGGER, AUTH_SERVICES } from './tokens';
 
 export interface AuthHttpDependencies {
@@ -40,12 +44,13 @@ class AuthHttpLifecycle implements OnModuleInit, OnModuleDestroy {
   }
 }
 
-/** SPEC-001 composition root for Auth HTTP routes (ws-e). */
+/** Composition root for Auth HTTP routes: SPEC-001 challenges, SPEC-002 placeholders. */
 @Module({})
 export class AuthHttpModule {
   static register(dependencies: AuthHttpDependencies): DynamicModule {
     return {
       module: AuthHttpModule,
+      imports: [GuardModule, SessionsHttpModule, RegistrationHttpModule],
       controllers: [ChallengeController],
       providers: [
         { provide: AUTH_LOGGER, useValue: dependencies.logger },

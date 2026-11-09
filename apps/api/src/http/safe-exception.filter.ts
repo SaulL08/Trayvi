@@ -5,6 +5,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { Logger } from '@trayvi/observability';
 import { getRequestContext, normalizeInboundId } from '@trayvi/observability';
 
+import { AuthHttpError, sendAuthHttpError } from '../auth/auth-problem';
+
 import { toProblemDetails } from './problem-details';
 import { getHttpRequestContext } from './request-context';
 
@@ -19,6 +21,11 @@ export class SafeExceptionFilter implements ExceptionFilter {
     const requestContext = getHttpRequestContext(request) ?? getRequestContext();
     const requestId = requestContext?.requestId ?? normalizeInboundId(request.id);
     const correlationId = requestContext?.correlationId ?? requestId;
+    // The global Auth guard (SPEC-002) runs before any controller filter, so its errors land here.
+    if (exception instanceof AuthHttpError) {
+      void sendAuthHttpError(reply, exception, requestId);
+      return;
+    }
     const problem = toProblemDetails(exception, requestId);
 
     if (!(exception instanceof HttpException) || problem.status >= 500) {

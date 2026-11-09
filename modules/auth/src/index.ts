@@ -17,3 +17,16 @@ export * from './infrastructure/challenge/index';
 export * from './infrastructure/rate-limit/index';
 export * from './infrastructure/delivery/index';
 export * from './infrastructure/callbacks/index';
+
+// SPEC-002 stream entry points (SPEC-002 design §4). Each stream replaces its own `export {};` file.
+export * from './domain/session/index';
+export * from './domain/password/index';
+export * from './domain/principal/index';
+export * from './application/session/index';
+export * from './application/password/index';
+export * from './application/registration/index';
+export * from './application/principal/index';
+export * from './application/sign-in/index';
+export * from './infrastructure/session/index';
+export * from './infrastructure/password/index';
+export * from './infrastructure/registration/index';

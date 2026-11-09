@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import type { DynamicModule } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 
 import type { AppConfig, AuthConfig } from '@trayvi/config';
 import type { FoundationMetrics, Logger } from '@trayvi/observability';
 
 import { AuthHttpModule } from './auth/auth-http.module';
+import { AuthGuard } from './auth/guard';
 import { DatabaseProbe } from './database-probe';
 import { HealthController } from './health/health.controller';
 import type { RuntimeState } from './runtime-state';
@@ -44,6 +46,8 @@ export class AppModule {
         { provide: FOUNDATION_METRICS, useValue: dependencies.metrics },
         { provide: RUNTIME_STATE, useValue: dependencies.runtime },
         { provide: APP_DATABASE_PROBE, useClass: DatabaseProbe },
+        // SPEC-002: every route needs a principal unless PLAN §9.4 lists it as public.
+        { provide: APP_GUARD, useClass: AuthGuard },
       ],
     };
   }

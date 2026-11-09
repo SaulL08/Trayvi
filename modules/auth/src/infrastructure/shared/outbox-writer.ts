@@ -1,11 +1,18 @@
 import type { AuthEventType, AuthOutboxEvent, OutboxWriter } from '../../contracts/outbox';
 import type { SqlExecutor } from '../../contracts/runtime';
 
-/** SPEC-001 design §2.3 payload allowlist. Every listed field is required; no other is allowed. */
+/**
+ * SPEC-001 and SPEC-002 design §2.3 payload allowlists. Every listed field is required; no other
+ * is allowed.
+ */
 export const AUTH_EVENT_PAYLOAD_FIELDS: Readonly<Record<AuthEventType, readonly string[]>> = {
   'auth.contact.bound': ['contactId', 'accountId', 'reason'],
   'auth.contact.replaced': ['contactId', 'previousContactId', 'accountId', 'reason', 'caseId'],
   'auth.contact.revoked': ['contactId', 'accountId', 'reason'],
+  'auth.session.created': ['familyId', 'accountId', 'assurance', 'newInstallation'],
+  'auth.session.family-revoked': ['familyId', 'accountId', 'reason'],
+  'auth.session.reuse-detected': ['familyId', 'accountId'],
+  'auth.password.changed': ['accountId', 'change'],
 };
 
 export class OutboxPayloadError extends Error {

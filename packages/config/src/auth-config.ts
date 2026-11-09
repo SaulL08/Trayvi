@@ -3,7 +3,7 @@ import type { ConfigIssue } from './config-error';
 import type { RawEnvironment, RuntimeEnvironment } from './types';
 
 /**
- * Auth settings for SPEC-001 (PLAN §§6, 8.2, 11, 14). They are parsed separately from AppConfig so
+ * Auth settings for SPEC-001 (PLAN §§6, 8.2, 11, 14) and SPEC-002 (PLAN §§9.2, 10). They are parsed separately from AppConfig so
  * processes that do not compose Auth keep their existing configuration surface.
  */
 export interface AuthCallingCodeConfig {
@@ -39,6 +39,23 @@ export interface AuthCallbackProviderConfig {
   readonly secret: Buffer;
 }
 
+/** PLAN §9.2 lifetimes. Mirrors `SessionPolicy` in `@trayvi/auth` contracts. */
+export interface AuthSessionConfig {
+  readonly accessTokenSeconds: number; // 300..900
+  readonly idleSeconds: number; // 86400..5184000
+  readonly absoluteSeconds: number; // >= idleSeconds, <= 15552000
+  readonly rotationGraceSeconds: number; // 0..60
+  readonly recentAuthSeconds: number; // 60..900
+}
+
+/** PLAN §10 password settings. */
+export interface AuthPasswordConfig {
+  /** Cap on concurrent scrypt verifications, so hashing never starves the event loop. */
+  readonly verificationConcurrency: number;
+  /** Newline-separated compromised-password list. Absent: the synthetic Phase 2 list. */
+  readonly compromisedListPath?: string;
+}
+
 export interface AuthConfig {
   readonly numbering: {
     readonly defaultCallingCode?: string;
@@ -61,6 +78,8 @@ export interface AuthConfig {
     readonly timestampToleranceSeconds: number;
     readonly providers: readonly AuthCallbackProviderConfig[];
   };
+  readonly session: AuthSessionConfig;
+  readonly passwordPolicy: AuthPasswordConfig;
   /** Where Auth key material comes from. Only the synthetic test source exists in Phase 2. */
   readonly keys: { readonly source: 'synthetic' };
 }
@@ -248,6 +267,38 @@ export function parseAuthConfig(
   }));
   const budget = rateLimits.find((rule) => rule.dimension === 'DELIVERY_GLOBAL_MINUTE');
 
+  const session: AuthSessionConfig = {
+    accessTokenSeconds: issues.integer(environment, 'AUTH_ACCESS_TOKEN_SECONDS', 600, 300, 900),
+    idleSeconds: issues.integer(environment, 'AUTH_SESSION_IDLE_SECONDS', 30 * DAY, DAY, 60 * DAY),
+    absoluteSeconds: issues.integer(
+      environment,
+      'AUTH_SESSION_ABSOLUTE_SECONDS',
+      90 * DAY,
+      DAY,
+      180 * DAY,
+    ),
+    rotationGraceSeconds: issues.integer(environment, 'AUTH_REFRESH_GRACE_SECONDS', 30, 0, 60),
+    recentAuthSeconds: issues.integer(environment, 'AUTH_RECENT_AUTH_SECONDS', 300, 60, 900),
+  };
+  if (session.absoluteSeconds < session.idleSeconds) {
+    issues.add(
+      'AUTH_SESSION_ABSOLUTE_SECONDS',
+      'must not be shorter than AUTH_SESSION_IDLE_SECONDS',
+    );
+  }
+
+  const compromisedListPath = environment.AUTH_COMPROMISED_PASSWORD_LIST_PATH?.trim();
+  const passwordPolicy: AuthPasswordConfig = {
+    verificationConcurrency: issues.integer(
+      environment,
+      'AUTH_PASSWORD_VERIFICATION_CONCURRENCY',
+      8,
+      1,
+      64,
+    ),
+    ...(compromisedListPath ? { compromisedListPath } : {}),
+  };
+
   const keySource = (environment.AUTH_KEY_SOURCE ?? 'synthetic').trim();
   if (keySource !== 'synthetic') {
     issues.add('AUTH_KEY_SOURCE', 'must name a supported key source');
@@ -271,6 +322,8 @@ export function parseAuthConfig(
       timestampToleranceSeconds: 300,
       providers: parseProviders(environment, runtime, issues),
     },
+    session,
+    passwordPolicy,
     keys: { source: 'synthetic' },
   };
 

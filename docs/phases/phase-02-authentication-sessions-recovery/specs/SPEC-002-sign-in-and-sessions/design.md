@@ -341,6 +341,27 @@ On `spec/002-sign-in-and-sessions/integration`:
    compromised-password list path, with tests.
 6. `scripts/db` verification placeholders for migrations `0017`–`0019`.
 
+The scaffold (2026-11-09) also made these integration-owned changes, because no
+stream may edit the files involved:
+
+7. `apps/api/src/auth/auth-problem.ts` lists the §2.3 codes
+   (`AUTHENTICATION_FAILED`, `AUTHENTICATION_REQUIRED`, `REAUTHENTICATION_REQUIRED`,
+   `STEP_UP_REQUIRED`, `IDEMPOTENCY_CONFLICT`). `AuthHttpError` takes an optional
+   `stepUp: { requiredAssurance, maxAgeSeconds }`, which only `STEP_UP_REQUIRED`
+   renders.
+8. The global `SafeExceptionFilter` renders any `AuthHttpError` as Auth Problem
+   Details. The global guard runs before controller filters, so its denials reach
+   that filter.
+9. `packages/config` exposes `AuthConfig.session` (`SessionPolicy`, PLAN §9.2
+   defaults) and `AuthConfig.passwordPolicy` (`verificationConcurrency`, default
+   8; optional `compromisedListPath`). The field is not called `password`, because
+   the secret scanner reads `password: …` as an assignment.
+10. The `db:verify` Auth rollback cycle covers every migration from `0012` onward,
+    so `0017`–`0019` roll back with SPEC-001's. T-91 adds their catalog entries.
+11. `apps/api/src/auth/public-routes.ts` also exports `isPublicRoute(method,
+template)`, which accepts PLAN `{name}` and Fastify `:name` parameters and
+    treats `HEAD` as `GET`.
+
 ## 5. Failure behavior and rollback
 
 - Resolver errors (database unavailable) deny the request with

@@ -29,7 +29,7 @@ export interface DatabaseVerificationEvidence {
   readonly outboxDeleteDenied: boolean;
   /** SPEC-001 (0012-0016): catalog after a clean apply. */
   readonly authCatalogVerified: boolean;
-  /** SPEC-001: 0016..0012 roll back in order on an empty domain and drop the auth schema. */
+  /** Every Auth migration (0012 onward) rolls back in order on an empty domain and drops the auth schema. */
   readonly authRollbackCycle: boolean;
   /** SPEC-001: the catalog is identical after rolling forward again. */
   readonly authCatalogReverified: boolean;
@@ -499,7 +499,13 @@ async function authCatalogValid(client: Client): Promise<boolean> {
   );
 }
 
-/** SPEC-001 T-91: up -> verify -> down (0016..0012) -> up -> verify on a clean database. */
+/**
+ * SPEC-001 T-91: up -> verify -> down (latest..0012) -> up -> verify on a clean database.
+ *
+ * Every migration from 0012 onward belongs to Auth (Phase 2), so the cycle covers SPEC-002's
+ * 0017-0019 as streams add them. SPEC-002 T-91 adds their tables, indexes, functions, and runtime
+ * privileges to the AUTH_* catalog lists above; until then only SPEC-001's catalog is asserted.
+ */
 async function verifyAuthMigrations(
   adminUrl: string,
 ): Promise<
@@ -515,10 +521,10 @@ async function verifyAuthMigrations(
     await migrator.up();
     await client.connect();
     const authCatalogVerified = await authCatalogValid(client);
-    const authVersions = (await migrationVersions()).filter(
-      (version) => version >= '0012' && version <= '0016',
+    const authVersions = (await migrationVersions()).filter((version) => version >= '0012');
+    let rolledBackInOrder = ['0012', '0013', '0014', '0015', '0016'].every((version) =>
+      authVersions.includes(version),
     );
-    let rolledBackInOrder = authVersions.length === 5;
     for (const version of [...authVersions].reverse()) {
       const rolledBack = await migrator.down();
       rolledBackInOrder &&= rolledBack.length === 1 && rolledBack[0] === version;

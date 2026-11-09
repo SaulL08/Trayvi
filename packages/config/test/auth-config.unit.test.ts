@@ -117,4 +117,47 @@ describe('Auth configuration', () => {
       'AUTH_KEY_SOURCE',
     ]);
   });
+
+  it('applies the PLAN §9.2 session lifetimes and §10 password defaults', () => {
+    const config = parseAuthConfig({}, 'test');
+    expect(config.session).toEqual({
+      accessTokenSeconds: 600,
+      idleSeconds: 2_592_000,
+      absoluteSeconds: 7_776_000,
+      rotationGraceSeconds: 30,
+      recentAuthSeconds: 300,
+    });
+    expect(config.passwordPolicy).toEqual({ verificationConcurrency: 8 });
+    expect(
+      parseAuthConfig({ AUTH_COMPROMISED_PASSWORD_LIST_PATH: ' /etc/trayvi/pw.txt ' }, 'test')
+        .passwordPolicy.compromisedListPath,
+    ).toBe('/etc/trayvi/pw.txt');
+  });
+
+  it('rejects session and password values outside their bounds', () => {
+    const issues = issuesOf({
+      AUTH_ACCESS_TOKEN_SECONDS: '299',
+      AUTH_SESSION_IDLE_SECONDS: '86399',
+      AUTH_SESSION_ABSOLUTE_SECONDS: '15552001',
+      AUTH_REFRESH_GRACE_SECONDS: '61',
+      AUTH_RECENT_AUTH_SECONDS: '59',
+      AUTH_PASSWORD_VERIFICATION_CONCURRENCY: '0',
+    });
+    expect(issues.map((issue) => issue.field)).toEqual([
+      'AUTH_ACCESS_TOKEN_SECONDS',
+      'AUTH_SESSION_IDLE_SECONDS',
+      'AUTH_SESSION_ABSOLUTE_SECONDS',
+      'AUTH_REFRESH_GRACE_SECONDS',
+      'AUTH_RECENT_AUTH_SECONDS',
+      'AUTH_PASSWORD_VERIFICATION_CONCURRENCY',
+    ]);
+  });
+
+  it('rejects an absolute lifetime shorter than the idle timeout', () => {
+    const issues = issuesOf({
+      AUTH_SESSION_IDLE_SECONDS: String(40 * 86_400),
+      AUTH_SESSION_ABSOLUTE_SECONDS: String(20 * 86_400),
+    });
+    expect(issues.map((issue) => issue.field)).toEqual(['AUTH_SESSION_ABSOLUTE_SECONDS']);
+  });
 });

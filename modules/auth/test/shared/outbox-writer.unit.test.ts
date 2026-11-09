@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AuthOutboxEvent } from '../../src/contracts/outbox';
 import type { SqlExecutor } from '../../src/contracts/runtime';
 import {
+  AUTH_EVENT_PAYLOAD_FIELDS,
   OutboxPayloadError,
   PostgresOutboxWriter,
 } from '../../src/infrastructure/shared/outbox-writer';
@@ -59,7 +60,42 @@ describe('PostgresOutboxWriter', () => {
     expect(sql.calls).toHaveLength(0);
   });
 
-  it('uses an aggregate type accepted by the Phase 0 outbox format check', () => {
-    expect(bound.aggregateType).toMatch(/^[a-z][a-z0-9_]{0,99}$/u);
+  it('uses aggregate types accepted by the Phase 0 outbox format check', () => {
+    const aggregateTypes: AuthOutboxEvent['aggregateType'][] = [
+      'auth_contact',
+      'auth_challenge',
+      'auth_session',
+      'auth_credential',
+    ];
+    for (const aggregateType of aggregateTypes) {
+      expect(aggregateType).toMatch(/^[a-z][a-z0-9_]{0,99}$/u);
+    }
+  });
+
+  it('allowlists exactly the SPEC-002 design §2.3 session and credential payloads', async () => {
+    expect({
+      'auth.session.created': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.created'],
+      'auth.session.family-revoked': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.family-revoked'],
+      'auth.session.reuse-detected': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.reuse-detected'],
+      'auth.password.changed': AUTH_EVENT_PAYLOAD_FIELDS['auth.password.changed'],
+    }).toEqual({
+      'auth.session.created': ['familyId', 'accountId', 'assurance', 'newInstallation'],
+      'auth.session.family-revoked': ['familyId', 'accountId', 'reason'],
+      'auth.session.reuse-detected': ['familyId', 'accountId'],
+      'auth.password.changed': ['accountId', 'change'],
+    });
+    const sql = recordingExecutor();
+    await new PostgresOutboxWriter().enqueue(sql, {
+      ...bound,
+      type: 'auth.session.created',
+      aggregateType: 'auth_session',
+      payload: {
+        familyId: '018f0000-0000-7000-8000-0000000000f1',
+        accountId: '018f0000-0000-7000-8000-0000000000e1',
+        assurance: 'AAL1',
+        newInstallation: true,
+      },
+    });
+    expect(sql.calls[0]?.[3]).toBe('auth_session');
   });
 });
