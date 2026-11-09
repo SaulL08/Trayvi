@@ -2,8 +2,8 @@
   "spec": "SPEC-002-sign-in-and-sessions",
   "title": "Sign-in, credentials, and sessions",
   "phase": "phase-02-authentication-sessions-recovery",
-  "status": "draft",
-  "base": "main",
+  "status": "approved",
+  "base": "spec/001-contact-verification-challenges/integration",
   "streams": [
     {
       "id": "ws-a",

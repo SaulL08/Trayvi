@@ -1,6 +1,6 @@
 # SPEC-002 — Sign-in, credentials, and sessions — Design
 
-Status: Draft  
+Status: Approved (early, see requirements §7)  
 Requirements: [requirements.md](requirements.md)
 
 ## 1. Approach
@@ -256,7 +256,7 @@ export interface RegistrationContactReservations {
 
 // contracts/outbox.ts additions (AuthEventType union extended by the scaffold)
 // 'auth.session.created' | 'auth.session.family-revoked' | 'auth.session.reuse-detected' | 'auth.password.changed'
-// aggregateType adds 'auth.session' | 'auth.credential'
+// aggregateType adds 'auth_session' | 'auth_credential' (Phase 0 forbids '.')
 ```
 
 The scaffold also adds `ChallengePurpose` handling for `STEP_UP` to the HTTP
@@ -278,10 +278,10 @@ grants given to the Auth workload; reporting roles get nothing on these tables.
 
 | Event                         | Aggregate         | Payload fields                                          |
 | ----------------------------- | ----------------- | ------------------------------------------------------- |
-| `auth.session.created`        | `auth.session`    | `familyId`, `accountId`, `assurance`, `newInstallation` |
-| `auth.session.family-revoked` | `auth.session`    | `familyId`, `accountId`, `reason`                       |
-| `auth.session.reuse-detected` | `auth.session`    | `familyId`, `accountId`                                 |
-| `auth.password.changed`       | `auth.credential` | `accountId`, `change` (`SET`, `REPLACED`, `REMOVED`)    |
+| `auth.session.created`        | `auth_session`    | `familyId`, `accountId`, `assurance`, `newInstallation` |
+| `auth.session.family-revoked` | `auth_session`    | `familyId`, `accountId`, `reason`                       |
+| `auth.session.reuse-detected` | `auth_session`    | `familyId`, `accountId`                                 |
+| `auth.password.changed`       | `auth_credential` | `accountId`, `change` (`SET`, `REPLACED`, `REMOVED`)    |
 
 | Route                                               | Auth                                  | Request                                                                              | Success                                                                          |
 | --------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |

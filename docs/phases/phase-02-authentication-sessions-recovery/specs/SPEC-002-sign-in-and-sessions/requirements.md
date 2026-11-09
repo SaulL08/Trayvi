@@ -1,9 +1,9 @@
 # SPEC-002 — Sign-in, credentials, and sessions — Requirements
 
-Status: Draft  
+Status: Approved (early, see §7)  
 Phase: `phase-02-authentication-sessions-recovery` ([PLAN.md](../../PLAN.md))  
 Owners: Auth  
-Last updated: 2026-11-02
+Last updated: 2026-11-09
 
 ## 1. Purpose
 
@@ -11,8 +11,8 @@ This spec turns a contact proof from SPEC-001 into a revocable session. It adds
 the optional password credential, opaque access tokens, rotating refresh tokens
 with family reuse detection, sign-out and revocation, the authentication guard
 and principal, step-up checks, and the binding of a verified contact to Phase 1
-account registration. It refines PLAN §§5.4, 9, 10, 12, and 15 and starts only
-after SPEC-001 is `integrated`.
+account registration. It refines PLAN §§5.4, 9, 10, 12, and 15. It builds on SPEC-001's integration branch
+(see §7), not on `main`.
 
 ## 2. Scope
 
@@ -99,10 +99,27 @@ commitment, network-prefix commitment, contact reservation fingerprint (PLAN §1
 
 ## 6. Open questions
 
-| Question                                                                   | Owner          | Blocks approval |
-| -------------------------------------------------------------------------- | -------------- | --------------- |
-| Confirm migration numbers after SPEC-001 integrates.                       | Auth           | Yes             |
-| `scrypt-v1` or Argon2id (ADR-013).                                         | Architecture   | Yes             |
-| Accept the document-registration oracle with the R-20 limits, or redesign. | Trust & Safety | Yes             |
-| Skip the second OTP after identity submission.                             | Product        | No              |
-| Session lifetime defaults for drivers versus customers.                    | Product        | No (config)     |
+| Question                                                                                                                                                                                | Owner          | Blocks approval |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | --------------- |
+| ~~Confirm migration numbers after SPEC-001 integrates.~~ Resolved: `0017`–`0019` (SPEC-001 holds `0012`–`0016`).                                                                        | Auth           | Resolved        |
+| ~~`scrypt-v1` or Argon2id (ADR-013).~~ Resolved: `scrypt-v1`, as ADR-013 proposes.                                                                                                      | Architecture   | Resolved        |
+| ~~Accept the document-registration oracle with the R-20 limits, or redesign.~~ Resolved: accepted with the R-20 limits as a residual risk; Trust & Safety reviews it before production. | Trust & Safety | Resolved        |
+| Skip the second OTP after identity submission.                                                                                                                                          | Product        | No              |
+| Session lifetime defaults for drivers versus customers.                                                                                                                                 | Product        | No (config)     |
+
+## 7. Approval record
+
+- 2026-11-09: approved by the repository owner, who asked to start the
+  implementation and chose `scrypt-v1` and acceptance of the
+  document-registration oracle with the R-20 limits.
+- Like SPEC-001, this approval is **ahead of the PLAN §1 gate**: Phase 1 has not
+  recorded a final `PASS` and ADR-013 is still `Proposed`. SPEC-001 is not
+  `integrated` either, so this spec's integration branch starts from
+  `spec/001-contact-verification-challenges/integration` and depends on its
+  contracts as built. It shall not merge to `main` before SPEC-001 does.
+- The oracle acceptance is a residual risk: a person who controls many phone
+  numbers can still learn, within the R-20 limits, whether a document is already
+  registered. It is recorded for Trust & Safety review before production.
+- Correction from SPEC-001: the outbox aggregate types are `auth_session` and
+  `auth_credential`, because Phase 0's `outbox_aggregate_type_format` check
+  forbids `.`.
