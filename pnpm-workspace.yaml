@@ -17,5 +17,8 @@ allowBuilds:
 
 # GHSA-g3hv-75wg-m249: ESLint 10.x still requests minimatch ^10; the fix ships only in 11.
 # Remove when eslint, @eslint/config-array, and @typescript-eslint depend on minimatch >= 11.0.1.
+# GHSA-389g-gv7q-r4x8: @nestjs/platform-fastify 12.0.4 pins fastify 5.12.5; the fix ships in 5.12.6.
+# Remove when @nestjs/platform-fastify is upgraded to a release that depends on fastify >= 5.12.6.
 overrides:
   minimatch: 11.0.3
+  fastify: 5.12.6

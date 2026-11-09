@@ -6,26 +6,66 @@
   "environment": "local macOS arm64, Node 22.14.0, pnpm 11.25.0, PostgreSQL 17.11 / PostGIS 3.5 (Docker)",
   "turboForce": true,
   "gates": {
-    "format": { "passed": true },
-    "lint": { "passed": true },
-    "typecheck": { "passed": true, "tasks": 14, "cached": 0 },
-    "architecture": { "passed": true, "violations": 0 },
-    "specValidate": { "passed": true, "specs": 3 },
-    "secretScan": { "passed": true, "findings": 0 },
-    "licenses": { "passed": true, "packages": 275, "findings": 0 },
-    "unit": { "passed": true, "files": 32, "tests": 216, "failed": 0 },
-    "build": { "passed": true, "tasks": 8, "cached": 0 },
-    "integration": { "passed": true, "files": 17, "tests": 84, "failed": 0 },
-    "dbVerify": { "passed": true, "evidenceFlags": 17 },
+    "format": {
+      "passed": true
+    },
+    "lint": {
+      "passed": true
+    },
+    "typecheck": {
+      "passed": true,
+      "tasks": 14,
+      "cached": 0
+    },
+    "architecture": {
+      "passed": true,
+      "violations": 0
+    },
+    "specValidate": {
+      "passed": true,
+      "specs": 3
+    },
+    "secretScan": {
+      "passed": true,
+      "findings": 0
+    },
+    "licenses": {
+      "passed": true,
+      "packages": 276,
+      "findings": 0
+    },
+    "unit": {
+      "passed": true,
+      "files": 32,
+      "tests": 216,
+      "failed": 0
+    },
+    "build": {
+      "passed": true,
+      "tasks": 8,
+      "cached": 0
+    },
+    "integration": {
+      "passed": true,
+      "files": 17,
+      "tests": 84,
+      "failed": 0
+    },
+    "dbVerify": {
+      "passed": true,
+      "evidenceFlags": 17
+    },
     "dependencyAudit": {
       "passed": true,
-      "advisories": [
+      "advisories": [],
+      "resolved": [
         {
           "id": "GHSA-389g-gv7q-r4x8",
           "package": "fastify",
-          "installed": "5.12.5",
-          "fixed": ">=5.12.6",
-          "severity": "low"
+          "from": "5.12.5",
+          "to": "5.12.6",
+          "severity": "low",
+          "via": "pnpm-workspace.yaml override (pinned by @nestjs/platform-fastify 12.0.4)"
         }
       ]
     }
@@ -43,10 +83,22 @@
       "alreadyBoundPerRound": 49,
       "activeBindingsPerRound": 1
     },
-    "startRace": { "connections": 50, "pendingChallenges": 1 },
-    "correctCodeRace": { "connections": 50, "proofs": 1 },
-    "wrongCodeRace": { "connections": 50, "failuresWithinCap": true },
-    "rateLimitBucketRace": { "connections": 200, "admittedEqualsLimit": true }
+    "startRace": {
+      "connections": 50,
+      "pendingChallenges": 1
+    },
+    "correctCodeRace": {
+      "connections": 50,
+      "proofs": 1
+    },
+    "wrongCodeRace": {
+      "connections": 50,
+      "failuresWithinCap": true
+    },
+    "rateLimitBucketRace": {
+      "connections": 200,
+      "admittedEqualsLimit": true
+    }
   },
   "hostedRuns": [
     {
@@ -54,10 +106,35 @@
       "run": 41705687702,
       "result": "integration failed (max_connections); fixed by b5baac6"
     },
-    { "pr": 9, "run": 41711533597, "result": "pass" },
-    { "pr": 10, "run": 41708782815, "result": "pass" },
-    { "pr": 11, "run": 41714773060, "result": "pass" },
-    { "pr": 12, "run": 41717093059, "result": "pass" }
+    {
+      "pr": 9,
+      "run": 41711533597,
+      "result": "pass"
+    },
+    {
+      "pr": 10,
+      "run": 41708782815,
+      "result": "pass"
+    },
+    {
+      "pr": 11,
+      "run": 41714773060,
+      "result": "pass"
+    },
+    {
+      "pr": 12,
+      "run": 41717093059,
+      "result": "pass"
+    }
   ],
-  "requirements": { "pass": 33, "deviation": ["R-32"], "fail": 0 }
+  "requirements": {
+    "pass": 34,
+    "fail": 0,
+    "amended": [
+      {
+        "req": "R-32",
+        "change": "INVALID_REQUEST added to design §2.3 and PLAN §15"
+      }
+    ]
+  }
 }

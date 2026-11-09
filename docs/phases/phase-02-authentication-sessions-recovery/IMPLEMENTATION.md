@@ -139,7 +139,7 @@ in the integration suite.
 
 ## 6. Verification
 
-Run on 2026-11-09 against `ada2b86` plus the fix below, on local macOS arm64,
+Run on 2026-11-09 against `ada2b86` plus the fixes below, on local macOS arm64,
 Node 22.14.0, pnpm 11.25.0, PostgreSQL 17.11 / PostGIS 3.5 (Docker), with
 `TURBO_FORCE=true`:
 
@@ -150,12 +150,12 @@ typecheck:            PASS (14/14 tasks, 0 cached)
 architecture:         PASS (0 violations)
 spec validate:        PASS (3 specs)
 secret scan:          PASS (0 findings)
-licenses:             PASS (275 packages, 0 findings)
+licenses:             PASS (276 packages, 0 findings)
 unit:                 PASS (216/216, 32 files)
 build:                PASS (8/8 tasks, 0 cached)
 integration:          PASS (84/84, 17 files)
 PostgreSQL/db verify: PASS (17/17 evidence flags)
-dependency audit:     PASS under policy (1 low advisory, see §8)
+dependency audit:     PASS (0 advisories at every severity)
 ```
 
 The first run found one failure: `scripts/db/migrate.integration.test.ts`
@@ -163,6 +163,14 @@ compared the `db:verify` evidence to the 14 pre-T-91 flags and rejected the thre
 Auth flags that `ada2b86` added. The test now expects all 17 flags. `ada2b86` was
 pushed straight to the integration branch, and the workflows run only on pull
 requests and pushes to `main`, so hosted CI never ran it.
+
+The first dependency audit reported one low advisory, `GHSA-389g-gv7q-r4x8`
+(header-validation bypass in `fastify@5.12.5`, fixed in `5.12.6`).
+`@nestjs/platform-fastify@12.0.4` pins `5.12.5` exactly, so a direct bump alone
+would leave the running server on the vulnerable copy. A `pnpm-workspace.yaml`
+override pins `fastify` to `5.12.6` across the workspace, leaving one copy in the
+lockfile; remove it when Nest is upgraded to a release that requires `>= 5.12.6`.
+The audit then reports 0 advisories.
 
 Hosted CI on the stream PRs:
 
@@ -182,55 +190,57 @@ Machine-readable summary:
 
 ## 7. Requirements
 
-| Req  | Status    | Evidence                                                                                  |
-| ---- | --------- | ----------------------------------------------------------------------------------------- |
-| R-01 | PASS      | `architecture:check` (0 violations); `challenge-routes.integration.test.ts`               |
-| R-02 | PASS      | `contact/phone-normalization.unit.test.ts`                                                |
-| R-03 | PASS      | `contact/phone-normalization.unit.test.ts`                                                |
-| R-04 | PASS      | `contact/contact-protection.unit.test.ts`                                                 |
-| R-05 | PASS      | `contact/contact-protection.unit.test.ts`                                                 |
-| R-06 | PASS      | `contact/contact-protection.unit.test.ts`                                                 |
-| R-34 | PASS      | `contact/contact-protection.unit.test.ts`                                                 |
-| R-07 | PASS      | `contact/contact-points.integration.test.ts`; `db-verify.json`                            |
-| R-08 | PASS      | `contact/contact-points.integration.test.ts` (50 × 10, §5)                                |
-| R-09 | PASS      | `contact/contact-points.integration.test.ts`                                              |
-| R-10 | PASS      | `challenge/otp.unit.test.ts`                                                              |
-| R-11 | PASS      | `challenge/otp.unit.test.ts`                                                              |
-| R-12 | PASS      | `challenge/challenge-lifecycle.unit.test.ts`; `challenge/challenges.integration.test.ts`  |
-| R-13 | PASS      | `challenge/challenges.integration.test.ts`                                                |
-| R-14 | PASS      | `challenge/challenges.integration.test.ts`                                                |
-| R-15 | PASS      | `challenge/challenges.integration.test.ts` (§5)                                           |
-| R-16 | PASS      | `challenge/challenges.integration.test.ts`                                                |
-| R-17 | PASS      | `rate-limit/subject-commitment.unit.test.ts`; `rate-limit/rate-limit.integration.test.ts` |
-| R-18 | PASS      | `rate-limit/rate-limit-rules.unit.test.ts` (three defaults provisional, §8)               |
-| R-19 | PASS      | `challenge/challenges.integration.test.ts`; `challenge-oracle.integration.test.ts`        |
-| R-20 | PASS      | `rate-limit/rate-limit.integration.test.ts`                                               |
-| R-21 | PASS      | `challenge/challenges.integration.test.ts`; `challenge-oracle.integration.test.ts`        |
-| R-22 | PASS      | `challenge-oracle.integration.test.ts` (local timing only, §8)                            |
-| R-23 | PASS      | `delivery/synthetic-delivery.unit.test.ts`; `challenge-leak.integration.test.ts`          |
-| R-24 | PASS      | `challenge/challenges.integration.test.ts`; `delivery/synthetic-delivery.unit.test.ts`    |
-| R-25 | PASS      | `callbacks/callback-ingress.integration.test.ts`                                          |
-| R-26 | PASS      | `callbacks/callback-ingress.integration.test.ts`; `challenge-routes.integration.test.ts`  |
-| R-27 | PASS      | `callbacks/callback-ingress.integration.test.ts`                                          |
-| R-28 | PASS      | `callbacks/callback-ingress.integration.test.ts`                                          |
-| R-29 | PASS      | `contact/contact-points.integration.test.ts`; `challenge/challenges.integration.test.ts`  |
-| R-30 | PASS      | `contact/contact-points.integration.test.ts`; `shared/outbox-writer.unit.test.ts`         |
-| R-31 | PASS      | `challenge-leak.integration.test.ts` (span check is a static source scan, §8)             |
-| R-32 | DEVIATION | `challenge-routes.integration.test.ts`; routes also emit `INVALID_REQUEST` (§8)           |
-| R-33 | PASS      | `db-verify.json`; refuse-down tests in each stream's integration suite                    |
+| Req  | Status | Evidence                                                                                  |
+| ---- | ------ | ----------------------------------------------------------------------------------------- |
+| R-01 | PASS   | `architecture:check` (0 violations); `challenge-routes.integration.test.ts`               |
+| R-02 | PASS   | `contact/phone-normalization.unit.test.ts`                                                |
+| R-03 | PASS   | `contact/phone-normalization.unit.test.ts`                                                |
+| R-04 | PASS   | `contact/contact-protection.unit.test.ts`                                                 |
+| R-05 | PASS   | `contact/contact-protection.unit.test.ts`                                                 |
+| R-06 | PASS   | `contact/contact-protection.unit.test.ts`                                                 |
+| R-34 | PASS   | `contact/contact-protection.unit.test.ts`                                                 |
+| R-07 | PASS   | `contact/contact-points.integration.test.ts`; `db-verify.json`                            |
+| R-08 | PASS   | `contact/contact-points.integration.test.ts` (50 × 10, §5)                                |
+| R-09 | PASS   | `contact/contact-points.integration.test.ts`                                              |
+| R-10 | PASS   | `challenge/otp.unit.test.ts`                                                              |
+| R-11 | PASS   | `challenge/otp.unit.test.ts`                                                              |
+| R-12 | PASS   | `challenge/challenge-lifecycle.unit.test.ts`; `challenge/challenges.integration.test.ts`  |
+| R-13 | PASS   | `challenge/challenges.integration.test.ts`                                                |
+| R-14 | PASS   | `challenge/challenges.integration.test.ts`                                                |
+| R-15 | PASS   | `challenge/challenges.integration.test.ts` (§5)                                           |
+| R-16 | PASS   | `challenge/challenges.integration.test.ts`                                                |
+| R-17 | PASS   | `rate-limit/subject-commitment.unit.test.ts`; `rate-limit/rate-limit.integration.test.ts` |
+| R-18 | PASS   | `rate-limit/rate-limit-rules.unit.test.ts` (three defaults provisional, §8)               |
+| R-19 | PASS   | `challenge/challenges.integration.test.ts`; `challenge-oracle.integration.test.ts`        |
+| R-20 | PASS   | `rate-limit/rate-limit.integration.test.ts`                                               |
+| R-21 | PASS   | `challenge/challenges.integration.test.ts`; `challenge-oracle.integration.test.ts`        |
+| R-22 | PASS   | `challenge-oracle.integration.test.ts` (local timing only, §8)                            |
+| R-23 | PASS   | `delivery/synthetic-delivery.unit.test.ts`; `challenge-leak.integration.test.ts`          |
+| R-24 | PASS   | `challenge/challenges.integration.test.ts`; `delivery/synthetic-delivery.unit.test.ts`    |
+| R-25 | PASS   | `callbacks/callback-ingress.integration.test.ts`                                          |
+| R-26 | PASS   | `callbacks/callback-ingress.integration.test.ts`; `challenge-routes.integration.test.ts`  |
+| R-27 | PASS   | `callbacks/callback-ingress.integration.test.ts`                                          |
+| R-28 | PASS   | `callbacks/callback-ingress.integration.test.ts`                                          |
+| R-29 | PASS   | `contact/contact-points.integration.test.ts`; `challenge/challenges.integration.test.ts`  |
+| R-30 | PASS   | `contact/contact-points.integration.test.ts`; `shared/outbox-writer.unit.test.ts`         |
+| R-31 | PASS   | `challenge-leak.integration.test.ts` (span check is a static source scan, §8)             |
+| R-32 | PASS   | `challenge-routes.integration.test.ts` (code list amended, §8)                            |
+| R-33 | PASS   | `db-verify.json`; refuse-down tests in each stream's integration suite                    |
 
 Module test paths are relative to `modules/auth/test/`; route, oracle, and leak
 tests are in `apps/api/test/auth/`.
 
-Summary: 33 PASS, 1 DEVIATION, 0 FAIL.
+Summary: 34 PASS, 0 FAIL.
 
 ## 8. Deviations, provisional values, and open items
 
-**`INVALID_REQUEST` (R-32).** The challenge routes answer schema violations
-(unknown fields, wrong types, a malformed installation header) with
-`400 INVALID_REQUEST`. Neither design §2.3 nor PLAN §15 lists that code. Either the
-spec and PLAN gain the code or the routes map those cases to an existing code.
-This needs a decision before T-93.
+**`INVALID_REQUEST` (R-32), resolved by amendment.** The challenge routes answer
+schema violations (unknown fields, wrong types, a missing or malformed
+installation header) with `400 INVALID_REQUEST`. That is Foundation's code for
+every `400` (`apps/api/src/http/problem-details.ts`), but design §2.3 and PLAN §15
+did not list it. On 2026-11-09 the owner chose to amend both lists rather than
+change the routes. The code depends only on the request's shape, never on
+account or contact state, so it reveals nothing that P2-AC-035 protects.
 
 **Provisional rate-limit defaults.** PLAN §11 does not set these, so the
 implementation uses placeholders pending Trust & Safety:
@@ -250,10 +260,8 @@ because the delivery-status function updates `auth.verification_challenges`;
 `streams.json` now says so. `HTTP_TRUSTED_PROXY_HOPS` did not exist and was added
 by the integration amendment.
 
-**Dependency advisory.** `fastify@5.12.5` (direct, production) has low-severity
-`GHSA-389g-gv7q-r4x8`, a header-validation bypass fixed in `5.12.6`. It appeared
-after the stream PRs ran and passes the audit policy. Upgrading is a one-line
-patch bump outside SPEC-001's scope.
+**`fastify` override.** The `fastify: 5.12.6` override in `pnpm-workspace.yaml`
+(§6) is temporary until `@nestjs/platform-fastify` is upgraded.
 
 **Local demo limitation.** The synthetic delivery adapter keeps the code in
 server memory only, so a person cannot complete `verify` against a local API

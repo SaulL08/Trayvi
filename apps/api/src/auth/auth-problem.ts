@@ -9,7 +9,7 @@ import { getHttpRequestContext } from '../http/request-context';
 
 import { AUTH_LOGGER } from './tokens';
 
-/** SPEC-001 design §2.3 codes, plus INVALID_REQUEST for requests that fail the strict schema. */
+/** SPEC-001 design §2.3 codes (INVALID_REQUEST is the Foundation code for schema failures). */
 export type AuthProblemCode =
   | 'INVALID_REQUEST'
   | 'INVALID_CONTACT_FORMAT'

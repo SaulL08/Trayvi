@@ -427,7 +427,10 @@ adds it.
 Problem Details codes this spec may emit: `INVALID_CONTACT_FORMAT` (400),
 `VERIFICATION_FAILED` (400), `CHALLENGE_NOT_ACTIVE` (409), `RATE_LIMITED` (429
 with `Retry-After`), `CALLBACK_REJECTED` (401), `REQUEST_CANNOT_BE_COMPLETED`
-(503). `INVALID_CONTACT_FORMAT` exposes the normalization code as a field error
+(503), and Foundation's `INVALID_REQUEST` (400) for a body or header that fails the
+strict schema (unknown field, wrong type, missing or malformed
+`X-Trayvi-Installation`). `INVALID_REQUEST` depends only on the request's shape,
+never on any account or contact state. `INVALID_CONTACT_FORMAT` exposes the normalization code as a field error
 because format does not depend on any account.
 
 ## 3. Stream decomposition

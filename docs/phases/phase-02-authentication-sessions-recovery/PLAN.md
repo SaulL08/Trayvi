@@ -3,7 +3,7 @@
 Status: DRAFT — REVIEW REQUIRED; NOT READY FOR IMPLEMENTATION  
 Planned phase: 2  
 Scope owners: Auth  
-Last updated: 2026-11-02
+Last updated: 2026-11-09
 
 ## 1. Decision and scope
 
@@ -668,9 +668,11 @@ IDEMPOTENCY_CONFLICT
 REQUEST_CANNOT_BE_COMPLETED
 RATE_LIMITED
 CALLBACK_REJECTED
+INVALID_REQUEST
 ```
 
-`VERIFICATION_FAILED` covers a wrong, expired, or exhausted code without saying
+`INVALID_REQUEST` is the Foundation code for a request that fails its schema; it
+depends only on the request's shape. `VERIFICATION_FAILED` covers a wrong, expired, or exhausted code without saying
 which. `AUTHENTICATION_FAILED` covers every sign-in failure.
 
 ## 16. Events
