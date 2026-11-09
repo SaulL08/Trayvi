@@ -25,6 +25,9 @@ describe('PostgreSQL/PostGIS migration matrix', () => {
       outboxImmutableDataDenied: true,
       outboxMetadataMutationDenied: true,
       outboxDeleteDenied: true,
+      authCatalogVerified: true,
+      authRollbackCycle: true,
+      authCatalogReverified: true,
     });
   });
 });

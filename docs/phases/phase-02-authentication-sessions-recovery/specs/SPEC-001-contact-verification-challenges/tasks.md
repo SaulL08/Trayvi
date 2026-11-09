@@ -113,7 +113,7 @@ Branch: `spec/001-contact-verification-challenges/ws-e` · Depends on: ws-a, ws-
 - [x] T-91 — Add catalog checks for migrations `0012`–`0016` to `scripts/db`
       verification and record the `up -> verify -> down -> up -> verify`
       transcript. Satisfies R-33.
-- [ ] T-92 — Record delivered requirements and evidence in the phase
+- [x] T-92 — Record delivered requirements and evidence in the phase
       `IMPLEMENTATION.md`.
 - [ ] T-93 — Set `status` to `integrated` and open the integration pull request
       to `main`.

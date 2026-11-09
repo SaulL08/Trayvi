@@ -1,0 +1,63 @@
+{
+  "spec": "SPEC-001-contact-verification-challenges",
+  "task": "T-92",
+  "recordedAt": "2026-11-09",
+  "baseCommit": "ada2b86cb7b77f1848e145788f6931fb43104942",
+  "environment": "local macOS arm64, Node 22.14.0, pnpm 11.25.0, PostgreSQL 17.11 / PostGIS 3.5 (Docker)",
+  "turboForce": true,
+  "gates": {
+    "format": { "passed": true },
+    "lint": { "passed": true },
+    "typecheck": { "passed": true, "tasks": 14, "cached": 0 },
+    "architecture": { "passed": true, "violations": 0 },
+    "specValidate": { "passed": true, "specs": 3 },
+    "secretScan": { "passed": true, "findings": 0 },
+    "licenses": { "passed": true, "packages": 275, "findings": 0 },
+    "unit": { "passed": true, "files": 32, "tests": 216, "failed": 0 },
+    "build": { "passed": true, "tasks": 8, "cached": 0 },
+    "integration": { "passed": true, "files": 17, "tests": 84, "failed": 0 },
+    "dbVerify": { "passed": true, "evidenceFlags": 17 },
+    "dependencyAudit": {
+      "passed": true,
+      "advisories": [
+        {
+          "id": "GHSA-389g-gv7q-r4x8",
+          "package": "fastify",
+          "installed": "5.12.5",
+          "fixed": ">=5.12.6",
+          "severity": "low"
+        }
+      ]
+    }
+  },
+  "firstRunFailure": {
+    "test": "scripts/db/migrate.integration.test.ts",
+    "cause": "expected the 14 pre-T-91 db:verify flags; ada2b86 added authCatalogVerified, authRollbackCycle, authCatalogReverified",
+    "fix": "test expects all 17 flags"
+  },
+  "concurrency": {
+    "contactBindingRace": {
+      "connections": 50,
+      "rounds": 10,
+      "boundPerRound": 1,
+      "alreadyBoundPerRound": 49,
+      "activeBindingsPerRound": 1
+    },
+    "startRace": { "connections": 50, "pendingChallenges": 1 },
+    "correctCodeRace": { "connections": 50, "proofs": 1 },
+    "wrongCodeRace": { "connections": 50, "failuresWithinCap": true },
+    "rateLimitBucketRace": { "connections": 200, "admittedEqualsLimit": true }
+  },
+  "hostedRuns": [
+    {
+      "pr": 8,
+      "run": 41705687702,
+      "result": "integration failed (max_connections); fixed by b5baac6"
+    },
+    { "pr": 9, "run": 41711533597, "result": "pass" },
+    { "pr": 10, "run": 41708782815, "result": "pass" },
+    { "pr": 11, "run": 41714773060, "result": "pass" },
+    { "pr": 12, "run": 41717093059, "result": "pass" }
+  ],
+  "requirements": { "pass": 33, "deviation": ["R-32"], "fail": 0 }
+}
