@@ -217,12 +217,12 @@ routes below; it changes no earlier contract.
 
 | Event                               | Aggregate       | Payload fields                                 |
 | ----------------------------------- | --------------- | ---------------------------------------------- |
-| `auth.recovery.opened`              | `auth.recovery` | `caseId`, `kind`, `tier` (real cases only)     |
-| `auth.recovery.cooling-off-started` | `auth.recovery` | `caseId`, `accountId`, `coolingOffEndsAt`      |
-| `auth.recovery.cancelled`           | `auth.recovery` | `caseId`, `accountId`, `reason`                |
-| `auth.recovery.completed`           | `auth.recovery` | `caseId`, `accountId`, `kind`, `tier`          |
-| `auth.recovery.rejected`            | `auth.recovery` | `caseId`, `accountId`, `reason`                |
-| `auth.restriction.applied`          | `auth.account`  | `accountId`, `kinds`, `endsAt`, `sourceCaseId` |
+| `auth.recovery.opened`              | `auth_recovery` | `caseId`, `kind`, `tier` (real cases only)     |
+| `auth.recovery.cooling_off_started` | `auth_recovery` | `caseId`, `accountId`, `coolingOffEndsAt`      |
+| `auth.recovery.cancelled`           | `auth_recovery` | `caseId`, `accountId`, `reason`                |
+| `auth.recovery.completed`           | `auth_recovery` | `caseId`, `accountId`, `kind`, `tier`          |
+| `auth.recovery.rejected`            | `auth_recovery` | `caseId`, `accountId`, `reason`                |
+| `auth.restriction.applied`          | `auth_account`  | `accountId`, `kinds`, `endsAt`, `sourceCaseId` |
 
 Decoy cases emit no events. Events never carry the handle, phone, or fingerprint.
 

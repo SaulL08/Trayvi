@@ -682,12 +682,16 @@ occurred-at, and correlation/causation IDs only:
 
 ```text
 auth.contact.bound          auth.contact.replaced
-auth.session.created        auth.session.family-revoked
-auth.session.reuse-detected auth.password.changed
-auth.recovery.opened        auth.recovery.cooling-off-started
+auth.session.created        auth.session.family_revoked
+auth.session.reuse_detected auth.password.changed
+auth.recovery.opened        auth.recovery.cooling_off_started
 auth.recovery.cancelled     auth.recovery.completed
 auth.recovery.rejected      auth.restriction.applied
 ```
+
+Event types use lowercase segments with underscores, because Phase 0's
+`outbox_event_type_format` check rejects hyphens; aggregate types use underscores
+instead of dots for the same reason (`auth_session`, not `auth.session`).
 
 No event carries a phone number, fingerprint, OTP, token, token hash, password
 material, network address, or provider payload.

@@ -6,8 +6,8 @@ export type AuthEventType =
   | 'auth.contact.revoked'
   // SPEC-002 design §2.3
   | 'auth.session.created'
-  | 'auth.session.family-revoked'
-  | 'auth.session.reuse-detected'
+  | 'auth.session.family_revoked'
+  | 'auth.session.reuse_detected'
   | 'auth.password.changed';
 
 export interface AuthOutboxEvent {

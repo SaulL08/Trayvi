@@ -72,16 +72,22 @@ describe('PostgresOutboxWriter', () => {
     }
   });
 
+  it('uses only event types accepted by the Phase 0 outbox format check', () => {
+    for (const type of Object.keys(AUTH_EVENT_PAYLOAD_FIELDS)) {
+      expect(type).toMatch(/^[a-z][a-z0-9]*(\.[a-z][a-z0-9_]*)+$/u);
+    }
+  });
+
   it('allowlists exactly the SPEC-002 design §2.3 session and credential payloads', async () => {
     expect({
       'auth.session.created': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.created'],
-      'auth.session.family-revoked': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.family-revoked'],
-      'auth.session.reuse-detected': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.reuse-detected'],
+      'auth.session.family_revoked': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.family_revoked'],
+      'auth.session.reuse_detected': AUTH_EVENT_PAYLOAD_FIELDS['auth.session.reuse_detected'],
       'auth.password.changed': AUTH_EVENT_PAYLOAD_FIELDS['auth.password.changed'],
     }).toEqual({
       'auth.session.created': ['familyId', 'accountId', 'assurance', 'newInstallation'],
-      'auth.session.family-revoked': ['familyId', 'accountId', 'reason'],
-      'auth.session.reuse-detected': ['familyId', 'accountId'],
+      'auth.session.family_revoked': ['familyId', 'accountId', 'reason'],
+      'auth.session.reuse_detected': ['familyId', 'accountId'],
       'auth.password.changed': ['accountId', 'change'],
     });
     const sql = recordingExecutor();

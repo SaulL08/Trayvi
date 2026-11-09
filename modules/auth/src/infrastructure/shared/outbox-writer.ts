@@ -10,8 +10,8 @@ export const AUTH_EVENT_PAYLOAD_FIELDS: Readonly<Record<AuthEventType, readonly 
   'auth.contact.replaced': ['contactId', 'previousContactId', 'accountId', 'reason', 'caseId'],
   'auth.contact.revoked': ['contactId', 'accountId', 'reason'],
   'auth.session.created': ['familyId', 'accountId', 'assurance', 'newInstallation'],
-  'auth.session.family-revoked': ['familyId', 'accountId', 'reason'],
-  'auth.session.reuse-detected': ['familyId', 'accountId'],
+  'auth.session.family_revoked': ['familyId', 'accountId', 'reason'],
+  'auth.session.reuse_detected': ['familyId', 'accountId'],
   'auth.password.changed': ['accountId', 'change'],
 };
 

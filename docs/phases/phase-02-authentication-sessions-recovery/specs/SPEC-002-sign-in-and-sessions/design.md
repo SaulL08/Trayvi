@@ -255,7 +255,7 @@ export interface RegistrationContactReservations {
 }
 
 // contracts/outbox.ts additions (AuthEventType union extended by the scaffold)
-// 'auth.session.created' | 'auth.session.family-revoked' | 'auth.session.reuse-detected' | 'auth.password.changed'
+// 'auth.session.created' | 'auth.session.family_revoked' | 'auth.session.reuse_detected' | 'auth.password.changed'
 // aggregateType adds 'auth_session' | 'auth_credential' (Phase 0 forbids '.')
 ```
 
@@ -279,8 +279,8 @@ grants given to the Auth workload; reporting roles get nothing on these tables.
 | Event                         | Aggregate         | Payload fields                                          |
 | ----------------------------- | ----------------- | ------------------------------------------------------- |
 | `auth.session.created`        | `auth_session`    | `familyId`, `accountId`, `assurance`, `newInstallation` |
-| `auth.session.family-revoked` | `auth_session`    | `familyId`, `accountId`, `reason`                       |
-| `auth.session.reuse-detected` | `auth_session`    | `familyId`, `accountId`                                 |
+| `auth.session.family_revoked` | `auth_session`    | `familyId`, `accountId`, `reason`                       |
+| `auth.session.reuse_detected` | `auth_session`    | `familyId`, `accountId`                                 |
 | `auth.password.changed`       | `auth_credential` | `accountId`, `change` (`SET`, `REPLACED`, `REMOVED`)    |
 
 | Route                                               | Auth                                  | Request                                                                              | Success                                                                          |
