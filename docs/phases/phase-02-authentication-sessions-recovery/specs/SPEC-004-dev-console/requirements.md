@@ -1,6 +1,6 @@
 # SPEC-004 — Local development console — Requirements
 
-Status: Draft  
+Status: Approved (see §7)  
 Phase: `phase-02-authentication-sessions-recovery` ([PLAN.md](../../PLAN.md))  
 Owners: Auth, Developer Experience  
 Last updated: 2026-11-09
@@ -104,8 +104,16 @@ browser tab's memory.
 
 ## 6. Open questions
 
-| Question                                                                                                                                                                                                  | Owner        | Blocks approval |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | --------------- |
-| Does P2-AC-001 ("changes are limited to Auth, approved seams, composition, migrations, tests, and docs") admit a development-only workspace and route? If not, record a PLAN amendment or move this spec. | Owner        | Yes             |
-| Approve the console's dev dependencies (Vite, React, `@vitejs/plugin-react`, Testing Library, jsdom) under the license policy.                                                                            | Architecture | Yes             |
-| Should the console also run against a shared staging API later? This spec says no, and R-01 enforces that.                                                                                                | Owner        | No              |
+| Question                                                                                                                                                                        | Owner        | Blocks approval |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | --------------- |
+| ~~Does P2-AC-001 admit a development-only workspace and route?~~ Resolved: yes, as development tooling with no production footprint.                                            | Owner        | Resolved        |
+| ~~Approve the console's dev dependencies (Vite, React, `@vitejs/plugin-react`, Testing Library, jsdom).~~ Resolved: approved; each must still pass the license and audit gates. | Architecture | Resolved        |
+| Should the console also run against a shared staging API later? This spec says no, and R-01 enforces that.                                                                      | Owner        | No              |
+
+## 7. Approval record
+
+- 2026-11-09: approved by the repository owner, who accepted the console inside
+  Phase 2 as development tooling under P2-AC-001 and approved its development
+  dependencies.
+- The console reaches `main` only together with SPEC-002, which is itself
+  approved ahead of the PLAN §1 gate (SPEC-002 requirements §7).

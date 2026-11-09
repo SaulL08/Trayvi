@@ -1,6 +1,6 @@
 # SPEC-004 — Local development console — Design
 
-Status: Draft  
+Status: Approved (see requirements §7)  
 Requirements: [requirements.md](requirements.md)
 
 ## 1. Approach

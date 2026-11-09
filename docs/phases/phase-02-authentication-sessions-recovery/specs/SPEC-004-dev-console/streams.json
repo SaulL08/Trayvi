@@ -2,7 +2,7 @@
   "spec": "SPEC-004-dev-console",
   "title": "Local development console",
   "phase": "phase-02-authentication-sessions-recovery",
-  "status": "draft",
+  "status": "approved",
   "base": "spec/002-sign-in-and-sessions/integration",
   "streams": [
     {
