@@ -18,28 +18,28 @@ branch when each stream merges.
 
 Branch: `spec/002-sign-in-and-sessions/ws-a` · Depends on: — · Migrations: `0017`
 
-- [ ] T-A1 — Implement token issuing and hashing on `OpaqueTokenCodec`. Satisfies
+- [x] T-A1 — Implement token issuing and hashing on `OpaqueTokenCodec`. Satisfies
       R-01. Proven by `test/session/token-codec.unit.test.ts`.
-- [ ] T-A2 — Write migration `0017` with tables, indexes, terminal-state trigger,
+- [x] T-A2 — Write migration `0017` with tables, indexes, terminal-state trigger,
       guarded functions, grants, and a guarded down. Satisfies R-02, R-04–R-07,
       R-32. Proven by `test/session/session-lifecycle.integration.test.ts`.
-- [ ] T-A3 — Implement `SessionCommands`, `AccessTokenResolver`, and
+- [x] T-A3 — Implement `SessionCommands`, `AccessTokenResolver`, and
       `AccountSessionRevoker` with outbox events. Satisfies R-02–R-06, R-09, R-10,
       R-24, R-30. Proven by `test/session/session-lifecycle.integration.test.ts`
       and `test/session/revocation.integration.test.ts`.
-- [ ] T-A4 — Run the 100-connection × 10-round refresh race. Satisfies R-08.
+- [x] T-A4 — Run the 100-connection × 10-round refresh race. Satisfies R-08.
       Proven by `test/session/refresh-race.integration.test.ts`.
 
 ## ws-b — Password credential
 
 Branch: `spec/002-sign-in-and-sessions/ws-b` · Depends on: — · Migrations: `0018`
 
-- [ ] T-B1 — Implement `scrypt-v1` hashing, verification, and rehash through the
+- [x] T-B1 — Implement `scrypt-v1` hashing, verification, and rehash through the
       asynchronous API with a concurrency semaphore. Satisfies R-11. Proven by
       `test/password/password-hashing.unit.test.ts`.
-- [ ] T-B2 — Implement the policy and the synthetic compromised-password checker.
+- [x] T-B2 — Implement the policy and the synthetic compromised-password checker.
       Satisfies R-12. Proven by `test/password/password-policy.unit.test.ts`.
-- [ ] T-B3 — Write migration `0018` and implement `PasswordCredentials` with
+- [x] T-B3 — Write migration `0018` and implement `PasswordCredentials` with
       failure limits and events. Satisfies R-13, R-14, R-30, R-32. Proven by
       `test/password/password.integration.test.ts`.
 
